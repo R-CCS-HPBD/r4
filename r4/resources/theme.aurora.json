@@ -1,0 +1,20 @@
+{
+  "name": "r4-aurora",
+  "source": "packages/r4-design/tokens.json",
+  "styles": {
+    "r4.accent": "#7C6CFF",
+    "r4.accent2": "#2DD4EE",
+    "r4.tertiary": "#F472B6",
+    "r4.success": "#34D399",
+    "r4.warning": "#FBBF24",
+    "r4.error": "#FB7185",
+    "r4.info": "#38BDF8",
+    "r4.muted": "#6B698C",
+    "r4.title": "bold #7C6CFF",
+    "r4.subtitle": "#A5A3C2",
+    "r4.thinking": "italic #2DD4EE",
+    "r4.tool": "#38BDF8",
+    "r4.approval": "bold #FBBF24",
+    "r4.banner": "bold #7C6CFF on #111018"
+  }
+}

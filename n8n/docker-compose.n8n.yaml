@@ -1,0 +1,84 @@
+# n8n Docker Compose Deployment
+#
+# Usage:
+#   docker-compose -f docker-compose.n8n.yaml up -d
+#
+# Requires env.n8n file with configuration
+
+version: "3.8"
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: rivault-n8n
+    restart: unless-stopped
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    environment:
+      # Basic auth
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
+
+      # Encryption
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+
+      # Database (SQLite by default, can use PostgreSQL)
+      - DB_TYPE=${N8N_DB_TYPE:-sqlite}
+      - DB_SQLITE_DATABASE=/home/node/.n8n/database.sqlite
+
+      # PostgreSQL (if DB_TYPE=postgresdb)
+      - DB_POSTGRESDB_HOST=${N8N_DB_HOST:-}
+      - DB_POSTGRESDB_PORT=${N8N_DB_PORT:-5432}
+      - DB_POSTGRESDB_DATABASE=${N8N_DB_NAME:-n8n}
+      - DB_POSTGRESDB_USER=${N8N_DB_USER:-}
+      - DB_POSTGRESDB_PASSWORD=${N8N_DB_PASSWORD:-}
+
+      # Webhook configuration
+      - WEBHOOK_URL=${N8N_WEBHOOK_URL:-http://localhost:5678}
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+
+      # Timezone
+      - GENERIC_TIMEZONE=${TZ:-Asia/Tokyo}
+      - TZ=${TZ:-Asia/Tokyo}
+
+      # Execution settings
+      - EXECUTIONS_DATA_PRUNE=true
+      - EXECUTIONS_DATA_MAX_AGE=168  # 7 days in hours
+
+      # Security
+      - N8N_SECURE_COOKIE=false  # Set to true if using HTTPS
+
+    volumes:
+      - n8n-data:/home/node/.n8n
+      - ./workflows:/workflows:ro
+
+    networks:
+      - rivault-network
+
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+
+volumes:
+  n8n-data:
+    name: rivault-n8n-data
+
+networks:
+  rivault-network:
+    external: true
+    name: ${DOCKER_NETWORK:-rivault-platform}

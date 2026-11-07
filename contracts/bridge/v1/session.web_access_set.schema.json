@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/session.web_access_set.schema.json",
+  "title": "session.web_access_set",
+  "description": "session.web_access_set: the choice now stored on the session.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SessionWebAccessSetResult",
+  "$defs": {
+    "SessionWebAccessSetResult": {
+      "type": "object",
+      "description": "session.web_access_set: the choice now stored on the session.",
+      "properties": {
+        "web_access": {
+          "$ref": "#/$defs/WebAccessChoice"
+        },
+        "notice": {
+          "type": "string"
+        },
+        "search_server_offer": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "web_access"
+      ],
+      "additionalProperties": true
+    },
+    "WebAccessChoice": {
+      "type": "object",
+      "description": "The session's web-access choice (ADR-099 D-2; ``WebAccess.to_metadata``).",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "",
+            "none",
+            "allowlist",
+            "public"
+          ]
+        },
+        "domains": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "chosen_at": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "mode",
+        "domains",
+        "chosen_at",
+        "source"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

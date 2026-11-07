@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/get_welcome.schema.json",
+  "title": "get_welcome",
+  "description": "get_welcome: brand banner beside a fresh readiness read.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/GetWelcomeResult",
+  "$defs": {
+    "GetWelcomeResult": {
+      "type": "object",
+      "description": "get_welcome: brand banner beside a fresh readiness read.",
+      "properties": {
+        "banner": {
+          "type": "string"
+        },
+        "readiness": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "banner",
+        "readiness"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

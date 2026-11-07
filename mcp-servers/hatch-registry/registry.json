@@ -1,0 +1,43 @@
+{
+  "registry": "ai4s-platform-default",
+  "description": "Default Hatch! MCP packages for the R4 Platform frontend",
+  "version": "1.0.0",
+  "packages": [
+    {
+      "name": "platform-tools",
+      "version": "1.0.0",
+      "description": "Query platform resources: models, endpoints, jobs, workflows (read-only)",
+      "tags": ["platform", "models", "endpoints", "jobs", "default"]
+    },
+    {
+      "name": "rag-search",
+      "version": "1.0.0",
+      "description": "RAG document search and index status via the Gateway RAG proxy",
+      "tags": ["rag", "search", "documents", "default"]
+    },
+    {
+      "name": "knowledge-tools",
+      "version": "1.0.0",
+      "description": "Project knowledge: status, readiness, search, and claim verification",
+      "tags": ["knowledge", "research", "verify", "default"]
+    },
+    {
+      "name": "rikyu-hpc",
+      "version": "1.0.0",
+      "description": "RIKYU cluster operations (Slurm jobs, filesystem) — stdio adapter, privileged",
+      "tags": ["hpc", "rikyu", "slurm", "default"]
+    },
+    {
+      "name": "rikyu-docs",
+      "version": "1.0.0",
+      "description": "RIKYU documentation search — stdio adapter, read-only, offline-safe",
+      "tags": ["hpc", "rikyu", "docs", "search", "default"]
+    },
+    {
+      "name": "fugaku",
+      "version": "1.0.0",
+      "description": "Fugaku operations (jobs, staging, manuals) — stdio adapter, privileged",
+      "tags": ["hpc", "fugaku", "jobs", "default"]
+    }
+  ]
+}

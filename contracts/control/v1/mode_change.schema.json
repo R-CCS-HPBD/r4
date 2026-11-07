@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/control/v1/mode_change.schema.json",
+  "title": "mode_change",
+  "description": "Permission-mode transition (user toggle, autopilot flip, ACP map).",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "type",
+    "payload"
+  ],
+  "properties": {
+    "type": {
+      "const": "mode_change"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "version": {
+          "type": "integer",
+          "default": 1
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "ask_always",
+            "auto_safe",
+            "deny",
+            "trust"
+          ],
+          "default": "ask_always"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "user",
+            "autopilot",
+            "acp",
+            "policy"
+          ],
+          "default": "user"
+        },
+        "session_id": {
+          "type": "string",
+          "default": ""
+        }
+      }
+    }
+  }
+}

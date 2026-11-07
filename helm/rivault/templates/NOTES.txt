@@ -1,0 +1,52 @@
+RiVault has been deployed!
+
+{{- if .Values.vllm.enabled }}
+=============================================================================
+vLLM Configuration
+=============================================================================
+  Model: {{ .Values.vllm.model.name }}
+  Path:  {{ .Values.vllm.model.path }}
+  Max Context Length: {{ .Values.vllm.maxModelLen }}
+  Tool Calling: {{ .Values.vllm.enableToolCalling }}
+{{- end }}
+
+{{- if .Values.litellm.enabled }}
+=============================================================================
+LiteLLM API Access
+=============================================================================
+{{- if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "rivault.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.service.type }}
+  NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+  watch kubectl get --namespace {{ .Release.Namespace }} svc {{ include "rivault.fullname" . }}
+{{- else if contains "ClusterIP" .Values.service.type }}
+  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "rivault.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+
+  Then access: http://127.0.0.1:{{ .Values.service.port }}/v1/models
+{{- end }}
+
+  API Key: {{ .Values.litellm.masterKey }}
+{{- end }}
+
+=============================================================================
+Verify Installation
+=============================================================================
+  # Check pods
+  kubectl get pods -n {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "rivault.name" . }}"
+
+  # Check logs
+  kubectl logs -n {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "rivault.name" . }}" -c vllm
+  kubectl logs -n {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "rivault.name" . }}" -c litellm
+
+  # Test API
+  curl -H "Authorization: Bearer {{ .Values.litellm.masterKey }}" \
+    http://localhost:{{ .Values.service.port }}/v1/models
+
+=============================================================================
+HPC Notes
+=============================================================================
+  - Models must be pre-staged at {{ .Values.vllm.model.path }}
+  - No internet access from inference containers
+  - Use presigned URLs for file access via UMRS

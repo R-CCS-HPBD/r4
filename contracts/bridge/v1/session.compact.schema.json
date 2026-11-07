@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/session.compact.schema.json",
+  "title": "session.compact",
+  "description": "session.compact (``compact_history``): from/to on a change, else a reason.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SessionCompactResult",
+  "$defs": {
+    "SessionCompactResult": {
+      "type": "object",
+      "description": "session.compact (``compact_history``): from/to on a change, else a reason.",
+      "properties": {
+        "changed": {
+          "type": "boolean"
+        },
+        "keep_recent": {
+          "type": "integer"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "message_count": {
+          "type": "integer"
+        },
+        "from": {
+          "type": "integer"
+        },
+        "to": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "changed",
+        "keep_recent"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

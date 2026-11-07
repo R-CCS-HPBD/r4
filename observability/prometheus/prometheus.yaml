@@ -1,0 +1,155 @@
+# Prometheus Configuration for RiVault (O-001)
+# See DEVELOPMENT_OBJECTIVES.md Section 9.1
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'rivault'
+    env: 'development'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+          # - alertmanager:9093  # Uncomment when alertmanager is deployed
+
+# Load alert rules
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # ==========================================================================
+  # RiVault Platform Services
+  # ==========================================================================
+
+  # Platform Gateway
+  - job_name: 'gateway'
+    static_configs:
+      - targets: ['gateway:8000']
+    metrics_path: /metrics
+    scrape_interval: 10s
+
+  # UMRS (Unified Multimodal Retriever Service)
+  - job_name: 'umrs'
+    static_configs:
+      - targets: ['umrs:8000']
+    metrics_path: /metrics
+    scrape_interval: 10s
+
+  # LiteLLM Proxy
+  - job_name: 'litellm'
+    static_configs:
+      - targets: ['litellm:11434']
+    metrics_path: /metrics
+    scrape_interval: 10s
+
+  # vLLM endpoint metrics (auto-discovered via UMRS).
+  # The observability sidecar writes /etc/prometheus/targets/vllm-targets.json
+  # from UMRS's ready endpoint list.  Each target uses the UMRS proxy route
+  # /umrs/endpoints/{job_id}/metrics because endpoint ports are bound to
+  # loopback and are not directly reachable from the Prometheus container.
+  - job_name: 'vllm'
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/targets/vllm-targets.json
+        refresh_interval: 15s
+    scrape_interval: 10s
+    scrape_timeout: 9s
+
+  # vLLM KV Cache & token throughput (same targets, higher scrape frequency).
+  - job_name: 'vllm_kv_cache'
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/targets/vllm-targets.json
+        refresh_interval: 15s
+    scrape_interval: 5s
+    scrape_timeout: 4s
+
+  # ==========================================================================
+  # Infrastructure Services
+  # ==========================================================================
+
+  # PostgreSQL (via postgres_exporter)
+  - job_name: 'postgresql'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 30s
+
+  # MinIO
+  - job_name: 'minio'
+    static_configs:
+      - targets: ['minio:9000']
+    metrics_path: /minio/v2/metrics/cluster
+    scrape_interval: 30s
+
+  # ==========================================================================
+  # Observability Stack Self-Monitoring
+  # ==========================================================================
+
+  # Loki
+  - job_name: 'loki'
+    static_configs:
+      - targets: ['loki:3100']
+    metrics_path: /metrics
+
+  # Jaeger
+  - job_name: 'jaeger'
+    static_configs:
+      - targets: ['jaeger:14269']
+    metrics_path: /metrics
+
+  # OpenTelemetry Collector
+  - job_name: 'otel-collector'
+    static_configs:
+      - targets: ['otel-collector:8888']
+    metrics_path: /metrics
+
+  # ==========================================================================
+  # Kubernetes Service Discovery (for K8s deployments)
+  # ==========================================================================
+  # Uncomment for Kubernetes deployments
+
+  # - job_name: 'kubernetes-pods'
+  #   kubernetes_sd_configs:
+  #     - role: pod
+  #   relabel_configs:
+  #     # Only scrape pods with prometheus.io/scrape: "true"
+  #     - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+  #       action: keep
+  #       regex: true
+  #     # Use custom port if specified
+  #     - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_port]
+  #       action: replace
+  #       target_label: __address__
+  #       regex: (.+)
+  #       replacement: ${1}
+  #     # Use custom path if specified
+  #     - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+  #       action: replace
+  #       target_label: __metrics_path__
+  #       regex: (.+)
+  #     # Add pod labels
+  #     - action: labelmap
+  #       regex: __meta_kubernetes_pod_label_(.+)
+  #     # Add namespace
+  #     - source_labels: [__meta_kubernetes_namespace]
+  #       action: replace
+  #       target_label: kubernetes_namespace
+  #     - source_labels: [__meta_kubernetes_pod_name]
+  #       action: replace
+  #       target_label: kubernetes_pod_name
+
+  # HPC / Slurm nodes (requires node_exporter on compute nodes)
+  # - job_name: 'slurm-nodes'
+  #   file_sd_configs:
+  #     - files:
+  #         - /etc/prometheus/slurm-nodes.json
+  #   scrape_interval: 30s

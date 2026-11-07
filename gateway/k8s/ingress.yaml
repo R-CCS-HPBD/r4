@@ -1,0 +1,65 @@
+# Gateway Ingress
+# Exposes the Gateway externally via HTTPS
+# Adjust annotations based on your ingress controller (nginx, traefik, etc.)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rivault-gateway
+  namespace: rivault-system
+  labels:
+    app.kubernetes.io/name: rivault-gateway
+    app.kubernetes.io/component: gateway
+    app.kubernetes.io/part-of: ai-platform
+  annotations:
+    # NGINX Ingress Controller annotations
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    # Enable WebSocket/SSE for streaming
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    # Rate limiting (optional - Gateway also has internal rate limiting)
+    # nginx.ingress.kubernetes.io/limit-rps: "10"
+    # TLS configuration
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - ai.example.com
+      secretName: rivault-gateway-tls
+  rules:
+    - host: ai.example.com
+      http:
+        paths:
+          # Gateway routes
+          - path: /gw
+            pathType: Prefix
+            backend:
+              service:
+                name: rivault-gateway
+                port:
+                  number: 8080
+          # Health endpoints (for external monitoring)
+          - path: /health
+            pathType: Exact
+            backend:
+              service:
+                name: rivault-gateway
+                port:
+                  number: 8080
+          - path: /ready
+            pathType: Exact
+            backend:
+              service:
+                name: rivault-gateway
+                port:
+                  number: 8080
+          # Metrics (consider restricting access)
+          - path: /metrics
+            pathType: Exact
+            backend:
+              service:
+                name: rivault-gateway
+                port:
+                  number: 8080

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/project_status.schema.json",
+  "title": "project_status",
+  "description": "project_status: the UMRS-side project summary payload.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ProjectStatusResult",
+  "$defs": {
+    "ProjectStatusResult": {
+      "type": "object",
+      "description": "project_status: the UMRS-side project summary payload.",
+      "properties": {
+        "status": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

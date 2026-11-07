@@ -1,0 +1,1399 @@
+{
+  "_comment": "ADR-103 D-4. Hand-classified VS Code status per console function; slash and pane rows are generated (scripts/parity-matrix.mjs --write). missing_max only goes down, except by the number of console rows a commit adds.",
+  "missing_max": 57,
+  "rows": [
+    {
+      "id": "pane:catalog",
+      "kind": "pane",
+      "source": "console",
+      "status": "partial",
+      "evidence": "vscode-extension/src/agent-view.ts",
+      "wave": "VP-5",
+      "note": "catalog/search on the ACP rail; no read drill, lineage, consistency glyphs"
+    },
+    {
+      "id": "pane:code",
+      "kind": "pane",
+      "source": "console",
+      "status": "native",
+      "note": "VS Code Source Control view + diff editor: change list, per-file diff, open, discard; tests via Tasks"
+    },
+    {
+      "id": "pane:infrastructure",
+      "kind": "pane",
+      "source": "console",
+      "status": "partial",
+      "evidence": "vscode-extension/src/bridge/work-verbs.ts",
+      "wave": "VP-4",
+      "note": "/infra prints the backend snapshot; the gateway tree views (endpoints, jobs, models) stay; load sparkline and row verbs are open"
+    },
+    {
+      "id": "pane:knowledge",
+      "kind": "pane",
+      "source": "console",
+      "status": "partial",
+      "evidence": "vscode-extension/webview-ui/src/components/KnowledgePanel.tsx",
+      "wave": "VP-5",
+      "note": "graphs, query, import on the ACP rail; no build strip, proposals inbox, readiness"
+    },
+    {
+      "id": "pane:logs",
+      "kind": "pane",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-5"
+    },
+    {
+      "id": "pane:loop",
+      "kind": "pane",
+      "source": "console",
+      "status": "n/a",
+      "note": "console pane is demo-only (live mode shows a redirect card to Research)"
+    },
+    {
+      "id": "pane:overview",
+      "kind": "pane",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-5"
+    },
+    {
+      "id": "pane:research",
+      "kind": "pane",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-5"
+    },
+    {
+      "id": "pane:sessions",
+      "kind": "pane",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/webview-ui/src/components/SessionList.tsx",
+      "note": "list with venue/state/sync/archived badges, server-side filters (state, venue, archives), resume, rename, pin, archive, export, fork (⑂), turns (≡, lib/session-turns.ts), stop on the server (⏹), open in a chat tab (⧉); with r4.agent.backend=bridge"
+    },
+    {
+      "id": "pane:settings",
+      "kind": "pane",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-6"
+    },
+    {
+      "id": "pane:tasks",
+      "kind": "pane",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-5"
+    },
+    {
+      "id": "pane:term",
+      "kind": "pane",
+      "source": "console",
+      "status": "native",
+      "note": "VS Code integrated terminal (`R4: Open Console in Editor` and any terminal); /term share is its own slash row"
+    },
+    {
+      "id": "pane:work",
+      "kind": "pane",
+      "source": "console",
+      "status": "partial",
+      "evidence": "vscode-extension/src/bridge/work-verbs.ts",
+      "wave": "VP-4",
+      "note": "/work prints the pane's sections as a card (VP-4c); clickable rows, approvals, agents, assets, the execution overlay and live DAG are open"
+    },
+    {
+      "id": "slash:/acquisition",
+      "kind": "slash",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-5"
+    },
+    {
+      "id": "slash:/adaptive",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/admin",
+      "kind": "slash",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-6"
+    },
+    {
+      "id": "slash:/agent",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/artifact",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/audit",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/bg",
+      "kind": "slash",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/chat-verbs.ts",
+      "note": "the background `!` commands with status, time and exit (the console's lines); turns in other chat tabs run side by side instead of Ctrl+B; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/btw",
+      "kind": "slash",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/chat-verbs.ts",
+      "note": "session.side_question as an output card: no tools, not in the history, answered while a turn runs; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/catalog",
+      "kind": "slash",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-5"
+    },
+    {
+      "id": "slash:/changes",
+      "kind": "slash",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "opens the dock's files panel (diff editor, revert); with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/checkpoint",
+      "kind": "slash",
+      "source": "both",
+      "status": "partial",
+      "wave": "VP-4",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command with r4.agent.backend=bridge (VP-2; default flips in VP-3); output lines as plain text, follow-up turns run; console cards not yet"
+    },
+    {
+      "id": "slash:/circles",
+      "kind": "slash",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-6"
+    },
+    {
+      "id": "slash:/clear",
+      "kind": "slash",
+      "source": "both",
+      "status": "partial",
+      "wave": "VP-2",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command with r4.agent.backend=bridge (VP-2; default flips in VP-3); output lines as plain text, follow-up turns run; console cards not yet"
+    },
+    {
+      "id": "slash:/code",
+      "kind": "slash",
+      "source": "both",
+      "status": "partial",
+      "wave": "VP-2",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command with r4.agent.backend=bridge (VP-2; default flips in VP-3); output lines as plain text, follow-up turns run; console cards not yet"
+    },
+    {
+      "id": "slash:/codeview",
+      "kind": "slash",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-7"
+    },
+    {
+      "id": "slash:/compact",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/companion",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/config",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/connect",
+      "kind": "slash",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-6"
+    },
+    {
+      "id": "slash:/context",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/cost",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/dashboard",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "partial",
+      "wave": "VP-6",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "output card over dispatch_slash_command; the dashboard state patch the console applies to its status views waits for VP-4; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/decision-model",
+      "kind": "slash",
+      "source": "both",
+      "status": "partial",
+      "wave": "VP-6",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command with r4.agent.backend=bridge (VP-2; default flips in VP-3); output lines as plain text, follow-up turns run; console cards not yet"
+    },
+    {
+      "id": "slash:/down",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/endpoint",
+      "kind": "slash",
+      "source": "both",
+      "status": "partial",
+      "wave": "VP-4",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command with r4.agent.backend=bridge (VP-2; default flips in VP-3); output lines as plain text, follow-up turns run; console cards not yet"
+    },
+    {
+      "id": "slash:/evidence",
+      "kind": "slash",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-5"
+    },
+    {
+      "id": "slash:/exit",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "n/a",
+      "note": "registry alias of quit; no console process to quit"
+    },
+    {
+      "id": "slash:/explain",
+      "kind": "slash",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/chat-verbs.ts",
+      "note": "bridge `explain`: cause, fix, exit code from the error registry (lib/explain-text.ts); with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/export",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/files",
+      "kind": "slash",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-6"
+    },
+    {
+      "id": "slash:/fork",
+      "kind": "slash",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "session.fork of the session on screen, opened here; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/governance",
+      "kind": "slash",
+      "source": "both",
+      "status": "partial",
+      "wave": "VP-6",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command with r4.agent.backend=bridge (VP-2; default flips in VP-3); output lines as plain text, follow-up turns run; console cards not yet"
+    },
+    {
+      "id": "slash:/grants",
+      "kind": "slash",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-6"
+    },
+    {
+      "id": "slash:/health",
+      "kind": "slash",
+      "source": "both",
+      "status": "partial",
+      "wave": "VP-6",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command with r4.agent.backend=bridge (VP-2; default flips in VP-3); output lines as plain text, follow-up turns run; console cards not yet"
+    },
+    {
+      "id": "slash:/help",
+      "kind": "slash",
+      "source": "both",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/console-tools.ts",
+      "note": "commands by category from the bridge's live catalog (list_slash_commands) plus the host's verbs, the keys line; /help <command> with its subcommands; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/history",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/infra",
+      "kind": "slash",
+      "source": "console",
+      "status": "done",
+      "note": "the backend snapshot (get_backend_dashboard): readiness, endpoints, jobs, failed probes named; with r4.agent.backend=bridge",
+      "evidence": "vscode-extension/src/bridge/work-verbs.ts"
+    },
+    {
+      "id": "slash:/job",
+      "kind": "slash",
+      "source": "both",
+      "status": "partial",
+      "wave": "VP-4",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command with r4.agent.backend=bridge (VP-2; default flips in VP-3); output lines as plain text, follow-up turns run; console cards not yet"
+    },
+    {
+      "id": "slash:/keybindings",
+      "kind": "slash",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-7"
+    },
+    {
+      "id": "slash:/knowledge",
+      "kind": "slash",
+      "source": "both",
+      "status": "partial",
+      "wave": "VP-5",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command with r4.agent.backend=bridge (VP-2; default flips in VP-3); output lines as plain text, follow-up turns run; console cards not yet"
+    },
+    {
+      "id": "slash:/lessons",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/lineage",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/login",
+      "kind": "slash",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-6"
+    },
+    {
+      "id": "slash:/logs",
+      "kind": "slash",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-5"
+    },
+    {
+      "id": "slash:/loop",
+      "kind": "slash",
+      "source": "console",
+      "status": "n/a",
+      "note": "console pane is demo-only (live mode redirects to Research); revisit if the console makes it live"
+    },
+    {
+      "id": "slash:/loops",
+      "kind": "slash",
+      "source": "console",
+      "status": "partial",
+      "wave": "VP-4",
+      "note": "list, status|stop|pause|resume <id> with the console's texts (lib/ops-text.ts); detail <id> is a one-shot key/value card (research_loop.status), the console's live-following card arrives with the Work view (VP-4)",
+      "evidence": "vscode-extension/src/bridge/ops-verbs.ts"
+    },
+    {
+      "id": "slash:/mcp",
+      "kind": "slash",
+      "source": "both",
+      "status": "partial",
+      "wave": "VP-6",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command with r4.agent.backend=bridge (VP-2; default flips in VP-3); output lines as plain text, follow-up turns run; console cards not yet"
+    },
+    {
+      "id": "slash:/memory",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/mode",
+      "kind": "slash",
+      "source": "both",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/model-mode.ts",
+      "note": "/mode chat|plan|autopilot switches the interaction mode; /mode write-plan on|off → set_write_requires_plan; bare /mode goes to the bridge; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/models",
+      "kind": "slash",
+      "source": "both",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/model-mode.ts",
+      "note": "bare /models (list, ls, /model) is a picker over list_models: the current model marked, failed sources named; /models default <name> goes to the bridge; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/new",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/outcome",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/overview",
+      "kind": "slash",
+      "source": "both",
+      "status": "partial",
+      "wave": "VP-5",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command with r4.agent.backend=bridge (VP-2; default flips in VP-3); output lines as plain text, follow-up turns run; console cards not yet"
+    },
+    {
+      "id": "slash:/palette",
+      "kind": "slash",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/chat-verbs.ts",
+      "note": "opens VS Code's command palette on R4's commands (workbench.action.quickOpen '>R4: '); with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/pipeline",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/plan",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/probe",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/progress",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/project",
+      "kind": "slash",
+      "source": "both",
+      "status": "partial",
+      "wave": "VP-5",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command with r4.agent.backend=bridge (VP-2; default flips in VP-3); output lines as plain text, follow-up turns run; console cards not yet"
+    },
+    {
+      "id": "slash:/provenance",
+      "kind": "slash",
+      "source": "console",
+      "status": "done",
+      "note": "<job-id> (provenance.job) and <job-id> lineage (provenance.lineage), the console's texts (lib/ops-text.ts); with r4.agent.backend=bridge",
+      "evidence": "vscode-extension/src/bridge/ops-verbs.ts"
+    },
+    {
+      "id": "slash:/quit",
+      "kind": "slash",
+      "source": "console",
+      "status": "n/a",
+      "note": "no console process to quit; views close with the editor"
+    },
+    {
+      "id": "slash:/quota",
+      "kind": "slash",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-6"
+    },
+    {
+      "id": "slash:/rag",
+      "kind": "slash",
+      "source": "both",
+      "status": "partial",
+      "wave": "VP-5",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command with r4.agent.backend=bridge (VP-2; default flips in VP-3); output lines as plain text, follow-up turns run; console cards not yet"
+    },
+    {
+      "id": "slash:/recovery",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/replay",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/research",
+      "kind": "slash",
+      "source": "both",
+      "status": "partial",
+      "wave": "VP-5",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command with r4.agent.backend=bridge (VP-2; default flips in VP-3); output lines as plain text, follow-up turns run; console cards not yet"
+    },
+    {
+      "id": "slash:/retry",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/rewind",
+      "kind": "slash",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/chat-verbs.ts",
+      "note": "QuickPick of the session's chat prompts (get_state, newest first); the prompt returns to the composer and the next send cuts the history first (session.truncate); /rewind cancel; refused on a server session; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/run",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/sandbox",
+      "kind": "slash",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "status / on / off / default on|off over session.sandbox_get|_set with the console's texts and typed refusals; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/save",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "turn saves via knowledge.save {args} after the one-time publish confirmation (L3); a path goes to the bridge's /save; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/search",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/search-server",
+      "kind": "slash",
+      "source": "console",
+      "status": "done",
+      "note": "status/up/down over search_server.*; a start's search_server_event progress as notices, with the console's texts (lib/search-server-text.ts); with r4.agent.backend=bridge",
+      "evidence": "vscode-extension/src/bridge/console-tools.ts"
+    },
+    {
+      "id": "slash:/secret",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/sessions",
+      "kind": "slash",
+      "source": "both",
+      "status": "partial",
+      "wave": "VP-3",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command with r4.agent.backend=bridge (VP-2; default flips in VP-3); output lines as plain text, follow-up turns run; console cards not yet"
+    },
+    {
+      "id": "slash:/settings",
+      "kind": "slash",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-6"
+    },
+    {
+      "id": "slash:/share",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/skills",
+      "kind": "slash",
+      "source": "both",
+      "status": "partial",
+      "wave": "VP-6",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command with r4.agent.backend=bridge (VP-2; default flips in VP-3); output lines as plain text, follow-up turns run; console cards not yet"
+    },
+    {
+      "id": "slash:/source",
+      "kind": "slash",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-6"
+    },
+    {
+      "id": "slash:/statusline",
+      "kind": "slash",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-6"
+    },
+    {
+      "id": "slash:/sweep",
+      "kind": "slash",
+      "source": "console",
+      "status": "done",
+      "note": "list (sweep.templates), preview <name> (sweep.preview), the help line, the console's texts (lib/ops-text.ts); with r4.agent.backend=bridge",
+      "evidence": "vscode-extension/src/bridge/ops-verbs.ts"
+    },
+    {
+      "id": "slash:/system",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/tab",
+      "kind": "slash",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/chat-panels.ts",
+      "note": "list/new/close [n]/next/prev/reopen/<n> over the editor's chat tabs (host LOCAL_SLASH → r4.tab.command); with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/tasks",
+      "kind": "slash",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-5"
+    },
+    {
+      "id": "slash:/team",
+      "kind": "slash",
+      "source": "both",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/teamup-verbs.ts",
+      "note": "the console's /teamup alias (VP-4b)"
+    },
+    {
+      "id": "slash:/teamup",
+      "kind": "slash",
+      "source": "console",
+      "status": "done",
+      "note": "every verb (list, create, status|logs|report|run|pause|resume|cancel|tailor, engines, crews, hardware, plans, help) and on|off: the next message runs a plan (its card) or the hpc crew's start; the console's texts (lib/teamup-text.ts); with r4.agent.backend=bridge",
+      "evidence": "vscode-extension/src/bridge/teamup-verbs.ts"
+    },
+    {
+      "id": "slash:/template",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/templates",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/term",
+      "kind": "slash",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-7"
+    },
+    {
+      "id": "slash:/theme",
+      "kind": "slash",
+      "source": "console",
+      "status": "native",
+      "note": "VS Code color theme; the webview reads --vscode-* tokens (ADR-103 D-5)",
+      "evidence": "vscode-extension/webview-ui/src/index.css"
+    },
+    {
+      "id": "slash:/tools",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/tour",
+      "kind": "slash",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-7"
+    },
+    {
+      "id": "slash:/trace",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/traces",
+      "kind": "slash",
+      "source": "console",
+      "status": "done",
+      "note": "get <trace-id> (traces.get), <job-id> (traces.job), list|show|lineage|children to the companion's /trace, the console's texts (lib/ops-text.ts); with r4.agent.backend=bridge",
+      "evidence": "vscode-extension/src/bridge/ops-verbs.ts"
+    },
+    {
+      "id": "slash:/trust",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/up",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/usage",
+      "kind": "slash",
+      "source": "both",
+      "status": "partial",
+      "wave": "VP-6",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command with r4.agent.backend=bridge (VP-2; default flips in VP-3); output lines as plain text, follow-up turns run; console cards not yet"
+    },
+    {
+      "id": "slash:/vectors",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/venue",
+      "kind": "slash",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/venue-host.ts",
+      "note": "status/start/stop [<id>]/sources/approvals/questions over session.venue_* and source.*, texts from lib/venue-runtime.ts; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/visibility",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/web",
+      "kind": "slash",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "shows and changes the session's web access (session.web_access_set, source prompt); with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/work",
+      "kind": "slash",
+      "source": "console",
+      "status": "done",
+      "note": "the Work pane as one card: workflows, plan runs, teams, loops, jobs, endpoints (each its own read); show|run <workflow> (the console's definition card and trigger line); with r4.agent.backend=bridge",
+      "evidence": "vscode-extension/src/bridge/work-verbs.ts"
+    },
+    {
+      "id": "slash:/workflow",
+      "kind": "slash",
+      "source": "bridge",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "rides dispatch_slash_command like the console's generic path: output card, dropped turns, follow-up turns, 'not handled'; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "slash:/workflows",
+      "kind": "slash",
+      "source": "console",
+      "status": "done",
+      "note": "the Work pane (as /work); with r4.agent.backend=bridge",
+      "evidence": "vscode-extension/src/bridge/work-verbs.ts"
+    },
+    {
+      "id": "slash:/worktree",
+      "kind": "slash",
+      "source": "console",
+      "status": "partial",
+      "evidence": "vscode-extension/src/bridge/console-tools.ts",
+      "wave": "ADR-108 W1c",
+      "note": "list/enter/exit/mode and the agent's moves as notices; no status-bar item yet"
+    },
+    {
+      "id": "interaction:ambient-cards",
+      "kind": "interaction",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-6"
+    },
+    {
+      "id": "interaction:approval-card",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/webview-ui/src/components/AskCards.tsx",
+      "note": "inline card, y/Enter a n keys (ADR-104 amendment 1: no p), with r4.agent.backend=bridge (VP-2; default flips in VP-3)"
+    },
+    {
+      "id": "interaction:approval-diff",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/webview-ui/src/components/AskCards.tsx",
+      "note": "server-computed diff of file_write/file_edit on the card, with r4.agent.backend=bridge (VP-2; default flips in VP-3)"
+    },
+    {
+      "id": "interaction:approval-fenced",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/webview-ui/src/components/AskCards.tsx",
+      "note": "fence reason shown, only once/reject offered, with r4.agent.backend=bridge (VP-2; default flips in VP-3)"
+    },
+    {
+      "id": "interaction:approval-names-agent",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/webview-ui/src/components/AskCards.tsx",
+      "note": "'asked by <agent>' on the card, with r4.agent.backend=bridge (VP-2; default flips in VP-3)"
+    },
+    {
+      "id": "interaction:ask-user-card",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/webview-ui/src/components/AskCards.tsx",
+      "note": "inline question card: options, free answer, decline, with r4.agent.backend=bridge (VP-2; default flips in VP-3)"
+    },
+    {
+      "id": "interaction:at-mentions",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/webview-ui/src/components/composer-assist.ts",
+      "note": "@ popup over the workspace (the console's index and ranking, host side), ↑↓ Tab/Enter, #L ranges kept, atomic chips; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "interaction:bang-shell-relay",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "runs in the workspace (src/bridge/shell-runner.ts), shell cell, masked relay framed by lib/shell-relay.ts, queued behind a turn; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "interaction:chat-tabs",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/chat-panels.ts",
+      "note": "each chat tab is a WebviewPanel with its own bridge and host (cap 8, as the console's); R4: New Chat Tab, ⧉ on a Sessions row; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "interaction:citation-preview",
+      "kind": "interaction",
+      "source": "console",
+      "status": "native",
+      "evidence": "vscode-extension/src/bridge/editor-hooks.ts",
+      "note": "citation.open → the passage in an editor tab; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "interaction:cited-replies",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/webview-ui/src/components/MessageBubble.tsx",
+      "note": "'cited N' chips on the turn's final answer; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "interaction:clipboard-osc52",
+      "kind": "interaction",
+      "source": "console",
+      "status": "n/a",
+      "note": "terminal mechanism; copy uses vscode.env.clipboard (transcript-cursor row)"
+    },
+    {
+      "id": "interaction:command-palette",
+      "kind": "interaction",
+      "source": "console",
+      "status": "partial",
+      "wave": "VP-7",
+      "evidence": "vscode-extension/package.json",
+      "note": "about 30 R4 commands in the VS Code palette; not every console action"
+    },
+    {
+      "id": "interaction:completion-bell",
+      "kind": "interaction",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-6"
+    },
+    {
+      "id": "interaction:cost-chip",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "bridge cost envelope → costState, with r4.agent.backend=bridge (VP-2; default flips in VP-3)"
+    },
+    {
+      "id": "interaction:error-card-hints",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/console-tools.ts",
+      "note": "every error the host posts is matched against the error registry (explain.match); a match adds `? <id>: <remediation> (/explain <id>)`, as the console's card; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "interaction:esc-ladder",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/webview-ui/src/lib/esc-ladder.ts",
+      "note": "popups close first; Esc stops a streaming reply; Esc Esc (600 ms) on an empty composer opens /rewind; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "interaction:execution-dag",
+      "kind": "interaction",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-4"
+    },
+    {
+      "id": "interaction:external-editor",
+      "kind": "interaction",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-7"
+    },
+    {
+      "id": "interaction:help-overlay",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/console-tools.ts",
+      "note": "/help prints the live catalog and the keys as an output card; editor keybindings are VS Code's Keyboard Shortcuts (R4 commands); with r4.agent.backend=bridge"
+    },
+    {
+      "id": "interaction:interaction-modes",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "set_interaction_mode chat/plan/autopilot + mode_change, with r4.agent.backend=bridge (VP-2; default flips in VP-3)"
+    },
+    {
+      "id": "interaction:keymap-overrides",
+      "kind": "interaction",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-7"
+    },
+    {
+      "id": "interaction:kitty-keys",
+      "kind": "interaction",
+      "source": "console",
+      "status": "n/a",
+      "note": "terminal key protocol; the webview receives modified keys natively"
+    },
+    {
+      "id": "interaction:knowledge-proposals",
+      "kind": "interaction",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-5"
+    },
+    {
+      "id": "interaction:masked-secret-input",
+      "kind": "interaction",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-6"
+    },
+    {
+      "id": "interaction:mission-overlay",
+      "kind": "interaction",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-4"
+    },
+    {
+      "id": "interaction:modified-files-card",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/webview-ui/src/components/SessionDock.tsx",
+      "note": "files panel from get_session_changes; a file opens in the VS Code diff editor; revert asks twice; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "interaction:mouse-reporting",
+      "kind": "interaction",
+      "source": "console",
+      "status": "n/a",
+      "note": "terminal mechanism; the webview has native selection"
+    },
+    {
+      "id": "interaction:narrow-layout",
+      "kind": "interaction",
+      "source": "console",
+      "status": "native",
+      "note": "VS Code panel layout replaces the console's sheet mode"
+    },
+    {
+      "id": "interaction:pane-resize",
+      "kind": "interaction",
+      "source": "console",
+      "status": "native",
+      "note": "VS Code views and editors resize natively"
+    },
+    {
+      "id": "interaction:paste-chips",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/webview-ui/src/components/composer-assist.ts",
+      "note": "3+ lines or 150+ chars become [Pasted text #N ~L lines], re-inflated at send; one Backspace removes the chip (the console's lib/paste-tracker.ts, mention-chips.ts); with r4.agent.backend=bridge"
+    },
+    {
+      "id": "interaction:plan-card",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/webview-ui/src/components/AskCards.tsx",
+      "note": "plan card a/m/n → confirm_plan, with r4.agent.backend=bridge (VP-2; default flips in VP-3)"
+    },
+    {
+      "id": "interaction:prompt-history",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/prompt-history.ts"
+    },
+    {
+      "id": "interaction:queue-while-streaming",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "queued through the console's lib/queue-rail.ts (server lane first), drained at turn end, a stop gives the text back; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "interaction:reduced-motion",
+      "kind": "interaction",
+      "source": "console",
+      "status": "native",
+      "evidence": "vscode-extension/webview-ui/src/index.css",
+      "note": "prefers-reduced-motion media queries (VS Code passes the OS setting)"
+    },
+    {
+      "id": "interaction:remote-session-sync",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/remote-turn.ts",
+      "note": "a queued server turn is watched over session.venue_sync with lib/venue-runtime.ts evaluateRemoteSync: partial text, round breaks, tool summary, the journal's answer; remote approvals and questions (remote-asks.ts); stop ends the watch only"
+    },
+    {
+      "id": "interaction:remote-source-picker",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/source-picker.ts",
+      "note": "QuickPick of eligible rows with the server's badge; a row not pushed asks and pushes (also on source_not_pushed), refusals in the server's words; /venue sources pushes or unpushes"
+    },
+    {
+      "id": "interaction:reopen-closed-tab",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/chat-panels.ts",
+      "note": "R4: Reopen Closed Chat Tab / /tab reopen: the session resumes from the journal (initialize {session_id})"
+    },
+    {
+      "id": "interaction:sandbox-notice",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "the bridge's session-open notice (the console's sandboxStartText) as one row; sbx:on|off|n/a chip in the status bar; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "interaction:session-conflict-recovery",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "typed session_conflict by stage: before_turn restores the draft, after_turn warns, with r4.agent.backend=bridge (VP-2; default flips in VP-3)"
+    },
+    {
+      "id": "interaction:session-todos",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/webview-ui/src/components/SessionDock.tsx",
+      "note": "todos panel from get_session_plan after each turn; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "interaction:slash-popup",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/webview-ui/src/lib/mgmt-slash.ts",
+      "note": "the `/` popup lists the bridge's live catalog and the host's verbs next to this surface's own (slashCatalog); with r4.agent.backend=bridge"
+    },
+    {
+      "id": "interaction:source-stale-warning",
+      "kind": "interaction",
+      "source": "console",
+      "status": "partial",
+      "wave": "VP-2",
+      "evidence": "vscode-extension/src/agent-view.ts",
+      "note": "warns for the ACP child; bridge source digest not read yet"
+    },
+    {
+      "id": "interaction:status-backend-chips",
+      "kind": "interaction",
+      "source": "console",
+      "status": "partial",
+      "wave": "VP-4",
+      "evidence": "vscode-extension/webview-ui/src/components/StatusBar.tsx",
+      "note": "gateway indicator, sandbox chip, web-access label and the remote: chip with its lease (polled while live); umrs/hpc chips arrive with VP-4"
+    },
+    {
+      "id": "interaction:status-model-mode-perm",
+      "kind": "interaction",
+      "source": "console",
+      "status": "partial",
+      "wave": "VP-2",
+      "evidence": "vscode-extension/webview-ui/src/components/StatusBar.tsx",
+      "note": "model and mode shown; no perm badge or project-rule count"
+    },
+    {
+      "id": "interaction:streaming-reply",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "response_* events through the console's lib/turn-reply.ts, with r4.agent.backend=bridge (VP-2; default flips in VP-3)"
+    },
+    {
+      "id": "interaction:tab-auto-titles",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/chat-panels.ts",
+      "note": "tab title follows the session name (placeholder hidden, cut at 28), ● while a turn runs, ! for a background approval or question"
+    },
+    {
+      "id": "interaction:team-live",
+      "kind": "interaction",
+      "source": "console",
+      "status": "partial",
+      "wave": "VP-4",
+      "note": "team_event lines as one keyed row per team (start, progress, finish, start errors, a degraded tailor) with the console's texts; the Work pane's team section, agent overlay and conclusion receipt come with the Work view",
+      "evidence": "vscode-extension/src/bridge/teamup-verbs.ts"
+    },
+    {
+      "id": "interaction:team-plan-live",
+      "kind": "interaction",
+      "source": "console",
+      "status": "partial",
+      "wave": "VP-4",
+      "note": "plan events as one keyed row per run (agent results with counts and tokens, the finish) and the gate row; the Work pane's plan rows and result drill-in come with the Work view",
+      "evidence": "vscode-extension/src/bridge/teamup-verbs.ts"
+    },
+    {
+      "id": "interaction:theme-palettes",
+      "kind": "interaction",
+      "source": "console",
+      "status": "native",
+      "evidence": "vscode-extension/webview-ui/src/index.css",
+      "note": "VS Code color theme instead of 13 palettes (M-V3)"
+    },
+    {
+      "id": "interaction:thinking-stream",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/bridge-agent-host.ts",
+      "note": "thinking_delta/thinking_done envelopes, with r4.agent.backend=bridge (VP-2; default flips in VP-3)"
+    },
+    {
+      "id": "interaction:title-screen",
+      "kind": "interaction",
+      "source": "console",
+      "status": "n/a",
+      "note": "terminal launch splash; the empty agent view shows the welcome hints"
+    },
+    {
+      "id": "interaction:tool-rollups",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/webview-ui/src/components/Transcript.tsx",
+      "note": "folding tool roll-up fed by the bridge's tool envelopes; expand fetches the full result the tool_result line carried; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "interaction:transcript-cursor",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/webview-ui/src/components/MessageBubble.tsx",
+      "note": "per-message resend, edit (the console's edit-and-resend: session.truncate before the resend, VP-2c), fork from the turn, save to knowledge, copy; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "interaction:venue-picker",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/source-picker.ts",
+      "note": "New chat asks where it runs: the console's venuePickerOptions after the 2 s journal probe (a disabled row keeps its reason); Server creates the session with the web answer (initialize {venue: frontend}) and starts it; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "interaction:web-access-question",
+      "kind": "interaction",
+      "source": "console",
+      "status": "done",
+      "evidence": "vscode-extension/src/bridge/web-access-picker.ts",
+      "note": "asked before a session's first turn when it has no choice (needsWebChoice); QuickPick + domains box checked by validateWebChoice; Esc gives the text back; with r4.agent.backend=bridge"
+    },
+    {
+      "id": "interaction:workflow-badge",
+      "kind": "interaction",
+      "source": "console",
+      "status": "missing",
+      "wave": "VP-4"
+    },
+    {
+      "id": "interaction:workflow-definition-card",
+      "kind": "interaction",
+      "source": "console",
+      "status": "partial",
+      "wave": "VP-4",
+      "evidence": "vscode-extension/src/agent-view.ts",
+      "note": "workflows/describe on the ACP rail; no parameters, graph, run line"
+    }
+  ]
+}

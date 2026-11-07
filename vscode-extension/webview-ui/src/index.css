@@ -1,0 +1,2621 @@
+/* Global styles for the R4 webview.
+   Uses VS Code CSS variables for theming (dark/light/high contrast). */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font: normal 13px var(--vscode-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  color: var(--vscode-foreground);
+  background: var(--vscode-sideBar-background, #1e1e1e);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar styling — matches VS Code's look */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--vscode-foreground) 20%, transparent);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--vscode-foreground) 35%, transparent);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--vscode-editor-selectionBackground, #264f78) 60%, transparent);
+}
+
+/* Generic button styling */
+.r4-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  min-height: 26px;
+  padding: 3px 8px;
+  cursor: pointer;
+  border: 1px solid var(--vscode-input-border, transparent);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--vscode-foreground);
+  font: inherit;
+  transition: background 0.15s ease;
+  white-space: nowrap;
+}
+
+.r4-btn:hover:not(:disabled) {
+  background: var(--vscode-toolbar-hoverBackground, #ffffff1a);
+}
+
+.r4-btn:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.r4-btn-primary {
+  color: var(--vscode-button-foreground, #ffffff);
+  background: var(--vscode-button-background, #0078d4);
+  border-color: transparent;
+}
+
+.r4-btn-primary:hover:not(:disabled) {
+  background: var(--vscode-button-hoverBackground, #0063ad);
+}
+
+.r4-btn-icon {
+  padding: 2px 4px;
+  font-size: 11px;
+  opacity: 0.6;
+  border: none;
+  min-width: 22px;
+  min-height: 22px;
+}
+
+.r4-btn-icon:hover {
+  opacity: 1;
+}
+
+/* Empty state */
+.r4-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+/* Translucent markdown links */
+.r4-markdown a {
+  color: var(--vscode-textLink-foreground, #007acc);
+  text-decoration: none;
+}
+
+.r4-markdown a:hover {
+  text-decoration: underline;
+}
+
+/* ── Layout ─────────────────────────────────────────────────────────────── */
+
+.r4-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.r4-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Detail pane (V4: Studio/System docked beside chat) ─────────────────── */
+
+.r4-detail-pane {
+  width: 45%;
+  min-width: 320px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--vscode-panel-border, #ffffff1a);
+  overflow: hidden;
+}
+
+.r4-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--vscode-panel-border, #ffffff1a);
+}
+
+.r4-detail-title {
+  font-weight: 600;
+}
+
+.r4-detail-close {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.r4-detail-close:hover {
+  color: var(--vscode-errorForeground, #f48771);
+}
+
+.r4-detail-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+@media (max-width: 900px) {
+  .r4-body:not(:has(.r4-detail-pane)) {
+    flex-direction: column;
+  }
+}
+
+/* ── Top bar ────────────────────────────────────────────────────────────── */
+
+.r4-topbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--vscode-panel-border, #ffffff1a);
+}
+
+.r4-title {
+  font-weight: 600;
+}
+
+.r4-topbar-spacer {
+  flex: 1;
+}
+
+/* ── Session list ───────────────────────────────────────────────────────── */
+
+.r4-sessions {
+  width: 180px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-right: 1px solid var(--vscode-panel-border, #ffffff1a);
+  padding: 4px;
+}
+
+.r4-sessions-empty,
+.r4-placeholder {
+  padding: 8px;
+  color: var(--vscode-descriptionForeground, #888);
+  font-size: 12px;
+}
+
+.r4-session {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.r4-session:hover {
+  background: var(--vscode-list-hoverBackground, #ffffff0d);
+}
+
+.r4-session-active {
+  background: var(--vscode-list-activeSelectionBackground, #094771);
+  color: var(--vscode-list-activeSelectionForeground, #ffffff);
+}
+
+.r4-session-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.r4-session-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.r4-session-meta {
+  display: block;
+  font-size: 10px;
+  opacity: 0.65;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Transcript ─────────────────────────────────────────────────────────── */
+
+.r4-transcript {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 10px 12px;
+}
+
+/* ── Composer ───────────────────────────────────────────────────────────── */
+
+.r4-composer {
+  border-top: 1px solid var(--vscode-panel-border, #ffffff1a);
+  padding: 6px 8px;
+}
+
+/* A2: slash autocomplete popup. */
+.r4-slash-popup {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--vscode-panel-border, #ffffff1a);
+  border-radius: 4px;
+  background: var(--vscode-editor-background, #1e1e1e);
+  margin-bottom: 4px;
+  overflow: hidden;
+}
+
+.r4-slash-option {
+  display: flex;
+  gap: 8px;
+  padding: 3px 8px;
+  cursor: pointer;
+  align-items: baseline;
+}
+
+.r4-slash-option.selected {
+  background: var(--vscode-list-activeSelectionBackground, #094771);
+}
+
+.r4-slash-option .r4-slash-name {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.r4-slash-option .r4-slash-hint {
+  opacity: 0.7;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* D5: editor-context chip — subtle inline chip above the composer. */
+.r4-editor-context-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  opacity: 0.75;
+  border: 1px solid var(--vscode-panel-border, #ffffff1a);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-bottom: 4px;
+}
+
+.r4-composer-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.r4-composer-actions {
+  justify-content: space-between;
+  margin-bottom: 0;
+}
+
+.r4-hint {
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground, #888);
+}
+
+.r4-input,
+.r4-select,
+.r4-textarea {
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid var(--vscode-input-border, #ffffff1a);
+  border-radius: 3px;
+  background: var(--vscode-input-background, #3c3c3c);
+  color: var(--vscode-input-foreground, #cccccc);
+  font: inherit;
+}
+
+.r4-textarea {
+  resize: vertical;
+  min-height: 48px;
+  line-height: 1.5;
+}
+
+.r4-input:focus,
+.r4-select:focus,
+.r4-textarea:focus {
+  outline: 1px solid var(--vscode-focusBorder, #007fd4);
+  outline-offset: -1px;
+}
+
+/* ── Status bar ─────────────────────────────────────────────────────────── */
+
+.r4-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-top: 1px solid var(--vscode-panel-border, #ffffff1a);
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground, #888);
+}
+
+.r4-statusbar-spacer {
+  flex: 1;
+}
+
+.r4-status-error {
+  color: var(--vscode-errorForeground, #f48771);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60%;
+}
+
+/* Sign-in affordance in the disconnected state (docs/WEBVIEW_AUTH_CHAIN_FINDING.md §R6).
+ * One canonical path: WebView postMessage → extension executes r4.login →
+ * same AuthManager/loginViaR4Cli flow the CLI uses. */
+.r4-sign-in-btn {
+  border: 1px solid var(--vscode-button-border, transparent);
+  background: var(--vscode-button-background, #0b8ce9);
+  color: var(--vscode-button-foreground, #fff);
+  border-radius: 3px;
+  padding: 2px 9px;
+  font-size: 11px;
+  cursor: pointer;
+  margin-left: 4px;
+}
+
+.r4-sign-in-btn:hover {
+  background: var(--vscode-button-hoverBackground, #1a8aff);
+}
+
+.r4-sign-in-btn:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder, #007fd4);
+  outline-offset: 1px;
+}
+
+/* ── Indicators ─────────────────────────────────────────────────────────── */
+
+.r4-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--vscode-charts-green, #89d185);
+}
+
+.r4-dot-connecting {
+  background: var(--vscode-charts-yellow, #cca700);
+}
+
+.r4-dot-disconnected,
+.r4-dot-error {
+  background: var(--vscode-errorForeground, #f48771);
+}
+
+.r4-cursor {
+  display: inline-block;
+  width: 6px;
+  height: 13px;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: currentColor;
+  animation: r4-blink 1s steps(2, start) infinite;
+}
+
+@keyframes r4-blink {
+  to { visibility: hidden; }
+}
+
+/* ── Animations ─────────────────────────────────────────────────────────── */
+
+/** Entrance animation for transcript entries (messages, events, toolcards). */
+.r4-anim-enter {
+  animation: r4-enter 0.18s ease-out;
+}
+
+@keyframes r4-enter {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/** Pulsing indicator (running dot in the session list). */
+.r4-dot-running {
+  background: var(--vscode-progressBar-background, #0e70c0);
+  animation: r4-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes r4-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.82); }
+}
+
+/** Rotating spinner (tool calls pending, topbar connecting). */
+.r4-spinner {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+  border: 2px solid color-mix(in srgb, var(--vscode-foreground, #ccc) 25%, transparent);
+  border-top-color: var(--vscode-focusBorder, #007fd4);
+  border-radius: 50%;
+  animation: r4-spin 0.8s linear infinite;
+}
+
+@keyframes r4-spin {
+  to { transform: rotate(360deg); }
+}
+
+/** Typing indicator: three bouncing dots. */
+.r4-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  margin: 0 0 12px;
+  animation: r4-enter 0.18s ease-out;
+}
+
+.r4-typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--vscode-descriptionForeground, #888);
+  animation: r4-typing-bounce 1.2s ease-in-out infinite;
+}
+
+.r4-typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.r4-typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+.r4-typing-label {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--r4-gradient-aurora, linear-gradient(135deg, #7c6cff, #2dd4ee));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Container becomes a soft aurora chip while the agent works */
+.r4-typing {
+  padding-left: 12px;
+  animation: r4-enter 0.18s ease-out, r4-inpulse-fade 2.4s var(--r4-ease-standard, ease) infinite;
+  border-radius: var(--r4-radius-pill, 999px);
+}
+
+@keyframes r4-inpulse-fade {
+  0%, 100% { background: var(--r4-gradient-aurora-soft, transparent); }
+  50% { background: transparent; }
+}
+
+/* Aurora mascot — shared identity with the companion TUI. */
+.r4-mascot {
+  display: inline-block;
+  vertical-align: text-bottom;
+  flex-shrink: 0;
+}
+
+.r4-mascot-eyes {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.r4-mascot-idle .r4-mascot-eyes {
+  animation: r4-mascot-blink 5s ease-in-out infinite;
+}
+
+.r4-mascot-thinking {
+  animation: r4-mascot-bob 1.6s ease-in-out infinite;
+}
+
+.r4-mascot-thinking .r4-mascot-eyes {
+  animation: r4-mascot-blink 3s ease-in-out infinite;
+}
+
+@keyframes r4-mascot-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.12); }
+}
+
+@keyframes r4-mascot-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1.5px); }
+}
+
+/* Rotating thinking verb — small fade on each change. */
+.r4-verb-fade {
+  animation: r4-verb-fade-in 240ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+@keyframes r4-verb-fade-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Skeleton shimmer while sessions load. */
+.r4-skeleton-row {
+  height: 26px;
+  margin: 4px 2px;
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--vscode-foreground) 6%, transparent),
+    color-mix(in srgb, var(--vscode-foreground) 13%, transparent),
+    color-mix(in srgb, var(--vscode-foreground) 6%, transparent)
+  );
+  background-size: 200% 100%;
+  animation: r4-skeleton-sweep 1.4s ease-in-out infinite;
+}
+
+@keyframes r4-skeleton-sweep {
+  from { background-position: 180% 0; }
+  to { background-position: -80% 0; }
+}
+
+/* Transcript empty state — mascot + guidance. */
+.r4-emptystate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--vscode-descriptionForeground, #888);
+}
+
+.r4-emptystate-title {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.r4-emptystate-hint {
+  font-size: 12px;
+  max-width: 300px;
+}
+
+/* Top-bar completion sweep — subtle success wash when a turn finishes. */
+.r4-topbar {
+  position: relative;
+  overflow: hidden;
+}
+
+.r4-topbar-celebrate::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--r4-success, #34d399) 30%, transparent),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: r4-celebrate-sweep 900ms cubic-bezier(0.2, 0, 0, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes r4-celebrate-sweep {
+  to { transform: translateX(100%); }
+}
+
+/* Token usage chip in the composer. */
+.r4-usage-chip {
+  font-size: 10px;
+  font-family: var(--vscode-editor-font-family, "JetBrains Mono", monospace);
+  color: var(--vscode-descriptionForeground, #9d9d9d);
+  white-space: nowrap;
+}
+
+.r4-usage-chip-warn {
+  color: var(--vscode-editorWarning-foreground, #cca700);
+}
+
+/* File chips on tool-call cards — jump from chat to the referenced file. */
+.r4-filechip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  max-width: 180px;
+  padding: 1px 6px;
+  border: 1px solid color-mix(in srgb, var(--r4-accent, #7c6cff) 45%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--r4-accent, #7c6cff) 12%, transparent);
+  color: var(--vscode-textLink-foreground, #3794ff);
+  font-size: 10px;
+  font-family: var(--vscode-editor-font-family, "JetBrains Mono", monospace);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.r4-filechip:hover {
+  filter: brightness(1.2);
+  border-color: var(--r4-accent, #7c6cff);
+}
+
+@keyframes r4-typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+/** Jump-to-bottom floating pill. */
+.r4-transcript-wrap {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.r4-transcript-wrap .r4-transcript {
+  flex: 1;
+}
+
+.r4-jump-bottom {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--vscode-panel-border, #ffffff1a);
+  background: var(--vscode-editorWidget-background, #252526);
+  color: var(--vscode-foreground, #ccc);
+  font-size: 11px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  animation: r4-jump-in 0.16s ease-out;
+  transition: background 0.15s ease;
+  z-index: 10;
+}
+
+.r4-jump-bottom:hover {
+  background: var(--vscode-list-hoverBackground, #2a2d2e);
+}
+
+@keyframes r4-jump-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/** Send button arrow glide. */
+.r4-send-arrow {
+  display: inline-block;
+  margin-left: 3px;
+  font-size: 10px;
+  transition: transform 0.15s ease;
+}
+
+.r4-btn-send:hover:not(:disabled) .r4-send-arrow {
+  transform: translateX(2px);
+}
+
+/** Stop button tone. */
+.r4-btn-stop {
+  color: var(--vscode-errorForeground, #f48771);
+  border-color: color-mix(in srgb, var(--vscode-errorForeground, #f48771) 40%, transparent);
+}
+
+.r4-btn-stop:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--vscode-errorForeground, #f48771) 12%, transparent);
+}
+
+/** Auto-growing composer textarea. */
+.r4-textarea-autogrow {
+  resize: none;
+  overflow-y: auto;
+  transition: height 0.12s ease-out;
+}
+
+/** Copy buttons (assistant replies + code blocks) — fade in on hover. */
+.r4-msg-actions {
+  display: inline-flex;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.r4-message:hover .r4-msg-actions,
+.r4-msg-actions:focus-within {
+  opacity: 1;
+}
+
+.r4-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  min-height: 20px;
+  padding: 1px 4px;
+  border: 1px solid var(--vscode-panel-border, #ffffff1a);
+  border-radius: 3px;
+  background: var(--vscode-input-background, #3c3c3c);
+  color: var(--vscode-descriptionForeground, #888);
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.r4-copy-btn:hover {
+  color: var(--vscode-foreground, #ccc);
+  border-color: var(--vscode-focusBorder, #007fd4);
+}
+
+.r4-copy-btn:active {
+  transform: scale(0.92);
+}
+
+.r4-copy-btn-copied {
+  color: var(--vscode-charts-green, #89d185);
+  border-color: var(--vscode-charts-green, #89d185);
+}
+
+/** Code block with header bar (language + copy). */
+.r4-codeblock {
+  margin: 8px 0;
+  border: 1px solid var(--vscode-panel-border, #ffffff1a);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.r4-codeblock-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px 2px 10px;
+  background: var(--vscode-editor-lineHighlightBackground, #ffffff08);
+  border-bottom: 1px solid var(--vscode-panel-border, #ffffff1a);
+}
+
+.r4-codeblock-lang {
+  flex: 1;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--vscode-descriptionForeground, #888);
+}
+
+.r4-codeblock-pre {
+  border: none;
+  border-radius: 0 0 4px 4px;
+}
+
+/** Thinking block chevron rotation on expand. */
+.r4-thinking-chevron {
+  display: inline-block;
+  margin-right: 4px;
+  font-size: 10px;
+  transition: transform 0.15s ease;
+}
+
+.r4-thinking[open] .r4-thinking-chevron {
+  transform: rotate(90deg);
+}
+
+.r4-thinking summary {
+  display: flex;
+  align-items: center;
+}
+
+.r4-thinking summary::-webkit-details-marker {
+  display: none;
+}
+
+/** Session list hover affordances — actions fade in on row hover. */
+.r4-session-actionset {
+  display: inline-flex;
+  gap: 1px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.r4-session:hover .r4-session-actionset,
+.r4-session-actionset:focus-within {
+  opacity: 1;
+}
+
+.r4-session-action {
+  font-size: 10px;
+}
+
+/** Session row entrance. */
+.r4-session {
+  animation: r4-enter 0.15s ease-out;
+}
+
+/** Respect users who prefer reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .r4-anim-enter,
+  .r4-session,
+  .r4-thinking-chevron,
+  .r4-copy-btn,
+  .r4-send-arrow,
+  .r4-session-actionset,
+  .r4-msg-actions,
+  .r4-textarea-autogrow,
+  .r4-mascot,
+  .r4-mascot-eyes,
+  .r4-verb-fade,
+  .r4-skeleton-row,
+  .r4-topbar-celebrate::after {
+    animation: none;
+    transition: none;
+  }
+
+  .r4-typing-dot,
+  .r4-dot-running,
+  .r4-spinner {
+    animation-duration: 2s;
+  }
+}
+
+/* ── Crash screen ───────────────────────────────────────────────────────── */
+
+.r4-crash {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.r4-crash-detail {
+  white-space: pre-wrap;
+  font-size: 12px;
+  color: var(--vscode-errorForeground, #f48771);
+}
+
+/* ── Tool call card (C6) ─────────────────────────────────────────────────── */
+
+.r4-toolcard {
+  margin: 8px 0;
+  border: 1px solid var(--vscode-panel-border, #ffffff1a);
+  border-radius: 4px;
+  background: var(--vscode-editor-background, #1e1e1e);
+  overflow: hidden;
+}
+
+.r4-toolcard-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--vscode-panel-border, #ffffff1a);
+  font-size: 12px;
+}
+
+.r4-toolcard-name {
+  font-family: "Cascadia Code", "Fira Code", "JetBrains Mono", monospace;
+  color: var(--vscode-charts-blue, #007acc);
+  font-weight: 600;
+}
+
+.r4-toolcard-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 2px;
+}
+
+.r4-toolcard-duration {
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground, #888);
+  margin-left: auto;
+}
+
+.r4-toolcard-result {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-family: "Cascadia Code", "Fira Code", "JetBrains Mono", monospace;
+  color: var(--vscode-descriptionForeground, #888);
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 240px;
+  overflow-y: auto;
+  border-top: 1px solid var(--vscode-panel-border, #ffffff1a);
+}
+
+/* ── Tool-call card: Aurora extension (verifying-ring on pending) ───────── */
+
+.r4-toolcard--verifying {
+  border-color: color-mix(in srgb, var(--r4-accent, #7c6cff) 45%, transparent);
+}
+
+.r4-toolcard--verifying .r4-toolcard-header {
+  /* tokens.css r4-verifying-ring supplies animated gradient border */
+  border-radius: var(--r4-radius-md, 8px) var(--r4-radius-md, 8px) 0 0;
+}
+
+.r4-badge-ok {
+  background: var(--r4-success, #34d399);
+  color: #fff;
+}
+
+.r4-badge-warn {
+  background: var(--r4-warning, #fbbf24);
+  color: #111018;
+}
+
+.r4-badge-error {
+  background: var(--r4-error, #fb7185);
+  color: #fff;
+}
+
+.r4-toolcard-toggle {
+  margin-left: 4px;
+  cursor: pointer;
+}
+
+/* ── Agent edit review cards ────────────────────────────────────────────── */
+
+.r4-edits-strip {
+  align-self: flex-start;
+  padding: 4px 10px;
+  margin: 4px 0;
+  border-radius: var(--r4-radius-md, 8px);
+  background: color-mix(in srgb, var(--r4-warning, #fbbf24) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--r4-warning, #fbbf24) 45%, transparent);
+  color: var(--vscode-foreground, inherit);
+  font-size: 12px;
+}
+
+.r4-editcard {
+  border: 1px solid var(--vscode-panel-border, #333);
+  border-radius: var(--r4-radius-md, 8px);
+  padding: 8px 10px;
+  margin: 6px 0;
+  background: var(--vscode-sideBar-background, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.r4-editcard--pending {
+  border-color: color-mix(in srgb, var(--r4-warning, #fbbf24) 55%, transparent);
+}
+
+.r4-editcard-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.r4-editcard-path {
+  font-weight: 600;
+}
+
+.r4-editcard-stats {
+  display: inline-flex;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+
+.r4-editcard-added {
+  color: var(--r4-success, #34d399);
+  font-weight: 600;
+}
+
+.r4-editcard-removed {
+  color: var(--r4-error, #fb7185);
+  font-weight: 600;
+}
+
+.r4-editcard-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.r4-btn-danger {
+  background: var(--vscode-button-secondaryBackground, #3a3d41);
+  color: var(--vscode-button-secondaryForeground, #e7e7e7);
+}
+
+.r4-btn-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--r4-error, #fb7185) 70%, #000);
+  color: #fff;
+}
+
+.r4-toolcard-result--expandable {
+  cursor: default;
+  border-left: 2px solid color-mix(in srgb, var(--r4-accent, #7c6cff) 35%, transparent);
+}
+
+/* ── Usage footer (C6) ──────────────────────────────────────────────────── */
+
+.r4-usage {
+  padding: 4px 0;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground, #888);
+  opacity: 0.7;
+}
+
+/* ── Aurora brand layer (design tokens: packages/r4-design) ──────────────
+   Overrides above with the shared token identity. Same specificity, later
+   in the cascade — VS Code theme vars stay the fallback for non-brand UI. */
+
+body {
+  font-family: var(--r4-font-sans, var(--vscode-font-family, sans-serif));
+}
+
+/* Brand title: aurora gradient text */
+.r4-title {
+  background: var(--r4-gradient-aurora);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* Top bar: aurora accent line under the header */
+.r4-topbar {
+  border-bottom: none;
+  background-image: linear-gradient(90deg, var(--r4-accent), var(--r4-accent-secondary) 40%, transparent 85%);
+  background-size: 100% 1px;
+  background-repeat: no-repeat;
+  background-position: bottom;
+}
+
+/* Primary action: aurora gradient button */
+.r4-btn-primary {
+  color: var(--r4-text-on-accent, #fff);
+  background: var(--r4-gradient-aurora);
+  border-color: transparent;
+  box-shadow: var(--r4-shadow-sm);
+  transition: filter var(--r4-duration-fast, 120ms) var(--r4-ease-standard, ease),
+    box-shadow var(--r4-duration-fast, 120ms) var(--r4-ease-standard, ease);
+}
+
+.r4-btn-primary:hover:not(:disabled) {
+  background: var(--r4-gradient-aurora);
+  filter: brightness(1.12);
+  box-shadow: var(--r4-shadow-glow);
+}
+
+/* Session list: active item gets aurora edge */
+.r4-session-active {
+  background: color-mix(in srgb, var(--r4-accent) 22%, transparent);
+  color: var(--vscode-list-activeSelectionForeground, #fff);
+  box-shadow: inset 2px 0 0 var(--r4-accent);
+}
+
+.r4-session {
+  border-radius: var(--r4-radius-sm, 3px);
+}
+
+/* Messages: rise-in entrance */
+.r4-message {
+  animation: r4-fade-slide-up var(--r4-duration-base, 240ms) var(--r4-ease-emphasized, ease-out) both;
+}
+
+/* Connection spinner matches brand accent */
+.r4-spinner {
+  border-top-color: var(--r4-accent-secondary, #2dd4ee);
+}
+
+/* Typing indicator: brand dots */
+.r4-typing-dot {
+  background: var(--r4-accent-secondary, #2dd4ee);
+}
+
+/* Jump-to-bottom pill: aurora */
+.r4-jump-bottom {
+  background: var(--r4-gradient-aurora);
+  color: var(--r4-text-on-accent, #fff);
+  border: none;
+  box-shadow: var(--r4-shadow-md);
+}
+
+.r4-jump-bottom:hover {
+  filter: brightness(1.12);
+  box-shadow: var(--r4-shadow-glow);
+}
+
+/* ── Wave 6: input/status polish ────────────────────────────────────────── */
+
+/* Composer focus: aurora ring with soft cyan halo (overrides VS Code focus) */
+.r4-textarea:focus {
+  outline: 1px solid var(--r4-accent, #7c6cff);
+  outline-offset: -1px;
+  box-shadow: 0 0 0 1px var(--r4-accent, #7c6cff),
+    0 0 8px color-mix(in srgb, var(--r4-accent-secondary, #2dd4ee) 35%, transparent);
+  transition: box-shadow var(--r4-duration-fast, 120ms) var(--r4-ease-standard, ease);
+}
+
+/* Selects get the same brand focus treatment */
+.r4-select:focus {
+  outline: 1px solid var(--r4-accent, #7c6cff);
+  outline-offset: -1px;
+}
+
+/* Ready status: gentle live pulse so users see the agent is alive */
+.r4-dot-ready {
+  background: var(--r4-success, #34d399);
+  animation: r4-pulse-glow 2s var(--r4-ease-standard, ease) infinite;
+}
+
+/* Composer primary action: hover lift + glow */
+.r4-composer .r4-btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--r4-shadow-glow);
+}
+
+.r4-composer .r4-btn-primary {
+  transition: transform var(--r4-duration-fast, 120ms) var(--r4-ease-standard, ease),
+    box-shadow var(--r4-duration-fast, 120ms) var(--r4-ease-standard, ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .r4-dot-ready { animation: none; }
+  .r4-composer .r4-btn-primary:hover:not(:disabled) { transform: none; }
+}
+
+/* ── Tabs ─────────────────────────────────────────────────────────────────── */
+
+.r4-tabbar {
+  display: inline-flex;
+  gap: 2px;
+  margin-right: 8px;
+}
+
+.r4-tab {
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+  font: inherit;
+}
+
+.r4-tab:hover {
+  background: color-mix(in srgb, var(--vscode-foreground) 8%, transparent);
+}
+
+.r4-tab-active {
+  background: color-mix(in srgb, var(--vscode-foreground) 12%, transparent);
+  color: var(--vscode-foreground);
+}
+
+/* ── Mode segmented control (ask | plan | agent) ─────────────────────────── */
+
+.r4-mode-segment {
+  display: inline-flex;
+  border: 1px solid var(--vscode-input-border, color-mix(in srgb, var(--vscode-foreground) 20%, transparent));
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.r4-mode-btn {
+  padding: 3px 9px;
+  border: none;
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+  font: inherit;
+  border-right: 1px solid color-mix(in srgb, var(--vscode-foreground) 14%, transparent);
+}
+
+.r4-mode-btn:last-child {
+  border-right: none;
+}
+
+.r4-mode-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--vscode-foreground) 8%, transparent);
+}
+
+.r4-mode-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.r4-mode-btn-active {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+/* ── Studio layout ───────────────────────────────────────────────────────── */
+
+.r4-studio {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  gap: 8px;
+  padding: 8px;
+  overflow: hidden;
+}
+
+.r4-studio-rail {
+  width: 210px;
+  min-width: 190px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+.r4-studio-card {
+  border: 1px solid color-mix(in srgb, var(--vscode-foreground) 12%, transparent);
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.r4-studio-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.r4-studio-list {
+  list-style: none;
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.r4-studio-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.r4-studio-list-item:hover {
+  background: color-mix(in srgb, var(--vscode-foreground) 8%, transparent);
+}
+
+.r4-studio-list-item-active {
+  background: color-mix(in srgb, var(--vscode-list-activeSelectionBackground, #094771) 70%, transparent);
+}
+
+.r4-studio-list-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.r4-studio-pill {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--vscode-foreground) 14%, transparent);
+  flex-shrink: 0;
+}
+
+.r4-studio-create {
+  display: flex;
+  gap: 4px;
+}
+
+.r4-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border, color-mix(in srgb, var(--vscode-foreground) 18%, transparent));
+  border-radius: 5px;
+  padding: 4px 6px;
+  font: inherit;
+}
+
+.r4-studio-params {
+  resize: vertical;
+  font-family: var(--vscode-editor-font-family, monospace);
+}
+
+.r4-studio-empty {
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+  padding: 4px 0;
+}
+
+.r4-studio-error {
+  color: var(--vscode-errorForeground, #f85149);
+  font-size: 12px;
+}
+
+.r4-studio-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.r4-studio-graph-wrap {
+  flex: 1;
+  min-height: 0;
+  border: 1px solid color-mix(in srgb, var(--vscode-foreground) 12%, transparent);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+}
+
+.r4-studio-graph-empty {
+  margin: auto;
+  text-align: center;
+  color: var(--vscode-descriptionForeground);
+}
+
+.r4-studio-hint {
+  font-size: 12px;
+  max-width: 320px;
+  margin-top: 6px;
+}
+
+.r4-studio-detail {
+  border: 1px solid color-mix(in srgb, var(--vscode-foreground) 12%, transparent);
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.r4-studio-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.r4-studio-detail-head > strong {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.r4-studio-detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.r4-studio-key {
+  display: inline-block;
+  width: 70px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.r4-studio-detail-step {
+  border-top: 1px solid color-mix(in srgb, var(--vscode-foreground) 10%, transparent);
+  padding-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.r4-studio-gate {
+  display: flex;
+  gap: 6px;
+}
+
+.r4-studio-status {
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  background: color-mix(in srgb, var(--vscode-foreground) 14%, transparent);
+}
+
+.r4-studio-status-running,
+.r4-studio-status-active {
+  background: color-mix(in srgb, #3794ff 30%, transparent);
+}
+
+.r4-studio-status-completed,
+.r4-studio-status-done,
+.r4-studio-status-succeeded {
+  background: color-mix(in srgb, #4ec9b0 30%, transparent);
+}
+
+.r4-studio-status-failed,
+.r4-studio-status-error {
+  background: color-mix(in srgb, #f85149 30%, transparent);
+}
+
+.r4-studio-status-waiting,
+.r4-studio-status-waiting-gate {
+  background: color-mix(in srgb, #e5c07b 30%, transparent);
+}
+
+/* Knowledge-panel badge tones (previously unstyled → invisible text) */
+.r4-studio-status-ready {
+  background: color-mix(in srgb, #4ec9b0 30%, transparent);
+}
+
+.r4-studio-status-pending {
+  background: color-mix(in srgb, #e5c07b 30%, transparent);
+}
+
+.r4-studio-status-unknown {
+  background: color-mix(in srgb, #9d9da8 25%, transparent);
+}
+
+/* Graph include/exclude control group (was unstyled → cramped wrap) */
+.r4-kg-select-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+/* ── Graph canvas ────────────────────────────────────────────────────────── */
+
+.r4-graph {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.r4-graph-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  border-bottom: 1px solid color-mix(in srgb, var(--vscode-foreground) 8%, transparent);
+}
+
+.r4-graph-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.r4-graph-legend .r4-dot {
+  margin-left: 8px;
+}
+
+.r4-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--vscode-descriptionForeground);
+}
+
+.r4-dot-running { background: #3794ff; }
+.r4-dot-completed { background: #4ec9b0; }
+.r4-dot-waiting { background: #e5c07b; }
+.r4-dot-failed { background: #f85149; }
+
+.r4-graph-zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.r4-graph-scroll {
+  flex: 1;
+  overflow: auto;
+}
+
+.r4-graph-svg {
+  display: block;
+}
+
+.r4-graph-edge {
+  fill: none;
+  stroke: color-mix(in srgb, var(--vscode-foreground) 30%, transparent);
+  stroke-width: 1.6;
+}
+
+.r4-graph-edge-active {
+  stroke: #3794ff;
+  stroke-dasharray: 6 4;
+  animation: r4-edge-flow 1s linear infinite;
+}
+
+.r4-graph-edge-done {
+  stroke: color-mix(in srgb, #4ec9b0 70%, transparent);
+}
+
+@keyframes r4-edge-flow {
+  to { stroke-dashoffset: -10; }
+}
+
+.r4-graph-arrowhead {
+  fill: color-mix(in srgb, var(--vscode-foreground) 45%, transparent);
+}
+
+.r4-graph-node {
+  cursor: pointer;
+  outline: none;
+}
+
+.r4-graph-node > rect {
+  fill: color-mix(in srgb, var(--vscode-sideBar-background) 80%, transparent);
+  stroke: color-mix(in srgb, var(--vscode-foreground) 30%, transparent);
+  stroke-width: 1.4;
+}
+
+.r4-graph-node:hover > rect {
+  stroke: color-mix(in srgb, var(--vscode-foreground) 55%, transparent);
+}
+
+.r4-graph-node:focus > rect,
+.r4-graph-node-selected > rect {
+  stroke: var(--vscode-focusBorder, #007fd4);
+  stroke-width: 2;
+}
+
+.r4-graph-node-gate .r4-graph-gate-ring {
+  fill: none;
+  stroke: #e5c07b;
+  stroke-width: 1.6;
+  stroke-dasharray: 5 4;
+  animation: r4-edge-flow 1.4s linear infinite;
+}
+
+.r4-graph-node-running > rect,
+.r4-graph-node-active > rect {
+  stroke: #3794ff;
+}
+
+.r4-graph-node-completed > rect,
+.r4-graph-node-done > rect,
+.r4-graph-node-succeeded > rect {
+  stroke: #4ec9b0;
+}
+
+.r4-graph-node-failed > rect,
+.r4-graph-node-error > rect {
+  stroke: #f85149;
+}
+
+.r4-graph-node-waiting > rect,
+.r4-graph-node-waiting-gate > rect {
+  stroke: #e5c07b;
+}
+
+.r4-graph-label {
+  fill: var(--vscode-foreground);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.r4-graph-sublabel {
+  fill: var(--vscode-descriptionForeground);
+  font-size: 10px;
+  pointer-events: none;
+}
+
+@media (max-width: 420px) {
+  .r4-studio {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .r4-studio-rail {
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+  }
+  .r4-studio-card {
+    min-width: 200px;
+  }
+}
+
+/* ── Studio tabs (Executions | Knowledge & Loops) + KnowledgePanel ─────── */
+
+.r4-studio-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.r4-studio-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
+  user-select: none;
+}
+
+.r4-studio-knowledge-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.r4-knowledge-svg {
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--vscode-foreground) 12%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--vscode-sideBar-background, transparent) 40%, transparent);
+}
+
+.r4-knowledge-edge {
+  stroke: color-mix(in srgb, var(--vscode-foreground) 35%, transparent);
+  stroke-width: 1;
+}
+
+.r4-knowledge-edge-active {
+  stroke: var(--vscode-charts-blue, #56ccf2);
+  stroke-width: 2;
+}
+
+.r4-knowledge-node {
+  cursor: pointer;
+}
+
+.r4-knowledge-node:focus {
+  outline: none;
+}
+
+/* Obsidian-style force graph canvas */
+.r4-force-canvas {
+  display: block;
+  width: 100%;
+  max-width: 520px;
+  height: 340px;
+  min-height: 340px;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--vscode-foreground) 18%, transparent);
+  border-radius: 6px;
+  cursor: grab;
+  /* HARD containment. Sigma's layers are `<canvas class="sigma-<layer>">
+     absolutely positioned (from its own dist: createLayer always sets
+     position: absolute). Without this the canvases escape to the nearest
+     stacking ancestor — the card scrolls while the graph stays fixed.
+     MUST hold in both HiDPI and non-HiDPI paths; do not remove. */
+  position: relative;
+  overflow: hidden;
+  background: #0b0f14;
+}
+.r4-force-canvas .sigma-canvas,
+.r4-force-canvas .sigma-mouse,
+.r4-force-canvas .sigma-layers,
+.r4-force-canvas .sigma-labels,
+.r4-force-canvas .sigma-scene,
+.r4-force-canvas canvas,
+.r4-force-canvas .sigma-container {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.r4-force-hint {
+  margin-top: 4px;
+  font-size: 10px;
+  opacity: 0.55;
+}
+
+/* On-map indicator for graphs currently rendered on the graph window. */
+.r4-kg-onmap-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+  background: var(--vscode-charts-green, #6fcf97);
+  box-shadow: 0 0 5px currentColor;
+}
+
+/* Spawn ring: expanding fade on nodes that arrive while the panel watches. */
+.r4-knowledge-ring-new {
+  animation: r4-node-spawn 1.5s ease-out 3;
+  pointer-events: none;
+}
+
+@keyframes r4-node-spawn {
+  0% {
+    r: 14;
+    stroke-opacity: 0.95;
+    stroke-width: 3;
+  }
+  100% {
+    r: 30;
+    stroke-opacity: 0;
+    stroke-width: 1;
+  }
+}
+
+/* Ticker: newest spawned nodes under the constellation. */
+.r4-knowledge-ticker {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--vscode-foreground);
+  opacity: 0.85;
+  overflow: hidden;
+}
+
+.r4-knowledge-ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.r4-knowledge-icon {
+  font-size: 12px;
+  font-weight: 600;
+  fill: #1a1a1a;
+  pointer-events: none;
+}
+
+.r4-knowledge-label {
+  font-size: 11px;
+  fill: var(--vscode-foreground);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.r4-studio-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.r4-studio-step {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+}
+
+/* ── Research loop start card ─────────────────────────────────────────── */
+
+.r4-studio-start-card {
+  gap: 8px;
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--vscode-focusBorder, #56ccf2) 40%, transparent);
+}
+
+.r4-studio-start-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.r4-input-narrow {
+  width: 110px;
+  flex: none;
+}
+
+/* ── Loops chip + intake UX animations ────────────────────────────────── */
+
+.r4-loop-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-variant: small-caps;
+  letter-spacing: 0.08em;
+}
+
+/* ── Chat top bar: project picker + knowledge chip ─────────────────────── */
+
+.r4-project-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.r4-project-select {
+  width: auto;
+  max-width: 170px;
+  font-size: 11px;
+  padding: 2px 4px;
+  text-overflow: ellipsis;
+}
+
+.r4-project-create {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.r4-project-input {
+  width: 110px;
+  flex: none;
+  font-size: 11px;
+  padding: 2px 6px;
+}
+
+.r4-kg-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-variant: small-caps;
+  letter-spacing: 0.08em;
+  color: var(--vscode-charts-purple, #b180d7);
+  border-color: color-mix(in srgb, var(--vscode-charts-purple, #b180d7) 45%, transparent);
+}
+
+.r4-kg-chip-grow {
+  animation: r4-kg-grow 1.6s ease-out;
+}
+
+@keyframes r4-kg-grow {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--vscode-charts-purple, #b180d7) 55%, transparent); }
+  60%  { box-shadow: 0 0 0 10px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .r4-kg-chip-grow { animation: none; }
+}
+
+.r4-kg-spinner {
+  width: 9px;
+  height: 9px;
+  border-width: 1.5px;
+}
+
+/* Session list project filter */
+.r4-sessions-filter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.r4-session-filter-toggle {
+  font-size: 11px;
+  padding: 2px 6px;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.r4-sessions-hidden {
+  border: none;
+  background: none;
+  color: var(--vscode-descriptionForeground, #888);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.r4-sessions-hidden:hover {
+  text-decoration: underline;
+}
+
+.r4-kg-chip-pulse {
+  animation: r4-kg-glow 1.2s ease-in-out infinite;
+}
+
+/* Static keyframes — re-armed by class toggle when the graph grows. */
+@keyframes r4-kg-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--vscode-charts-purple, #b180d7) 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--vscode-charts-purple, #b180d7) 18%, transparent);
+  }
+}
+
+.r4-kg-growth {
+  font-size: 10px;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--vscode-charts-green, #3fb950) 25%, transparent);
+  color: var(--vscode-charts-green, #3fb950);
+  font-variant: normal;
+  letter-spacing: normal;
+  animation: r4-kg-pop 0.25s ease-out;
+}
+
+@keyframes r4-kg-pop {
+  from { transform: scale(0.6); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+.r4-loop-pulse {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--vscode-charts-blue, #56ccf2);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--vscode-charts-blue, #56ccf2) 50%, transparent);
+  animation: r4-loop-pulse 1.6s ease-out infinite;
+}
+
+@keyframes r4-loop-pulse {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--vscode-charts-blue, #56ccf2) 55%, transparent); }
+  60%  { box-shadow: 0 0 0 8px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+/* Loop card: subtle "alive" sweep while a loop is running. */
+.r4-studio-status-running {
+  position: relative;
+  animation: r4-run-glow 1.4s ease-in-out infinite;
+}
+
+@keyframes r4-run-glow {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
+}
+
+/* Chips row on the ingest card. */
+.r4-studio-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.r4-chip {
+  border: 1px solid color-mix(in srgb, var(--vscode-foreground) 25%, transparent);
+  border-radius: 10px;
+  padding: 1px 10px;
+  font-size: 11px;
+  line-height: 1.4;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--vscode-sideBar-background, transparent) 40%, transparent);
+  color: inherit;
+}
+
+.r4-chip-variant {
+  cursor: default;
+  background: color-mix(in srgb, var(--vscode-focusBorder, #56ccf2) 10%, transparent);
+}
+
+/* Ingest progress — brief spin-up on submit. */
+.r4-spin {
+  animation: r4-spin 0.9s linear infinite;
+}
+
+@keyframes r4-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .r4-loop-pulse, .r4-studio-status-running, .r4-knowledge-ring-new { animation: none !important; }
+}
+
+/* ── Studio: offline banner when the gateway is unreachable ───────────── */
+
+.r4-studio-offline-banner {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border: 1px dashed color-mix(in srgb, var(--vscode-charts-yellow, #f2c94c) 50%, transparent);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--vscode-charts-yellow, #f2c94c) 8%, transparent);
+  color: var(--vscode-foreground);
+}
+
+.r4-studio-offline-banner strong {
+  font-size: 12px;
+}
+
+/* ---- Wave T3-ui S4: grouped tool calls, thinking blocks, inline refs ---- */
+
+.r4-toolgroup {
+  margin: 4px 0;
+  border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.25));
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.r4-toolgroup-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  background: color-mix(in srgb, var(--r4-accent, #7c6cff) 6%, transparent);
+  color: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.r4-toolgroup-header:hover {
+  background: color-mix(in srgb, var(--r4-accent, #7c6cff) 10%, transparent);
+}
+
+.r4-toolgroup-chevron {
+  opacity: 0.8;
+}
+
+.r4-toolgroup-meta {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.r4-toolgroup-body {
+  padding: 4px 8px 8px;
+  border-top: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.2));
+}
+
+/* Thinking block (reasoning trace); muted + collapsible, hidden when empty */
+.r4-thinkingblock {
+  margin: 4px 0;
+  border-left: 3px solid color-mix(in srgb, var(--r4-accent, #7c6cff) 40%, transparent);
+  background: color-mix(in srgb, var(--vscode-widget-background, #1e1e24) 60%, transparent);
+  border-radius: 4px;
+  opacity: 0.85;
+}
+
+.r4-thinkingblock[data-running='true'] {
+  border-left-color: var(--vscode-progressBar-background, #7c6cff);
+}
+
+.r4-thinkingblock-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: var(--vscode-descriptionForeground, #999);
+  font-size: 11px;
+  font-style: italic;
+  cursor: pointer;
+  text-align: left;
+}
+
+.r4-thinkingblock-toggle:hover {
+  color: inherit;
+}
+
+.r4-thinkingblock-content {
+  margin: 0;
+  padding: 8px 12px 10px;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--vscode-descriptionForeground, #b0b0b0);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+/* Inline path reference chip inside markdown inline-code */
+.r4-inlineref {
+  display: inline;
+  padding: 0px 5px;
+  border: 1px solid color-mix(in srgb, var(--r4-accent, #7c6cff) 40%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--r4-accent, #7c6cff) 8%, transparent);
+  color: var(--vscode-textLink-foreground, #3794ff);
+  font-family: var(--vscode-editor-font-family, "JetBrains Mono", monospace);
+  font-size: 0.92em;
+  cursor: pointer;
+}
+
+.r4-inlineref:hover {
+  filter: brightness(1.2);
+  text-decoration: underline;
+}
+
+/* ── Planned workflow lane (describe preview before run) ─────────────────── */
+
+.r4-dot-planned {
+  background: #b088f9;
+}
+
+.r4-graph-node-planned > rect {
+  stroke: #b088f9;
+  stroke-dasharray: 6 4;
+}
+
+.r4-studio-status-planned {
+  background: color-mix(in srgb, #b088f9 30%, transparent);
+}
+
+.r4-studio-planned .r4-studio-detail-head strong {
+  color: #b088f9;
+}
+
+/* ── System tab (skills / MCP servers / commands) ────────────────────────── */
+
+.r4-system-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.r4-system-columns {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.r4-system-column {
+  flex: 1;
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.r4-system-pill {
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  background: color-mix(in srgb, var(--vscode-foreground) 14%, transparent);
+}
+
+.r4-system-pill-active {
+  background: color-mix(in srgb, #4ec9b0 30%, transparent);
+}
+
+.r4-system-server-item {
+  flex-wrap: wrap;
+}
+
+.r4-system-tools {
+  flex-basis: 100%;
+  padding: 6px 2px 2px;
+  border-top: 1px solid color-mix(in srgb, var(--vscode-foreground) 12%, transparent);
+}
+
+.r4-system-tool-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+}
+
+.r4-system-command-group {
+  padding-top: 6px;
+}
+
+.r4-btn-active {
+  border-color: var(--vscode-focusBorder, #007fd4);
+}
+
+@media (max-width: 640px) {
+  .r4-system-columns {
+    flex-direction: column;
+  }
+}
+
+/* ── Help overlay ────────────────────────────────────────────────────────── */
+
+.r4-help-backdrop {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, #000 45%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.r4-help-modal {
+  width: min(520px, 92vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--vscode-sideBar-background, #1e1e1e);
+  border: 1px solid color-mix(in srgb, var(--vscode-foreground) 20%, transparent);
+  border-radius: 10px;
+  box-shadow: 0 8px 30px color-mix(in srgb, #000 50%, transparent);
+}
+
+.r4-help-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--vscode-foreground) 14%, transparent);
+}
+
+.r4-help-body {
+  overflow-y: auto;
+  padding: 10px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Knowledge satellites (selected knowledge graphs) ────────────────────── */
+
+.r4-knowledge-satellite-label {
+  font-size: 10px;
+  fill: var(--vscode-foreground);
+  opacity: 0.8;
+  pointer-events: none;
+  text-anchor: middle;
+}
+
+.r4-knowledge-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 6px;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.r4-knowledge-legend .r4-dot {
+  margin-right: 4px;
+}
+
+.r4-loop-kind-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-top: 4px;
+}
+
+.r4-crash-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+/* ── M5: management cards (workflow / loop / session / knowledge) ── */
+.r4-mgmt-chips {
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 2px;
+}
+
+.r4-mgmt-card {
+  border: 1px solid color-mix(in srgb, var(--vscode-foreground) 18%, transparent);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 6px 0;
+  font-size: 12px;
+  line-height: 1.5;
+  max-width: 760px;
+  background: color-mix(in srgb, var(--vscode-sideBar-background, transparent) 35%, transparent);
+}
+
+.r4-mgmt-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.r4-mgmt-title { letter-spacing: 0.02em; }
+
+.r4-mgmt-row {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.r4-mgmt-k {
+  color: var(--vscode-descriptionForeground, #888);
+  min-width: 7ch;
+}
+
+.r4-mgmt-v { overflow: hidden; text-overflow: ellipsis; }
+
+.r4-mgmt-dim {
+  color: var(--vscode-descriptionForeground, #888);
+  font-size: 11px;
+}
+
+.r4-mgmt-foot {
+  margin-top: 4px;
+  color: var(--vscode-descriptionForeground, #888);
+  font-size: 11px;
+}
+
+.r4-mgmt-error {
+  border-color: color-mix(in srgb, var(--vscode-errorForeground, #f66) 45%, transparent);
+}
+
+.r4-mgmt-error-text {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--vscode-errorForeground, #f66);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── ADR-103 VP-2: inline cards of the bridge backend (approval, question, plan) ── */
+.r4-ask-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 10px 0;
+}
+.r4-ask-card {
+  border-left: 3px solid var(--vscode-editorWarning-foreground, var(--vscode-focusBorder));
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  background: color-mix(in srgb, var(--vscode-editorWidget-background, transparent) 80%, transparent);
+  outline: none;
+}
+.r4-ask-card:focus-visible {
+  box-shadow: 0 0 0 1px var(--vscode-focusBorder);
+}
+.r4-ask-title {
+  font-weight: 600;
+}
+.r4-ask-agent,
+.r4-ask-path {
+  color: var(--vscode-descriptionForeground);
+}
+.r4-ask-fence {
+  color: var(--vscode-editorWarning-foreground);
+}
+.r4-ask-diff {
+  max-height: 240px;
+  overflow: auto;
+  margin: 6px 0;
+  padding: 4px 6px;
+  font-family: var(--vscode-editor-font-family);
+  font-size: var(--vscode-editor-font-size, 12px);
+  background: var(--vscode-textCodeBlock-background);
+}
+.r4-diff-add {
+  color: var(--vscode-gitDecoration-addedResourceForeground, var(--vscode-charts-green));
+}
+.r4-diff-del {
+  color: var(--vscode-gitDecoration-deletedResourceForeground, var(--vscode-charts-red));
+}
+.r4-ask-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.r4-ask-input {
+  flex: 1 1 200px;
+  min-width: 0;
+  color: var(--vscode-input-foreground);
+  background: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border, transparent);
+  padding: 3px 6px;
+}
+
+/* ── ADR-103 VP-2b: !cmd cells, message verbs, citations, session dock ── */
+.r4-shell {
+  margin: 6px 0;
+  padding: 6px 8px;
+  max-height: 320px;
+  overflow: auto;
+  font-family: var(--vscode-editor-font-family);
+  font-size: var(--vscode-editor-font-size, 12px);
+  background: var(--vscode-terminal-background, var(--vscode-textCodeBlock-background));
+  color: var(--vscode-terminal-foreground, var(--vscode-foreground));
+  border-left: 3px solid var(--vscode-terminal-ansiGreen, var(--vscode-focusBorder));
+  white-space: pre-wrap;
+}
+.r4-shell-error {
+  border-left-color: var(--vscode-terminal-ansiRed, var(--vscode-errorForeground));
+}
+.r4-output {
+  margin: 6px 0;
+  padding: 6px 8px;
+  max-height: 360px;
+  overflow: auto;
+  font-family: var(--vscode-editor-font-family);
+  font-size: var(--vscode-editor-font-size, 12px);
+  background: var(--vscode-textCodeBlock-background);
+  border-left: 3px solid var(--vscode-descriptionForeground);
+  white-space: pre-wrap;
+}
+.r4-session-filter {
+  font-size: 11px;
+  padding: 0 2px;
+  max-width: 48%;
+}
+.r4-session-filter-archives {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
+.r4-status-chip {
+  padding: 0 6px;
+  margin-right: 6px;
+  border-radius: 3px;
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  font-size: 11px;
+}
+/* VP-2c: the prompt being edited (the next send replaces from it). */
+.r4-msg-act-on {
+  color: var(--vscode-textLink-foreground);
+  opacity: 1;
+}
+/* VP-3b: the remote: chip's state (the console's chip colours). */
+.r4-status-chip[data-state='warn'] {
+  background: var(--vscode-editorWarning-foreground, #cca700);
+  color: var(--vscode-editor-background);
+}
+.r4-status-chip[data-state='error'] {
+  background: var(--vscode-errorForeground, #f48771);
+  color: var(--vscode-editor-background);
+}
+.r4-status-chip[data-state='dim'] {
+  opacity: 0.6;
+}
+.r4-output-error {
+  border-left-color: var(--vscode-errorForeground);
+  color: var(--vscode-errorForeground);
+}
+.r4-msg-act {
+  background: none;
+  border: none;
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+  padding: 0 3px;
+  font-size: 12px;
+}
+.r4-msg-act:hover {
+  color: var(--vscode-foreground);
+}
+.r4-cite-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 11px;
+}
+.r4-cite-label {
+  color: var(--vscode-descriptionForeground);
+}
+.r4-cite-chip {
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  border: none;
+  border-radius: 3px;
+  padding: 0 6px;
+  cursor: pointer;
+}
+.r4-dock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 10px 0;
+  font-size: 12px;
+}
+.r4-dock-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+.r4-dock-label {
+  color: var(--vscode-descriptionForeground);
+  cursor: default;
+}
+.r4-dock-chip {
+  background: var(--vscode-editorWidget-background, transparent);
+  border: 1px solid var(--vscode-widget-border, transparent);
+  border-radius: 3px;
+  padding: 0 6px;
+}
+.r4-dock-panel summary {
+  cursor: pointer;
+}
+.r4-dock-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  max-height: 160px;
+  overflow: auto;
+}
+.r4-dock-list li {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 1px 0;
+}
+.r4-plan-completed,
+.r4-plan-done,
+.r4-file-reverted {
+  color: var(--vscode-descriptionForeground);
+}
+.r4-plan-in_progress .r4-plan-glyph,
+.r4-plan-running .r4-plan-glyph {
+  color: var(--vscode-progressBar-background);
+}
+.r4-file-open {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--vscode-textLink-foreground);
+  cursor: pointer;
+  font-family: var(--vscode-editor-font-family);
+}
+.r4-file-stat {
+  color: var(--vscode-descriptionForeground);
+  flex: 1;
+}
+.r4-file-revert-armed {
+  background: var(--vscode-inputValidation-warningBackground, var(--vscode-button-secondaryBackground));
+}

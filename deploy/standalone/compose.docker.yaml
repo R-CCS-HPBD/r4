@@ -1,0 +1,23 @@
+# Stand-alone — Docker overlay (2026-10-15). standalone.sh adds it whenever
+# the engine is Docker (Engine on Linux, Docker Desktop on macOS or WSL2);
+# STANDALONE_HOST_GATEWAY=on|off, exported or in env/local.env, overrides that rule
+# (lib/state.sh host_gateway_overlay_wanted).
+#
+# podman writes host.containers.internal into every container's /etc/hosts;
+# Docker does not. Two services dial the host by that name:
+#   umrs  the chat model's endpoint-registry row when the model runs on the
+#         host's own ollama (STANDALONE_MODEL_HOST=native), and the MCP
+#         runtimes `r4 mcp hatch connect` registers
+#         (R4_HATCH_ADVERTISE_HOST=host.containers.internal);
+#   rag   answers from the same registry rows (api/rag_service.py builds
+#         http://<row host>:<port>/v1).
+# host-gateway is the host's address on Docker's bridge. A native ollama on
+# Linux must listen beyond 127.0.0.1 to be reached there (lib/model.sh
+# loopback_ollama_fix); by default the stack runs its own ollama instead.
+services:
+  umrs:
+    extra_hosts:
+      - "host.containers.internal:host-gateway"
+  rag:
+    extra_hosts:
+      - "host.containers.internal:host-gateway"

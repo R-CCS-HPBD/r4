@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/get_session_changes.schema.json",
+  "title": "get_session_changes",
+  "description": "get_session_changes: cumulative per-path session diff.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/GetSessionChangesResult",
+  "$defs": {
+    "GetSessionChangesResult": {
+      "type": "object",
+      "description": "get_session_changes: cumulative per-path session diff.",
+      "properties": {
+        "changes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SessionChangeRow"
+          }
+        }
+      },
+      "required": [
+        "changes"
+      ],
+      "additionalProperties": true
+    },
+    "SessionChangeRow": {
+      "type": "object",
+      "description": "One recorded before\u2192after file change (``r4.companion.tools``);",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "before": {
+          "type": "string"
+        },
+        "after": {
+          "type": "string"
+        },
+        "before_existed": {
+          "type": "boolean"
+        },
+        "before_truncated": {
+          "type": "boolean"
+        },
+        "before_lossy": {
+          "type": "boolean"
+        },
+        "inserted": {
+          "type": "integer"
+        },
+        "deleted": {
+          "type": "integer"
+        },
+        "edits": {
+          "type": "integer"
+        },
+        "diff_text": {
+          "type": "string"
+        },
+        "reverted": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "path",
+        "before",
+        "after",
+        "before_existed",
+        "before_truncated",
+        "before_lossy",
+        "inserted",
+        "deleted",
+        "edits",
+        "diff_text"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,71 @@
+# Gateway NetworkPolicy
+# Restricts network access to/from Gateway pods
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rivault-gateway
+  namespace: rivault-system
+  labels:
+    app.kubernetes.io/name: rivault-gateway
+    app.kubernetes.io/component: gateway
+spec:
+  podSelector:
+    matchLabels:
+      app: rivault-gateway
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow traffic from ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow traffic from other pods in same namespace
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow Prometheus scraping
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Allow UMRS access
+    - to:
+        - podSelector:
+            matchLabels:
+              app: umrs
+      ports:
+        - protocol: TCP
+          port: 8000
+    # Allow LiteLLM access (within same namespace)
+    - to:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 11434
+    # Allow external LiteLLM on compute nodes (for Slurm deployments)
+    # Adjust CIDR based on your network
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/8
+      ports:
+        - protocol: TCP
+          port: 11434

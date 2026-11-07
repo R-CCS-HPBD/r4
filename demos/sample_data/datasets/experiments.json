@@ -1,0 +1,127 @@
+[
+  {
+    "experiment_id": "EXP-2024-001",
+    "name": "BERT Fine-tuning on Scientific Papers",
+    "type": "nlp_training",
+    "status": "completed",
+    "start_time": "2024-01-15T09:00:00Z",
+    "end_time": "2024-01-15T18:30:00Z",
+    "gpu_hours": 9.5,
+    "parameters": {
+      "model": "bert-base-uncased",
+      "learning_rate": 2e-5,
+      "batch_size": 32,
+      "epochs": 10,
+      "max_seq_length": 512
+    },
+    "metrics": {
+      "train_loss": 0.234,
+      "val_loss": 0.312,
+      "f1_score": 0.876,
+      "accuracy": 0.891
+    },
+    "artifacts": [
+      "models/bert-scientific-v1",
+      "logs/training_2024_001.log"
+    ]
+  },
+  {
+    "experiment_id": "EXP-2024-002",
+    "name": "Molecular Dynamics Simulation - Water Box",
+    "type": "md_simulation",
+    "status": "completed",
+    "start_time": "2024-01-20T00:00:00Z",
+    "end_time": "2024-01-22T12:00:00Z",
+    "gpu_hours": 60,
+    "parameters": {
+      "system": "water_box_10nm",
+      "force_field": "TIP4P-EW",
+      "timestep_fs": 2,
+      "total_time_ns": 100,
+      "temperature_K": 300,
+      "pressure_bar": 1
+    },
+    "metrics": {
+      "avg_temperature_K": 299.8,
+      "avg_pressure_bar": 1.01,
+      "total_energy_kJ_mol": -41250.3,
+      "diffusion_coefficient": 2.3e-9
+    },
+    "artifacts": [
+      "trajectories/water_100ns.xtc",
+      "analysis/msd_analysis.csv"
+    ]
+  },
+  {
+    "experiment_id": "EXP-2024-003",
+    "name": "Climate Model Ensemble - RCP8.5",
+    "type": "climate_simulation",
+    "status": "running",
+    "start_time": "2024-02-01T00:00:00Z",
+    "end_time": null,
+    "gpu_hours": 240,
+    "parameters": {
+      "scenario": "RCP8.5",
+      "period": "2050-2100",
+      "resolution_km": 25,
+      "ensemble_members": 10,
+      "region": "East Asia"
+    },
+    "metrics": {
+      "completed_years": 35,
+      "current_year": 2085,
+      "avg_runtime_per_year_hours": 0.5
+    },
+    "artifacts": []
+  },
+  {
+    "experiment_id": "EXP-2024-004",
+    "name": "Protein-Ligand Docking Screen",
+    "type": "drug_discovery",
+    "status": "completed",
+    "start_time": "2024-02-05T10:00:00Z",
+    "end_time": "2024-02-05T16:00:00Z",
+    "gpu_hours": 6,
+    "parameters": {
+      "protein_pdb": "7K3G",
+      "ligand_library": "ZINC250K",
+      "n_compounds": 250000,
+      "docking_software": "AutoDock-GPU",
+      "exhaustiveness": 32
+    },
+    "metrics": {
+      "compounds_screened": 250000,
+      "top_hits": 127,
+      "best_binding_affinity_kcal_mol": -12.3,
+      "avg_docking_time_sec": 0.086
+    },
+    "artifacts": [
+      "results/docking_scores.csv",
+      "results/top_hits.sdf"
+    ]
+  },
+  {
+    "experiment_id": "EXP-2024-005",
+    "name": "Diffusion Model Training - Molecular Generation",
+    "type": "generative_model",
+    "status": "failed",
+    "start_time": "2024-02-10T08:00:00Z",
+    "end_time": "2024-02-10T14:30:00Z",
+    "gpu_hours": 6.5,
+    "parameters": {
+      "model": "E3-Diffusion",
+      "dataset": "QM9",
+      "batch_size": 64,
+      "learning_rate": 1e-4,
+      "noise_schedule": "cosine"
+    },
+    "metrics": {
+      "steps_completed": 15000,
+      "last_train_loss": 0.523
+    },
+    "error": "CUDA out of memory at step 15001. Reduce batch size.",
+    "artifacts": [
+      "checkpoints/step_15000.pt"
+    ]
+  }
+]

@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/worktree.exit.schema.json",
+  "title": "worktree.exit",
+  "description": "worktree.exit: back in the session's original workspace; the worktree",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/WorktreeExitResult",
+  "$defs": {
+    "WorktreeExitResult": {
+      "type": "object",
+      "description": "worktree.exit: back in the session's original workspace; the worktree",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        },
+        "workspace_root": {
+          "type": "string"
+        },
+        "worktree_id": {
+          "type": "string"
+        },
+        "removed": {
+          "type": "boolean"
+        },
+        "changed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "ok",
+        "message",
+        "workspace_root",
+        "worktree_id",
+        "removed",
+        "changed"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

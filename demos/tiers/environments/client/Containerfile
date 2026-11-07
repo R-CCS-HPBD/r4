@@ -1,0 +1,68 @@
+# =============================================================================
+# R4 Platform - Client Environment
+# =============================================================================
+# Provides: r4 CLI, Python SDK, demo scripts for all deployment tiers.
+# =============================================================================
+
+FROM python:3.11-slim-bookworm
+
+LABEL maintainer="R4 Platform Team"
+LABEL description="Client environment for R4 Platform demos"
+
+# System dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    jq \
+    git \
+    ssh-client \
+    vim-tiny \
+    less \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd -m -s /bin/bash r4 && \
+    mkdir -p /workspace && \
+    chown r4:r4 /workspace
+
+WORKDIR /workspace
+
+# Install Python dependencies
+RUN pip install --no-cache-dir \
+    httpx \
+    click \
+    rich \
+    pydantic \
+    python-dotenv \
+    tabulate
+
+# Copy and install r4 SDK/CLI
+COPY --chown=r4:r4 r4 /workspace/r4-platform/r4
+RUN cd /workspace/r4-platform/r4 && \
+    pip install --no-cache-dir -e . || true
+
+# Copy demo scripts
+COPY --chown=r4:r4 demos /workspace/demos
+
+# Setup environment
+ENV GATEWAY_URL=http://localhost:8080
+ENV PYTHONPATH=/workspace/r4-platform/r4/src
+
+# Switch to non-root user
+USER r4
+
+# Shell configuration
+RUN echo 'PS1="(r4) \u@\h:\w\$ "' >> ~/.bashrc && \
+    echo 'alias ll="ls -la"' >> ~/.bashrc && \
+    echo 'alias demo="cd /workspace/demos/workflows && ./run-all.sh"' >> ~/.bashrc && \
+    echo '' >> ~/.bashrc && \
+    echo 'echo "╔════════════════════════════════════════════════════════════╗"' >> ~/.bashrc && \
+    echo 'echo "║  R4 Platform Client Environment                            ║"' >> ~/.bashrc && \
+    echo 'echo "╠════════════════════════════════════════════════════════════╣"' >> ~/.bashrc && \
+    echo 'echo "║  Gateway: $GATEWAY_URL                          ║"' >> ~/.bashrc && \
+    echo 'echo "║                                                            ║"' >> ~/.bashrc && \
+    echo 'echo "║  Quick Start:                                              ║"' >> ~/.bashrc && \
+    echo 'echo "║    demo           - Run all workflow demos                 ║"' >> ~/.bashrc && \
+    echo 'echo "║    r4 --help   - CLI help                               ║"' >> ~/.bashrc && \
+    echo 'echo "╚════════════════════════════════════════════════════════════╝"' >> ~/.bashrc
+
+CMD ["/bin/bash"]

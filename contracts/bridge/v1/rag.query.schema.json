@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/rag.query.schema.json",
+  "title": "rag.query",
+  "description": "rag.query: the answer and its sources (UMRS ``RAGQueryResponse``).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/RagQueryResult",
+  "$defs": {
+    "RagQueryResult": {
+      "type": "object",
+      "description": "rag.query: the answer and its sources (UMRS ``RAGQueryResponse``).",
+      "properties": {
+        "answer": {
+          "type": "string"
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RagSourceRow"
+          }
+        },
+        "usage": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {
+                "type": "integer"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "metadata": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "answer",
+        "sources",
+        "usage",
+        "metadata"
+      ],
+      "additionalProperties": true
+    },
+    "RagSourceRow": {
+      "type": "object",
+      "description": "One retrieval source (UMRS ``RAGSource``).",
+      "properties": {
+        "document_id": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "score": {
+          "type": "number"
+        },
+        "metadata": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "document_id",
+        "content",
+        "score",
+        "metadata"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/add_lesson.schema.json",
+  "title": "add_lesson",
+  "description": "add_lesson: the new row id.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/AddLessonResult",
+  "$defs": {
+    "AddLessonResult": {
+      "type": "object",
+      "description": "add_lesson: the new row id.",
+      "properties": {
+        "lesson_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "lesson_id"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

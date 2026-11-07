@@ -1,0 +1,43 @@
+# Gateway Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: rivault-gateway
+  namespace: rivault-system
+  labels:
+    app.kubernetes.io/name: rivault-gateway
+    app.kubernetes.io/component: gateway
+    app.kubernetes.io/part-of: ai-platform
+  annotations:
+    # Prometheus service discovery
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  selector:
+    app: rivault-gateway
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+---
+# Headless Service for direct pod access (optional, for debugging)
+apiVersion: v1
+kind: Service
+metadata:
+  name: rivault-gateway-headless
+  namespace: rivault-system
+  labels:
+    app.kubernetes.io/name: rivault-gateway
+    app.kubernetes.io/component: gateway
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app: rivault-gateway
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

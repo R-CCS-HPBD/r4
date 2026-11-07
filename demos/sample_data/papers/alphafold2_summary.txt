@@ -1,0 +1,69 @@
+AlphaFold2: Highly Accurate Protein Structure Prediction - Summary
+
+DeepMind's AlphaFold2 achieved breakthrough performance in protein
+structure prediction at CASP14 (2020), essentially solving a 50-year
+grand challenge in biology.
+
+Background:
+
+Proteins are chains of amino acids that fold into specific 3D structures.
+The structure determines function, making prediction crucial for:
+- Understanding disease mechanisms
+- Drug discovery and design
+- Enzyme engineering
+- Synthetic biology
+
+The Folding Problem:
+- First posed by Christian Anfinsen (1972 Nobel Prize)
+- Sequence determines structure, but prediction is computationally hard
+- ~10^300 possible configurations for a typical protein
+
+AlphaFold2 Architecture:
+
+1. Evoformer
+   - Processes Multiple Sequence Alignments (MSAs)
+   - Learns evolutionary relationships
+   - Updates pair representations iteratively
+
+2. Structure Module
+   - Converts representations to 3D coordinates
+   - Uses invariant point attention (IPA)
+   - Respects physical constraints
+
+3. Recycling
+   - Iteratively refines predictions
+   - Passes outputs back as inputs
+   - Improves accuracy with each cycle
+
+Key Innovations:
+
+- End-to-end differentiable
+- Learns to use evolutionary information
+- Self-distillation training
+- Novel loss functions (FAPE, pLDDT)
+
+CASP14 Results:
+- Median GDT score: 92.4 (next best: 87.0)
+- 88 out of 97 targets with GDT > 90
+- Essentially experimental-level accuracy
+
+AlphaFold Database:
+- Released 200+ million structure predictions
+- Covers nearly all known proteins
+- Free for research use
+
+Impact on Science:
+- Accelerates drug discovery pipelines
+- Enables study of previously unknown proteins
+- Democratizes structural biology
+- Cited as potential Nobel Prize-worthy work
+
+Limitations:
+- Single static structures (not dynamics)
+- Struggles with some protein complexes
+- Requires good MSA for accuracy
+- Does not predict protein-ligand binding directly
+
+The success of AlphaFold2 demonstrates the power of deep learning
+for fundamental scientific problems and has opened new avenues
+for computational biology research.

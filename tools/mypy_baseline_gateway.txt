@@ -1,0 +1,114 @@
+# mypy baseline (tools/mypy_baseline.py; hardening plan H-0.5).
+# One known error per line as file:code:message, line numbers dropped.
+# Shrink only: regenerate with `write` after fixing errors.
+gateway/sidecar/main.py:misc:Class cannot subclass "BaseModel" (has type "Any")
+gateway/sidecar/main.py:misc:Class cannot subclass "BaseModel" (has type "Any")
+gateway/sidecar/main.py:no-any-return:Returning Any from function declared to return "dict[Any, Any] | None"
+gateway/sidecar/main.py:no-any-return:Returning Any from function declared to return "dict[Any, Any]"
+gateway/sidecar/main.py:no-any-return:Returning Any from function declared to return "str"
+gateway/sidecar/main.py:no-untyped-call:Call to untyped function "ensure_audit_table" in typed context
+gateway/sidecar/main.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/main.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/main.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/main.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/main.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/main.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/main.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/main.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/main.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/main.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/main.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/main.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/main.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/main.py:type-arg:Missing type arguments for generic type "dict"
+gateway/sidecar/main.py:type-arg:Missing type arguments for generic type "dict"
+gateway/sidecar/main.py:type-arg:Missing type arguments for generic type "dict"
+gateway/sidecar/main.py:type-arg:Missing type arguments for generic type "dict"
+gateway/sidecar/main.py:type-arg:Missing type arguments for generic type "dict"
+gateway/sidecar/main.py:type-arg:Missing type arguments for generic type "dict"
+gateway/sidecar/main.py:type-arg:Missing type arguments for generic type "dict"
+gateway/sidecar/main.py:type-arg:Missing type arguments for generic type "dict"
+gateway/sidecar/main.py:type-arg:Missing type arguments for generic type "dict"
+gateway/sidecar/main.py:type-arg:Missing type arguments for generic type "dict"
+gateway/sidecar/main.py:type-arg:Missing type arguments for generic type "dict"
+gateway/sidecar/main.py:type-arg:Missing type arguments for generic type "dict"
+gateway/sidecar/main.py:type-arg:Missing type arguments for generic type "dict"
+gateway/sidecar/main.py:type-arg:Missing type arguments for generic type "dict"
+gateway/sidecar/main.py:type-arg:Missing type arguments for generic type "tuple"
+gateway/sidecar/main.py:untyped-decorator:Untyped decorator makes function "cli_callback" untyped
+gateway/sidecar/main.py:untyped-decorator:Untyped decorator makes function "get_audit_log" untyped
+gateway/sidecar/main.py:untyped-decorator:Untyped decorator makes function "validate_download" untyped
+gateway/sidecar/main.py:untyped-decorator:Untyped decorator makes function "validate_optional" untyped
+gateway/sidecar/main.py:untyped-decorator:Untyped decorator makes function "validate_request" untyped
+gateway/sidecar/main.py:untyped-decorator:Untyped decorator makes function "web_login_page" untyped
+gateway/sidecar/main.py:untyped-decorator:Untyped decorator makes function "web_login_submit" untyped
+gateway/sidecar/otel.py:no-untyped-def:Function is missing a type annotation for one or more parameters
+gateway/sidecar/saml_sp.py:no-any-return:Returning Any from function declared to return "str | None"
+gateway/sidecar/saml_sp.py:no-any-return:Returning Any from function declared to return "str"
+gateway/sidecar/saml_sp.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/saml_sp.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/saml_sp.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/saml_sp.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/saml_sp.py:type-arg:Missing type arguments for generic type "dict"
+gateway/sidecar/saml_sp.py:type-arg:Missing type arguments for generic type "dict"
+gateway/sidecar/saml_sp.py:type-arg:Missing type arguments for generic type "dict"
+gateway/sidecar/saml_sp.py:type-arg:Missing type arguments for generic type "dict"
+gateway/sidecar/saml_sp.py:type-arg:Missing type arguments for generic type "dict"
+gateway/sidecar/saml_sp.py:type-arg:Missing type arguments for generic type "dict"
+gateway/sidecar/saml_sp.py:untyped-decorator:Untyped decorator makes function "saml_acs" untyped
+gateway/sidecar/saml_sp.py:untyped-decorator:Untyped decorator makes function "saml_login" untyped
+gateway/sidecar/test_sidecar.py:attr-defined:"Collection[Any]" has no attribute "endswith"
+gateway/sidecar/test_sidecar.py:attr-defined:"Collection[Any]" has no attribute "pop"
+gateway/sidecar/test_sidecar.py:attr-defined:"Exception" has no attribute "status_code"
+gateway/sidecar/test_sidecar.py:attr-defined:"Exception" has no attribute "status_code"
+gateway/sidecar/test_sidecar.py:attr-defined:Module "main" does not explicitly export attribute "HTTPException"
+gateway/sidecar/test_sidecar.py:attr-defined:Module "main" does not explicitly export attribute "httpx"
+gateway/sidecar/test_sidecar.py:index:Value of type "Collection[Any]" is not indexable
+gateway/sidecar/test_sidecar.py:index:Value of type "Collection[Any]" is not indexable
+gateway/sidecar/test_sidecar.py:index:Value of type "Collection[Any]" is not indexable
+gateway/sidecar/test_sidecar.py:no-any-return:Returning Any from function declared to return "str"
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a return type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a type annotation
+gateway/sidecar/test_sidecar.py:no-untyped-def:Function is missing a type annotation
+gateway/sidecar/test_sidecar.py:type-arg:Missing type arguments for generic type "dict"
+gateway/sidecar/test_sidecar.py:type-arg:Missing type arguments for generic type "dict"
+gateway/sidecar/test_sidecar.py:type-arg:Missing type arguments for generic type "dict"
+gateway/sidecar/test_sidecar.py:type-arg:Missing type arguments for generic type "dict"

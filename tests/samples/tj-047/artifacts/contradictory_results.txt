@@ -1,0 +1,2 @@
+KNOWN_DEFECT: Figure 1 shows accuracy=95% but text claims 72%.
+KNOWN_DEFECT: Methods section references Dataset B but results use Dataset C.

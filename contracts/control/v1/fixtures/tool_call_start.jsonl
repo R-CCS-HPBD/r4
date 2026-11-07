@@ -1,0 +1,1 @@
+{"case": "roundtrip-sanitized-args", "expect": "ok", "envelope": {"type": "tool_call_start", "payload": {"version": 1, "session_id": "s", "tool_call_id": "tc-1", "name": "shell_exec", "args_summary": "Run: git status", "risk_tier": "risky"}}}

@@ -1,0 +1,18 @@
+# Stand-alone — NVIDIA GPU for the container ollama, Docker with the NVIDIA
+# container toolkit (nvidia-container-toolkit) (2026-10-15).
+#
+# standalone.sh adds it on Linux when the model runs in the `models` container,
+# nvidia-smi works and Docker can serve `driver: nvidia`: `docker info` lists
+# the nvidia runtime, or nvidia-container-runtime-hook is on PATH
+# (lib/state.sh gpu_overlay_choice). A failed NVML ("Driver/library version
+# mismatch" after a driver update without a reboot) is a CPU host: no overlay.
+# STANDALONE_GPU=auto|off|nvidia|cdi, exported or in env/local.env, overrides.
+services:
+  models:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

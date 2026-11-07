@@ -1,0 +1,226 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/teamup.status.schema.json",
+  "title": "teamup.status",
+  "description": "teamup.status (``TeamupSession.get_status``): roles keyed by agent key.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/TeamupStatusResult",
+  "$defs": {
+    "TeamupAgentRow": {
+      "type": "object",
+      "description": "One role's state on teamup.status (``AgentState.to_dict`` + prompt and model).",
+      "properties": {
+        "role": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "current_task": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "last_action_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "messages_sent": {
+          "type": "integer"
+        },
+        "messages_received": {
+          "type": "integer"
+        },
+        "prompt": {
+          "type": "string"
+        },
+        "prompt_source": {
+          "type": "string",
+          "enum": [
+            "default",
+            "override"
+          ]
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "role",
+        "status",
+        "current_task",
+        "last_action_at",
+        "errors",
+        "messages_sent",
+        "messages_received",
+        "prompt",
+        "prompt_source",
+        "model"
+      ],
+      "additionalProperties": true
+    },
+    "TeamupSotaEntry": {
+      "type": "object",
+      "description": "The HPC preset's project-best measurement (``SOTAEntry.to_dict``).",
+      "properties": {
+        "value": {
+          "type": "number"
+        },
+        "metric_type": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string"
+        },
+        "agent": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "technique": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "hardware_target": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object"
+        },
+        "code_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "value",
+        "metric_type",
+        "timestamp",
+        "agent",
+        "technique",
+        "hardware_target",
+        "description",
+        "metadata",
+        "code_ref"
+      ],
+      "additionalProperties": true
+    },
+    "TeamupStatusResult": {
+      "type": "object",
+      "description": "teamup.status (``TeamupSession.get_status``): roles keyed by agent key.",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "crew_pack": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "type": "string"
+        },
+        "iteration": {
+          "type": "integer"
+        },
+        "max_iterations": {
+          "type": "integer"
+        },
+        "agents": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/TeamupAgentRow"
+          }
+        },
+        "current_sota": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TeamupSotaEntry"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "started_at": {
+          "type": "string"
+        },
+        "updated_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "name",
+        "crew_pack",
+        "status",
+        "iteration",
+        "max_iterations",
+        "agents",
+        "current_sota",
+        "started_at",
+        "updated_at"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

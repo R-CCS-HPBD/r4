@@ -1,0 +1,30 @@
+name: llm-bench
+description: Benchmark one or more served models across the JA/EN prompt suites
+# partition is empty by default: the --partition line is dropped from the
+# rendered script, so sbatch uses SBATCH_PARTITION or the cluster default.
+# Pass partition=<name> to pin one. R4_SRC must name the R4 source checkout
+# (with its .venv) on the cluster.
+defaults:
+  partition: ""
+  time: 02:00:00
+  mem: 32G
+  nodes: 1
+params:
+  model: {required: true}
+  suite: {default: unit_test}
+  max_tokens: {default: "8192"}
+  gateway: {default: ""}
+script: |
+  #!/bin/bash
+  #SBATCH --job-name=r4sweep-llm-bench-{{model}}
+  #SBATCH --partition={{partition}}
+  #SBATCH --time={{time}}
+  #SBATCH --mem={{mem}}
+  #SBATCH --nodes={{nodes}}
+
+  set -euo pipefail
+  export R4_SEED="${R4_SEED:-42}"
+  args=(--models "{{model}}" --categories "{{suite}}" --max-tokens "{{max_tokens}}")
+  if [[ -n "{{gateway}}" ]]; then args+=(--gateway-url "{{gateway}}"); fi
+  cd "${R4_SRC:?set R4_SRC to the R4 source checkout on the cluster}"
+  .venv/bin/python benchmarks/run_benchmarks.py "${args[@]}"

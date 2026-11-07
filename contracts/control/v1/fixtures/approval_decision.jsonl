@@ -1,0 +1,2 @@
+{"case": "roundtrip-always", "expect": "ok", "envelope": {"type": "approval_decision", "payload": {"version": 1, "request_id": 7, "decision": "always"}}}
+{"case": "negative-invalid-decision", "expect": "error", "envelope": {"type": "approval_decision", "payload": {"version": 1, "request_id": 2, "decision": "maybe"}}}

@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/summarize_session.schema.json",
+  "title": "summarize_session",
+  "description": "summarize_session: the rollup and the id it was computed for.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SummarizeSessionResult",
+  "$defs": {
+    "SessionSummary": {
+      "type": "object",
+      "description": "One ``summarize`` rollup over the event log.",
+      "properties": {
+        "total_events": {
+          "type": "integer"
+        },
+        "event_types": {
+          "type": "object"
+        },
+        "agents": {
+          "type": "array"
+        },
+        "tools_used": {
+          "type": "array"
+        },
+        "first_event": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "last_event": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "total_events",
+        "event_types",
+        "agents",
+        "tools_used",
+        "first_event",
+        "last_event"
+      ],
+      "additionalProperties": true
+    },
+    "SummarizeSessionResult": {
+      "type": "object",
+      "description": "summarize_session: the rollup and the id it was computed for.",
+      "properties": {
+        "summary": {
+          "$ref": "#/$defs/SessionSummary"
+        },
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "summary",
+        "session_id"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

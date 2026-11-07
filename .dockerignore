@@ -1,0 +1,38 @@
+# =============================================================================
+# Docker build-context filter (repo root)
+# =============================================================================
+# umrs/deploy/umrs-front/docker-compose.yaml uses context: ../../../ (here)
+# but Dockerfile.server only COPYs:  r4-contracts/  and  umrs/src/
+# Without this file, the entire 5+ GB repo is sent as build context.
+# =============================================================================
+
+# Exclude everything by default
+*
+
+# Allow only what Dockerfile.server copies
+!r4-contracts/
+!umrs/src/
+# ... and the image locks (ADR-100: images install only from these;
+# scripts/deps/lockctl.py writes them).
+!umrs/docker/server-image/
+!deploy/ansible/roles/front_end/files/assistant-frontend.requirements.lock.txt
+# ... and what mcp-servers/Dockerfile copies (ADR-045 D3: the r4-mcp / egress-guard
+# image is built from the repository root so the unpublished r4-contracts sibling
+# installs from the checkout).
+!mcp-servers/
+# ... and what r4/Dockerfile copies (ADR-046 A2: the frontend-venue worker
+# image `localhost/r4-companion` is built from the repository root by the
+# converge role; r4/.dockerignore does not apply to a repo-root context).
+!r4/pyproject.toml
+!r4/README.md
+!r4/src/
+!r4/docker/requirements.lock.txt
+!packages/r4-teamengine-spi/
+!science/
+
+# Exclude caches within allowed dirs
+**/__pycache__
+**/*.pyc
+**/.mypy_cache
+**/.pytest_cache
+**/*.egg-info

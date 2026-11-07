@@ -1,0 +1,199 @@
+/* R4 Design Tokens — "Aurora" theme
+   GENERATED FILE — do not edit. Source of truth: tokens.json.
+   Regenerate with `npm run build` in packages/r4-design.
+   Consumers: vscode-extension/webview-ui, packages/r4-web, packages/r4-tui-v3 (mapped), r4 CLI (theme.cli.json). */
+
+:root {
+  /* Accent */
+  --r4-accent: #7c6cff;
+  --r4-accent-hover: #8f81ff;
+  --r4-accent-secondary: #2dd4ee;
+  --r4-accent-tertiary: #f472b6;
+
+  /* Semantic */
+  --r4-success: #34d399;
+  --r4-warning: #fbbf24;
+  --r4-error: #fb7185;
+  --r4-info: #38bdf8;
+
+  /* Surface */
+  --r4-surface-base: #111018;
+  --r4-surface-raised: #1a1826;
+  --r4-surface-overlay: #232138;
+  --r4-surface-border: #2e2b45;
+
+  /* Text */
+  --r4-text-primary: #ededf4;
+  --r4-text-secondary: #a5a3c2;
+  --r4-text-muted: #6b698c;
+  --r4-text-on-accent: #ffffff;
+
+  /* Gradients */
+  --r4-gradient-aurora: linear-gradient(135deg, #7C6CFF 0%, #2DD4EE 100%);
+  --r4-gradient-aurora-soft: linear-gradient(135deg, rgba(124,108,255,0.16) 0%, rgba(45,212,238,0.16) 100%);
+  --r4-gradient-verifying: linear-gradient(90deg, #7C6CFF, #2DD4EE, #34D399, #7C6CFF);
+
+  /* Spacing */
+  --r4-space-xs: 4px;
+  --r4-space-sm: 8px;
+  --r4-space-md: 12px;
+  --r4-space-lg: 16px;
+  --r4-space-xl: 24px;
+
+  /* Radius */
+  --r4-radius-sm: 4px;
+  --r4-radius-md: 8px;
+  --r4-radius-lg: 12px;
+  --r4-radius-pill: 999px;
+
+  /* Motion */
+  --r4-duration-instant: 80ms;
+  --r4-duration-fast: 120ms;
+  --r4-duration-base: 240ms;
+  --r4-duration-slow: 420ms;
+  --r4-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --r4-ease-emphasized: cubic-bezier(0.22, 1, 0.36, 1);
+  --r4-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Typography (CJK-aware pairing for JA/EN parity) */
+  --r4-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', Meiryo, sans-serif;
+  --r4-font-mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+
+  /* Shadow */
+  --r4-shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --r4-shadow-md: 0 4px 12px rgba(0,0,0,0.35);
+  --r4-shadow-glow: 0 0 12px rgba(124,108,255,0.45);
+  --r4-shadow-glow-cyan: 0 0 12px rgba(45,212,238,0.4);
+}
+
+/* ---- Keyframes: canonical R4 states ---- */
+
+/* Thinking / AI working: soft aurora shadow sweep */
+@keyframes r4-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Verifying / scanning: moving gradient border */
+@keyframes r4-verify-scan {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Pulse glow for live status dots */
+@keyframes r4-pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55); }
+  50% { box-shadow: 0 0 0 6px rgba(52, 211, 153, 0); }
+}
+
+/* Streaming caret blink */
+@keyframes r4-blink-caret {
+  0%, 45% { opacity: 1; }
+  50%, 95% { opacity: 0; }
+}
+
+/* Entrance: fade + rise */
+@keyframes r4-fade-slide-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Pop for approvals / badges */
+@keyframes r4-pop-in {
+  0% { opacity: 0; transform: scale(0.85); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* Spinner */
+@keyframes r4-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---- Utility classes ---- */
+
+.r4-text-gradient {
+  background: var(--r4-gradient-aurora);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.r4-anim-fade-up {
+  animation: r4-fade-slide-up var(--r4-duration-base) var(--r4-ease-emphasized) both;
+}
+
+.r4-anim-pop {
+  animation: r4-pop-in var(--r4-duration-base) var(--r4-ease-spring) both;
+}
+
+/* Thinking shimmer: apply to a bar/pill element */
+.r4-thinking-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--r4-surface-overlay) 25%,
+    var(--r4-accent) 50%,
+    var(--r4-accent-secondary) 60%,
+    var(--r4-surface-overlay) 75%
+  );
+  background-size: 200% 100%;
+  animation: r4-shimmer 1.8s linear infinite;
+  border-radius: var(--r4-radius-pill);
+}
+
+/* Verifying ring: animated gradient border via padding trick */
+.r4-verifying-ring {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--r4-surface-raised), var(--r4-surface-raised)) padding-box,
+    var(--r4-gradient-verifying) border-box;
+  background-size: 100% 100%, 300% 100%;
+  animation: r4-verify-scan 3s linear infinite;
+}
+
+/* Live status dot */
+.r4-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r4-radius-pill);
+  background: var(--r4-success);
+  animation: r4-pulse-glow 2s var(--r4-ease-standard) infinite;
+}
+.r4-status-dot--busy { background: var(--r4-warning); }
+.r4-status-dot--error { background: var(--r4-error); animation: none; }
+
+/* Streaming caret */
+.r4-caret {
+  display: inline-block;
+  width: 7px;
+  height: 1em;
+  vertical-align: text-bottom;
+  background: var(--r4-accent-secondary);
+  border-radius: 1px;
+  animation: r4-blink-caret 1s step-end infinite;
+}
+
+/* Brand chip / badge */
+.r4-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--r4-space-xs);
+  padding: 2px 10px;
+  border-radius: var(--r4-radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: var(--r4-gradient-aurora-soft);
+  border: 1px solid color-mix(in srgb, var(--r4-accent) 40%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .r4-thinking-shimmer,
+  .r4-verifying-ring,
+  .r4-status-dot,
+  .r4-caret,
+  .r4-anim-fade-up,
+  .r4-anim-pop {
+    animation: none;
+  }
+}

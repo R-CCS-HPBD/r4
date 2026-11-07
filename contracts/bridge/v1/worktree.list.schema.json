@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/worktree.list.schema.json",
+  "title": "worktree.list",
+  "description": "worktree.list: the repository's worktrees; ``current`` is the one this",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/WorktreeListResult",
+  "$defs": {
+    "WorktreeListResult": {
+      "type": "object",
+      "description": "worktree.list: the repository's worktrees; ``current`` is the one this",
+      "properties": {
+        "worktrees": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/WorktreeRow"
+          }
+        },
+        "current": {
+          "type": "string"
+        },
+        "workspace_root": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "mode_source": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "worktrees",
+        "current",
+        "workspace_root",
+        "mode",
+        "mode_source"
+      ],
+      "additionalProperties": true
+    },
+    "WorktreeRow": {
+      "type": "object",
+      "description": "One registered worktree (``r4.worktrees.Worktree``) and its state.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "base": {
+          "type": "string"
+        },
+        "parent": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "level": {
+          "type": "string"
+        },
+        "snapshot_ref": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "number"
+        },
+        "changed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "path",
+        "branch",
+        "base",
+        "parent",
+        "owner",
+        "level",
+        "snapshot_ref",
+        "created_at",
+        "changed"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

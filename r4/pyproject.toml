@@ -1,0 +1,156 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "r4"
+version = "0.2.0rc1"
+description = "R4 Platform Client SDK"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+authors = [
+    { name = "RCCS AI Platform Team" },
+]
+keywords = ["ai", "science", "llm", "rag", "hpc"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "httpx>=0.25.0",
+    "r4-contracts>=0.1.0",
+    "r4-teamengine-spi>=0.1.0",
+    "r4-science>=0.1.0",
+    # Imported at module level (r4.recipes, r4.sweep_templates); until
+    # 2026-11-06 it only arrived through umrs[client] or an extra.
+    "pyyaml>=6.0",
+]
+
+# Team Engine SPI adapters bundled with r4 (ADR-020; plan per ADR-092 D-2).
+# External engines plug in through their own packages on this same group.
+[project.entry-points."r4.team_engines"]
+native = "r4.teams.native:NativeEngine"
+plan = "r4.teams.plan.engine:PlanEngine"
+
+[project.optional-dependencies]
+# Formatted terminal output for chat and the companion Python bridge/REPL.
+companion-lite = [
+    "rich>=13.0",
+]
+# Full companion UI (JS TUI bridge + Python REPL fallback).
+companion = [
+    "r4[companion-lite]",
+    "prompt_toolkit>=3.0",
+]
+# Alias used in docs/Dockerfile for chat formatting.
+chat = [
+    "r4[companion-lite]",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "pytest-cov>=4.0",
+    "ruff>=0.1",
+    "mypy>=1.0",
+]
+test = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "pytest-cov>=4.0",
+    "ipython>=8.0",
+    "ipywidgets>=8.0",
+    "rich>=13.0",
+    "prompt_toolkit>=3.0",
+    "textual>=1.0",
+    "pyyaml>=6.0",
+]
+
+# Optional framework integrations (MIT-licensed only)
+# Note: mcp-use requires Python 3.11+
+mcp-use = [
+    "mcp-use>=1.0.0; python_version >= '3.11'",
+]
+
+langchain = [
+    "langchain>=0.1.0",
+    "langchain-core>=0.1.0",
+]
+
+llamaindex = [
+    "llama-index>=0.10.0",
+]
+
+jupyter = [
+    "ipywidgets>=8.0",
+    "ipython>=8.0",
+]
+
+# UMRS ZeroMQ transport for efficient file transfers
+umrs = [
+    "pyzmq>=25.0",
+]
+
+# NVIDIA SkillSpector — 64-pattern security scanner for agent skills
+# https://github.com/NVIDIA/SkillSpector
+# When installed, ``r4 skill scan`` and all install paths use it
+# automatically.  Without it, the built-in SkillScanner is used.
+#
+# SkillSpector is NOT on PyPI.  Install separately on Python 3.12+:
+#   uv tool install git+https://github.com/NVIDIA/skillspector.git
+# The code gracefully falls back to the built-in SkillScanner when
+# SkillSpector is not importable (see r4/skill_scanner.py).
+
+# All optional integrations
+# NOTE: skillspector is excluded from all-integrations because it requires
+# Python 3.12+ and is not on PyPI (GitHub-only). Install separately with
+# ``pip install r4[skillspector]`` on Python 3.12+.
+all-integrations = [
+    "r4[mcp-use]",
+    "r4[langchain]",
+    "r4[llamaindex]",
+    "r4[jupyter]",
+    "r4[umrs]",
+]
+
+[project.scripts]
+r4 = "r4.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/R-CCS-HPBD/r4"
+Documentation = "https://github.com/R-CCS-HPBD/r4/blob/main/r4/README.md"
+Repository = "https://github.com/R-CCS-HPBD/r4"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/r4"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+# benchmarks/ lives at the repo root; this file imports it after a load-bearing
+# splice (CI invokes pytest from working-directory=r4).
+"tests/test_team_bench.py" = ["E402"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "integration: marks tests as integration tests that require external services (deselect with -m 'not integration')",
+]

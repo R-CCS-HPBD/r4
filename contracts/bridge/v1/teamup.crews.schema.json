@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/teamup.crews.schema.json",
+  "title": "teamup.crews",
+  "description": "teamup.crews: every crew, hpc first.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/TeamupCrewsResult",
+  "$defs": {
+    "TeamPlanParamSpec": {
+      "type": "object",
+      "description": "One declared parameter of a plan template (template JSON, verbatim).",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "default": {},
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "TeamupCrewRow": {
+      "type": "object",
+      "description": "One crew (``r4.teams.crews.list_crews``): hpc, or the plan template it names.",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "template": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "description": {
+          "type": "string"
+        },
+        "phases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/TeamPlanParamSpec"
+          }
+        }
+      },
+      "required": [
+        "name",
+        "template",
+        "aliases",
+        "description",
+        "phases",
+        "params"
+      ],
+      "additionalProperties": true
+    },
+    "TeamupCrewsResult": {
+      "type": "object",
+      "description": "teamup.crews: every crew, hpc first.",
+      "properties": {
+        "crews": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TeamupCrewRow"
+          }
+        },
+        "count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "crews",
+        "count"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

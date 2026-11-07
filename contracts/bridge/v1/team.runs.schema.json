@@ -1,0 +1,209 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/team.runs.schema.json",
+  "title": "team.runs",
+  "description": "team.runs: every team run on this machine, newest first.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/TeamRunsResult",
+  "$defs": {
+    "TeamRunAgents": {
+      "type": "object",
+      "description": "A run row's agents column: counts (plan runs) or roles (team sessions).",
+      "properties": {
+        "started": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ok": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "null": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "TeamRunCost": {
+      "type": "object",
+      "description": "A run row's cost column (plan runs; team sessions record none).",
+      "properties": {
+        "tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "llm_calls": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "TeamRunsResult": {
+      "type": "object",
+      "description": "team.runs: every team run on this machine, newest first.",
+      "properties": {
+        "runs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TeamRunsRow"
+          }
+        },
+        "count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "runs",
+        "count"
+      ],
+      "additionalProperties": true
+    },
+    "TeamRunsRow": {
+      "type": "object",
+      "description": "One TeamService run (``list_runs``), live progress overlaid by this process.",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "type": "string"
+        },
+        "engine": {
+          "type": "string"
+        },
+        "project_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "attempt": {
+          "type": "string"
+        },
+        "iteration": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_iterations": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "agents": {
+          "$ref": "#/$defs/TeamRunAgents"
+        },
+        "cost": {
+          "$ref": "#/$defs/TeamRunCost"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "updated_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "phase": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "live": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind",
+        "run_id",
+        "name",
+        "status"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

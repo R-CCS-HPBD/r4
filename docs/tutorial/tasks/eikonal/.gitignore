@@ -1,0 +1,4 @@
+# Anything downloaded from external services (e.g. the ISC Bulletin) stays out of git.
+data/*
+!data/synthetic-kii/
+local-run/

@@ -1,0 +1,5 @@
+# Local configuration (copy from env.template)
+env.hpc
+
+# Runtime state
+.rivault_job_id

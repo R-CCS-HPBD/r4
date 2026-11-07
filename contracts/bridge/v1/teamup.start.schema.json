@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/teamup.start.schema.json",
+  "title": "teamup.start",
+  "description": "teamup.start: the bootstrap was accepted (``team_started`` lands later).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/TeamupStartResult",
+  "$defs": {
+    "TeamupStartResult": {
+      "type": "object",
+      "description": "teamup.start: the bootstrap was accepted (``team_started`` lands later).",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "accepted": {
+          "type": "boolean"
+        },
+        "goal": {
+          "type": "string"
+        },
+        "crew": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ok",
+        "accepted",
+        "goal",
+        "crew"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

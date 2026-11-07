@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/cancel_turn.schema.json",
+  "title": "cancel_turn",
+  "description": "cancel_turn / shutdown: the bare acknowledgement.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/OkResult",
+  "$defs": {
+    "OkResult": {
+      "type": "object",
+      "description": "cancel_turn / shutdown: the bare acknowledgement.",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "ok"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

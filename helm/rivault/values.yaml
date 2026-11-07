@@ -1,0 +1,206 @@
+# RiVault Helm Chart Values
+# ==========================
+# HPC-first GenAI inference platform
+
+global:
+  namespace: rivault-system
+  imageRegistry: ""
+  imagePullSecrets: []
+
+# =============================================================================
+# vLLM Configuration
+# =============================================================================
+vllm:
+  enabled: true
+  image:
+    repository: vllm/vllm-openai
+    tag: "v0.20.0"
+    pullPolicy: IfNotPresent
+
+  # Model configuration (pre-staged on filesystem)
+  model:
+    path: /models/rivault-gpt-oss-static
+    name: rivault-gpt-oss-static
+    # Model must be pre-staged - NO downloads
+
+  # Inference settings
+  maxModelLen: 4096
+  maxNumSeqs: 4
+  tensorParallelSize: 1
+  pipelineParallelSize: 1
+  gpuMemoryUtilization: 0.9
+  enableToolCalling: true
+
+  # Resources
+  resources:
+    limits:
+      nvidia.com/gpu: 1
+      memory: 32Gi
+      cpu: 8
+    requests:
+      nvidia.com/gpu: 1
+      memory: 16Gi
+      cpu: 4
+
+  # Port (internal only - not exposed outside pod)
+  port: 8000
+
+  # API key LiteLLM sends to vLLM (Secret key vllm-api-key). Leave empty to
+  # generate a random key on install and keep it across upgrades; set it
+  # (e.g. --set vllm.apiKey=...) to use your own. Never commit a real key.
+  apiKey: ""
+
+# =============================================================================
+# LiteLLM Configuration
+# =============================================================================
+litellm:
+  enabled: true
+  image:
+    repository: ghcr.io/berriai/litellm
+    tag: "main-v1.59.10"
+    pullPolicy: IfNotPresent
+
+  # Authentication
+  masterKey: "sk-ll-rivault-CHANGE-ME"
+
+  # Service port
+  port: 11434
+
+  # Rate limiting
+  rateLimit:
+    enabled: true
+    requestsPerMinute: 60
+
+  # Logging
+  logLevel: INFO
+
+  resources:
+    limits:
+      memory: 2Gi
+      cpu: 2
+    requests:
+      memory: 512Mi
+      cpu: 500m
+
+# =============================================================================
+# NGINX Configuration (optional sidecar)
+# =============================================================================
+nginx:
+  enabled: false
+  image:
+    repository: nginx
+    tag: "alpine"
+  port: 8080
+  uploadLimit: "10g"
+  timeout: 600
+
+# =============================================================================
+# Storage Configuration
+# =============================================================================
+storage:
+  # Model storage (ReadOnlyMany recommended for shared storage)
+  models:
+    enabled: true
+    storageClass: ""  # Use default
+    accessMode: ReadOnlyMany
+    size: 100Gi
+    existingClaim: ""  # Use existing PVC
+
+  # Cache storage
+  cache:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 20Gi
+
+# =============================================================================
+# Service Configuration
+# =============================================================================
+service:
+  type: ClusterIP
+  port: 11434
+  annotations: {}
+
+# =============================================================================
+# Ingress Configuration
+# =============================================================================
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+  hosts:
+    - host: llm.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# =============================================================================
+# Network Policy
+# =============================================================================
+networkPolicy:
+  enabled: true
+  # Only allow access from gateway namespace
+  allowedNamespaces:
+    - gateway-system
+    - umrs-system
+
+# =============================================================================
+# Pod Configuration
+# =============================================================================
+podAnnotations: {}
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+nodeSelector: {}
+tolerations:
+  # Tolerate GPU nodes
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule
+
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: nvidia.com/gpu.present
+              operator: In
+              values:
+                - "true"
+
+# =============================================================================
+# Environment Variables
+# =============================================================================
+env:
+  # Offline mode (HPC requirement)
+  TRANSFORMERS_OFFLINE: "1"
+  HF_HUB_OFFLINE: "1"
+  VLLM_NO_USAGE_STATS: "1"
+
+# =============================================================================
+# Health Checks
+# =============================================================================
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 120
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 60
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3

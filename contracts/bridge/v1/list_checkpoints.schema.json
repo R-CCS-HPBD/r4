@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/list_checkpoints.schema.json",
+  "title": "list_checkpoints",
+  "description": "list_checkpoints: newest first.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ListCheckpointsResult",
+  "$defs": {
+    "CheckpointRow": {
+      "type": "object",
+      "description": "One checkpoint listing row.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "agent_id": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string"
+        },
+        "checkpoint_type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "agent_id",
+        "timestamp",
+        "checkpoint_type"
+      ],
+      "additionalProperties": true
+    },
+    "ListCheckpointsResult": {
+      "type": "object",
+      "description": "list_checkpoints: newest first.",
+      "properties": {
+        "checkpoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CheckpointRow"
+          }
+        }
+      },
+      "required": [
+        "checkpoints"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

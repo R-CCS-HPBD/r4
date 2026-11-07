@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/get_governance_overview.schema.json",
+  "title": "get_governance_overview",
+  "description": "get_governance_overview: per-section payloads, or ``{\"error\": ...}``",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/GetGovernanceOverviewResult",
+  "$defs": {
+    "GetGovernanceOverviewResult": {
+      "type": "object",
+      "description": "get_governance_overview: per-section payloads, or ``{\"error\": ...}``",
+      "properties": {
+        "ownership": {
+          "type": "object"
+        },
+        "quotas": {
+          "type": "object"
+        },
+        "audit": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "ownership",
+        "quotas",
+        "audit"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/get_resources.schema.json",
+  "title": "get_resources",
+  "description": "get_resources: the snapshot under one key.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/GetResourcesResult",
+  "$defs": {
+    "GetResourcesResult": {
+      "type": "object",
+      "description": "get_resources: the snapshot under one key.",
+      "properties": {
+        "resources": {
+          "$ref": "#/$defs/ResourceSnapshot"
+        }
+      },
+      "required": [
+        "resources"
+      ],
+      "additionalProperties": true
+    },
+    "ResourceSnapshot": {
+      "type": "object",
+      "description": "The resource monitor's live box read; section shapes vary by host.",
+      "properties": {
+        "gpu": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "cpu": {
+          "type": "object"
+        },
+        "memory": {
+          "type": "object"
+        },
+        "slurm_jobs": {
+          "type": "array"
+        },
+        "hostname": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "gpu",
+        "cpu",
+        "memory",
+        "slurm_jobs",
+        "hostname"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/control/v1/tool_call_end.schema.json",
+  "title": "tool_call_end",
+  "description": "Completion of a governed tool invocation (status + timing + preview).",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "type",
+    "payload"
+  ],
+  "properties": {
+    "type": {
+      "const": "tool_call_end"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "version": {
+          "type": "integer",
+          "default": 1
+        },
+        "session_id": {
+          "type": "string",
+          "default": ""
+        },
+        "tool_call_id": {
+          "type": "string",
+          "default": ""
+        },
+        "name": {
+          "type": "string",
+          "default": ""
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "done",
+            "error",
+            "cancelled"
+          ],
+          "default": "done"
+        },
+        "duration_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "result_preview": {
+          "type": "string",
+          "default": ""
+        },
+        "result_truncated": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    }
+  }
+}

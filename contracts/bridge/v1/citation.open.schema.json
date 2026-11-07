@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/citation.open.schema.json",
+  "title": "citation.open",
+  "description": "citation.open: one cited passage with its context (K1.4).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/CitationOpenResult",
+  "$defs": {
+    "CitationOpenResult": {
+      "type": "object",
+      "description": "citation.open: one cited passage with its context (K1.4).",
+      "properties": {
+        "sid": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "artifact_id": {
+          "type": "string"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "window": {
+          "type": "integer"
+        },
+        "chunks": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        }
+      },
+      "required": [
+        "sid",
+        "title",
+        "artifact_id",
+        "source_id",
+        "text",
+        "window",
+        "chunks"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/loops.stop.schema.json",
+  "title": "loops.stop",
+  "description": "Result union for loops.stop (see branches).",
+  "x-bridge-protocol": 1,
+  "anyOf": [
+    {
+      "$ref": "#/$defs/UmrsLoopAck"
+    },
+    {
+      "$ref": "#/$defs/LocalLoopControl"
+    }
+  ],
+  "$defs": {
+    "LocalLoopControl": {
+      "type": "object",
+      "description": "loops.stop/pause/resume (local/hybrid lane): serialized loop + location.",
+      "properties": {
+        "loop_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "phase": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "research_goal": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "current_iteration": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_iterations": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tracks": {
+          "anyOf": [
+            {
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_tracks": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "runtime": {
+          "type": "string"
+        },
+        "durable": {
+          "type": "boolean"
+        },
+        "distributed": {
+          "type": "boolean"
+        },
+        "backends": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "loop_id",
+        "status",
+        "phase",
+        "research_goal",
+        "current_iteration",
+        "max_iterations",
+        "runtime",
+        "durable",
+        "distributed",
+        "backends"
+      ],
+      "additionalProperties": true
+    },
+    "UmrsLoopAck": {
+      "type": "object",
+      "description": "loops.stop/pause (UMRS lane): StopLoopResponse.",
+      "properties": {
+        "loop_id": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "loop_id",
+        "status",
+        "message"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

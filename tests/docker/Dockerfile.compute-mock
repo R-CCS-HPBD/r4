@@ -1,0 +1,33 @@
+# Mock Compute Node for E2E Testing
+#
+# Provides a lightweight mock LiteLLM server that responds to:
+# - GET /health
+# - GET /v1/models
+# - POST /v1/chat/completions
+#
+# Does NOT require GPU or actual model weights
+
+FROM python:3.11-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir \
+    fastapi \
+    uvicorn[standard] \
+    httpx
+
+WORKDIR /app
+
+COPY mock_litellm.py /app/
+
+# Create job info directory
+RUN mkdir -p /var/run/rivault
+
+EXPOSE 11434 8000
+
+ENV LITELLM_PORT=11434
+ENV MOCK_MODE=true
+
+CMD ["python", "mock_litellm.py"]

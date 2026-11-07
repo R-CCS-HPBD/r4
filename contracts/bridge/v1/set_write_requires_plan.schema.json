@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/set_write_requires_plan.schema.json",
+  "title": "set_write_requires_plan",
+  "description": "set_write_requires_plan: the bare flag.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SetWriteRequiresPlanResult",
+  "$defs": {
+    "SetWriteRequiresPlanResult": {
+      "type": "object",
+      "description": "set_write_requires_plan: the bare flag.",
+      "properties": {
+        "write_requires_plan": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "write_requires_plan"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

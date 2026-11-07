@@ -1,0 +1,640 @@
+# Enforcement-point matrix (ADR-035, proposed)
+#
+# One row per UMRS HTTP surface family. The matrix is the specification the
+# console `/health authz` audit probes against. Invariant:
+#   any route where mutating=true MUST carry a non-blank enforceable umrs_authz
+#   (gateway_auth or ux_gate alone is not sufficient for platform state).
+#
+# Field semantics:
+#   path_prefix  longest-prefix match against the live FastAPI surface
+#   methods      methods this row claims responsibility for
+#   mutating     does any method change platform state
+#   gateway_auth edge authn: auth_request (NGINX auth_request) | open | exclude
+#   umrs_authz   authz inside UMRS handler:
+#                  owner-scope      caller identity must own/match the scope
+#                  verified-identity requires trusted X-Verified-* headers
+#                  provision-identity-derived
+#                                  authz computed at provisioning from the verified
+#                                  identity + tenant tier (ADR-037 Rule 2a)
+#                  mutation-guard   knowledge mutation guard decides (ADR-015/027)
+#                  ops-admin        admin-only dependency: require_ops_admin, or
+#                                   require_session_admin (/umrs/admin, 2026-10-27)
+#                  read-only        no writes, authz not applicable
+#                  internal         loopback/worker-only, never edge-exposed
+#                  exempt           documented exemption (notes must say why)
+#   ux_gate      client-side gating only (never an enforcement point):
+#                  permission-manager | approval-card | none
+#   review       date this row was last audited against the handler code
+#
+# Rows are data, not code analysis: the validator reports drift against the
+# live surface, but `umrs_authz` values are assertions to be re-verified per
+# row during each audit cycle (`review` field).
+
+version: 1
+
+defaults:
+  gateway_auth: auth_request
+  ux_gate: none
+
+rows:
+  # ── Health/metrics/readiness (open by whitelist) ─────────────────────────
+  - id: health-readiness-metrics
+    path_prefix: /health
+    methods: [GET]
+    mutating: false
+    gateway_auth: open
+    umrs_authz: read-only
+    ux_gate: none
+    verification_exempt: "open beacon surface — anon-allowed by design; there is nothing for a deny-canary to deny (the row's own notes, 2026-10-18)"
+    notes: "whitelist prefix; also covers /readiness, /metrics, the /umrs/web static shell and /umrs/web/dashboard/{health,metrics} — structural beacon surface; no canary (anon-allowed by design, nothing to deny). The rest of /umrs/web/dashboard needs HMAC-verified identity since H-1 (2026-10-17) and falls to platform-default. H-1 2026-10-18: the static shell calls the API under /gw/web/dashboard when served at /gw/web/ (nginx /gw/web/ block with auth_request); overview and job-list counts come from JobStore.count_jobs under the caller's scope; the route inventory whitelists only the static mount and the two probes"
+    review: "2026-10-18"
+
+  # ── A2L conservation ledger (ADR-034 merge domain) ────────────────────────
+  - id: a2l-ledger
+    path_prefix: /umrs/a2l
+    methods: [GET, POST, PATCH]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: verified-identity
+    ux_gate: none
+    verified_by: a2l-ledger
+    notes: "agent-exec/decisions/artifacts + derive/resolve transitions; PoC-grade surface pending ADR-034 consolidation. H-1 (2026-10-17): /a2l/artifacts, /resolve, /derive and ledger decisions take the HMAC-verified caller and check the project of every artifact they touch"
+    review: "2026-10-18"
+
+  # ── Companion venue worker + turns (ADR-025/-028, T3a) ─────────────────────
+  - id: companion-workers
+    path_prefix: /umrs/companion/workers
+    methods: [GET, POST]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: verified-identity
+    ux_gate: permission-manager
+    verified_by: companion-workers
+    notes: "worker registry; resume-token fingerprint compare on reattach (fingerprint_matches); a named owner must equal the HMAC-verified caller (_strict_headers) and the durable job lands in a project the caller may write (H-1 2026-10-17); an empty owner defaults to the caller and a body job_id must be the caller's own companion job in that project, else 404 (H-1 2026-10-18)"
+    review: "2026-10-18"
+
+  - id: companion-chat-turns
+    path_prefix: /umrs/companion
+    methods: [GET, POST]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: verified-identity
+    ux_gate: permission-manager
+    verified_by: companion-workers
+    notes: "/chat attempts + /turns/{attempt_id} replay; approvals decision endpoint is the durable approval channel (ADR-028 §2). H-1 (2026-10-17): turns read only by the worker owner, ownerless approvals follow the loop rule, session/venue owner from the HMAC-verified tuple. DEFERRED H-1: a non-owner of an owned approval gets 401, not 404, which discloses that it exists"
+    review: "2026-10-18"
+
+  # ── Endpoints lifecycle ───────────────────────────────────────────────────
+  - id: endpoints-upgrade
+    path_prefix: /umrs/endpoints
+    methods: [GET, POST, PUT, PATCH, DELETE]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: owner-scope
+    ux_gate: none
+    verified_by: endpoints-upgrade
+    notes: "provision/deprovision/upgrade; per-user Slurm account resolution runs inside the owner gate; ADR-040 D4 refuse-before-launch — any `egress_domains` provision must carry `network.egress_proxy_image` (or `EGRESS_GUARD_IMAGE`) at the site else 400 (rccs declares localhost/r4-mcp:latest from 2026-09-07). non-admin mount sources and caller-named model paths (model_path override, absolute model with no catalog entry) must lie under the caller's own roots (UMRS_ENDPOINT_CALLER_MOUNT_ROOTS, default /home/{user_id},/shared/users/{user_id},/shared/projects/{project_id},/projects/{project_id}) else 403 (H-1 2026-10-18). Since 2026-10-18 (h1-leftovers) the same rule (orchestrator/caller_roots.py) covers POST /{job_id}/upgrade model_path (site-wide prefixes, then caller roots unless it is the storage_ref of a catalog entry the caller may provision) and POST /umrs/jobs endpoint_provision spec.mounts / spec.model_path / spec.model, plus the recipe policy (env_vars, container_image, tier=system admin-only) and a model that must resolve (parent and fan-out children); upgrade, PUT /{job_id}/access, DELETE /{job_id}/deprovision and PUT /{job_id}/used check the strict identity (401) before the lookup (404). DEFERRED H-1: the check is lexical at request time (launcher re-check pending); the ZMQ job submit (job_tracking_handler) does not apply the caller-root rule to endpoint_provision specs yet"
+    review: "2026-10-18"
+
+  # ── Files (upload/download) ───────────────────────────────────────────────
+  - id: files
+    path_prefix: /umrs/files
+    methods: [GET, POST, DELETE]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: verified-identity
+    ux_gate: none
+    verified_by: files
+    notes: "presigned URLs never leave the server side; download/{path} is read but classified mutating=false per method table below. GET /download-status and the presign download gate resolve the caller (get_project_id) and read another project's job as 404 files.job_not_found (H-1 A.2, 2026-10-18)"
+    review: "2026-10-18"
+
+  # ── Knowledge multi-graph + proposals (ADR-015/027/031) ───────────────────
+  - id: knowledge-ledger
+    path_prefix: /umrs/knowledge/graphs
+    methods: [GET, POST, PATCH]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: mutation-guard
+    ux_gate: approval-card
+    verified_by: knowledge-ledger
+    notes: _knowledge_mutation_guard enforces propose/decide flow; decide step is the non-bypassable approval point
+    review: "2026-09-02"
+
+  - id: knowledge-proposals
+    path_prefix: /umrs/knowledge/proposals
+    methods: [GET, POST]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: mutation-guard
+    ux_gate: approval-card
+    verified_by: knowledge-proposals
+    notes: proposal decision endpoint; autopilot never auto-approves (development.instructions invariants). Id-shaped canary covers the family's auth chain (pure-denied GET on a false id)
+    review: "2026-09-02"
+
+  - id: knowledge-read
+    path_prefix: /umrs/knowledge
+    methods: [GET]
+    mutating: false
+    gateway_auth: auth_request
+    umrs_authz: read-only
+    ux_gate: none
+    verified_by: knowledge-read
+    notes: graph/reconcile/query reads; mutating subpaths covered by the two rows above (longest-prefix wins)
+    review: "2026-09-02"
+
+  # ── Research loops (server venue) ─────────────────────────────────────────
+  - id: research-loops
+    path_prefix: /umrs/loops
+    methods: [GET, POST, PUT, PATCH, DELETE]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: owner-scope
+    ux_gate: permission-manager
+    verified_by: research-loops
+    notes: "loop start/stop/pause/resume; autopilot must refuse loop start until TRUST allowlist rows exist (Review F3). 2026-10-18: a thread-hosted runner never overwrites a concurrent pause or stop: on the psycopg2 LoopStore it saves through LoopStore.save_keeping_control (SELECT ... FOR UPDATE and the upsert in one transaction under the store lock, so a resume is neither lost nor undone). Residual: other stores (HttpLoopStore on cluster drivers) re-read then save, so a resume stored between the two calls is written back to PAUSED until resumed again; PUT /{loop_id}/state and the pause/stop/resume routes still read-modify-write with plain save()"
+    review: "2026-10-18"
+
+  # ── Research sessions (ADR-025) ───────────────────────────────────────────
+  - id: research-sessions
+    path_prefix: /umrs/research/sessions
+    methods: [GET, POST, PATCH, DELETE]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: owner-scope
+    ux_gate: none
+    verified_by: research-sessions
+    notes: session lifecycle + loop membership links
+    review: "2026-09-02"
+
+  # ── Workflow bundles & run definitions (ADR-027) ──────────────────────────
+  - id: workflow-runs
+    path_prefix: /umrs/workflows
+    methods: [GET, POST, PUT, PATCH, DELETE]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: verified-identity
+    ux_gate: none
+    verified_by: workflow-runs
+    notes: "upload/trigger/definitions; author claim verified via verify_workflow_author_claim (handshake hmac suite). The trigger routes admit a declared project only from the signed project or the gateway-signed memberships list (X-Verified-Memberships-HMAC, get_verified_memberships; strict mode, H-1 2026-10-18)"
+    review: "2026-10-18"
+
+  # ── Ops admin ─────────────────────────────────────────────────────────────
+  - id: ops-admin
+    path_prefix: /umrs/ops
+    methods: [GET, POST, PUT, PATCH, DELETE]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: ops-admin
+    ux_gate: none
+    verified_by: ops-admin
+    notes: "require_ops_admin (HMAC-verified admin, H-1 2026-10-17) guards health/topology; quota/retention/orphan/transfer writes need x-admin-token = UMRS_ADMIN_TOKEN; shares need the signed owner or the admin token; reload and governance reads take the HMAC-verified caller (own project unless admin). GET /timeline is admin-only (require_ops_admin; its decorator is on ops_timeline again); connect-info discovery stays open, and under UMRS_EMIT_S3CFG=1 emits the s3cfg only for a signed tuple in strict (forged tuple 401; H-1 2026-10-18); the gateway /gw/ops/connect-info block forwards the signed tuple (X-User-ID, X-Verified-Project-ID, X-Verified-Is-Admin, X-Verified-HMAC) from validate-optional since 2026-10-18 (live after the next gateway converge)"
+    review: "2026-10-18"
+
+  # ── Remaining mutating families (sprint-1 sweep baseline) ────────────────
+  # Authz values below are audit assertions to re-verify during each cycle;
+  # each row gets a dedicated deep pass before the matrix graduates hard-fail.
+
+  - id: models-registry
+    path_prefix: /umrs/models
+    methods: [GET, POST, PUT, PATCH, DELETE]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: owner-scope
+    ux_gate: none
+    verified_by: models-registry
+    notes: "model registry + policies; scope model is system/project/user per development.instructions. The ACL context is the HMAC-verified user/admin plus the signed project and the gateway-signed memberships list (X-Verified-Memberships-HMAC; unsigned list ignored in strict); project-scope create/stage/publish/download need a writable member project (_member_may_write); ?caller_project_id is checked with writable_project_for, default the caller's project (Appendix A.1; H-1 2026-10-18)"
+    review: "2026-10-18"
+
+  - id: jobs
+    path_prefix: /umrs/jobs
+    methods: [GET, POST, PATCH, DELETE]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: owner-scope
+    ux_gate: none
+    verified_by: jobs
+    notes: "durable job control (cancel/retry); commit-pointer and execution authority are server-only. H-1 (2026-10-18): a non-admin endpoint_provision spec (parent or fan-out child) follows POST /umrs/endpoints/provision: its model (spec.model, else 'default', the name the executor resolves) must resolve to a catalog entry the caller may provision (400 unresolved, 403 foreign scope); env_vars, container_image and tier=system are admin-only (403); its mount sources and host model_path must lie under its own roots (403). The partition stays with the executor's site check. Project and user come from the signed tuple (IDENTITY-ONLY in the scope guard)"
+    review: "2026-10-18"
+
+  - id: uploads
+    path_prefix: /umrs/uploads
+    methods: [GET, POST, PUT, DELETE]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: verified-identity
+    ux_gate: none
+    verified_by: uploads
+    notes: multipart upload manifests; presigned URLs stay server-side per invariants. Id-shaped canary covers the family's auth chain (pure-denied GET on a false manifest id)
+    review: "2026-09-02"
+
+  - id: zmq-sessions
+    path_prefix: /umrs/zmq
+    methods: [GET, POST, DELETE]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: verified-identity
+    ux_gate: none
+    verified_by: zmq-sessions
+    notes: >-
+      CURVE session bootstrap/refresh; tunnel-mode loopback binding is a hard
+      invariant. Canonical UMRS surface is /umrs/zmq/*; clients reach it via
+      the GATEWAY alias /gw/zmq/* (nginx rewrite, server.conf) — both map to
+      this row. Exception: GET /umrs/zmq/server-key is intentionally OPEN
+      (CURVE public key is not secret); all session-management verbs stay
+      behind gateway auth_request + verified identity.
+    review: "2026-09-07"
+
+  - id: mcp-servers
+    path_prefix: /umrs/mcp
+    methods: [GET, POST, DELETE]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: verified-identity
+    ux_gate: permission-manager
+    verified_by: mcp-servers
+    notes: MCP registration/invocation surface; sandbox manifest enforcement is load-time (separate validator)
+    review: "2026-09-02"
+
+  - id: custom-mcp-capability-grant
+    path_prefix: /umrs/mcp/invoke
+    methods: [POST]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: provision-identity-derived
+    ux_gate: none
+    verified_by: custom-mcp-invoke
+    notes: >-
+      ADR-037 Rule 2a (target state): UMRS computes
+      RIVAULT_MCP_GRANTED_CAPABILITIES from the VERIFIED identity + tenant
+      tier at mini-RiVault provisioning and injects it signed; the custom-MCP
+      runner refuses to start in any non-local profile when the var is absent
+      or unsigned (STANDARD_USER survives only in compose/dev). ADR-037
+      shadow mode (would_filter telemetry, nothing removed) applies
+      meanwhile. Canary scope (2026-10-20): the edge-denied probe covers
+      gateway authn only; the Rule-2a injection claim stays
+      specification-only until the provision path lands — an authenticated
+      STANDARD_USER WRITE_REMOTE denial canary needs server work first.
+    review: "2026-10-20"
+
+  - id: llm-usage
+    path_prefix: /umrs/llm
+    methods: [GET, POST]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: verified-identity
+    ux_gate: none
+    verified_by: llm-usage
+    notes: "llm proxy/usage rows; mutating methods only register usage + config. Identity and admin come from the HMAC-verified tuple (request_identity verify_hmac=True; forged tuple 401 in strict), and upstream identity headers are rebuilt from it (H-1 2026-10-18)"
+    review: "2026-10-18"
+
+  - id: rag
+    path_prefix: /umrs/rag
+    methods: [GET, POST, DELETE]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: owner-scope
+    ux_gate: none
+    verified_by: rag
+    notes: "RAG index/query jobs; egress behind EgressGuard for ingest class. _require_rag_scope (query, documents, stats, corpus-access, upload, retrieve, passages), put_corpus_access, _query_via_spine and rag_retrieve.is_admin take identity and admin only from the HMAC-verified tuple on every call (forged tuple 401 in strict; H-1 2026-10-18)"
+    review: "2026-10-18"
+
+  - id: rag-profiles
+    path_prefix: /umrs/rag-profiles
+    methods: [GET, POST, PATCH, DELETE]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: owner-scope
+    ux_gate: none
+    verified_by: rag-profiles
+    notes: "per-user rag profile CRUD; owner is the HMAC-verified caller (H-1 item 6, umrs e2d74cc6; was the raw X-Project-ID header)"
+    review: "2026-10-18"
+
+  - id: skills
+    path_prefix: /umrs/skills
+    methods: [GET, POST, PUT, DELETE]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: owner-scope
+    ux_gate: none
+    verified_by: skills
+    notes: "skills registry; project-scope registration needs a writable project (H-1 item 6, umrs e2d74cc6). _caller_identity takes project and admin from the HMAC-verified tuple (forged tuple 401 in strict; H-1 2026-10-18)"
+    review: "2026-10-18"
+
+  - id: artifacts
+    path_prefix: /umrs/artifacts
+    methods: [GET, POST, DELETE]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: verified-identity
+    ux_gate: none
+    verified_by: artifacts
+    notes: artifact store write surface
+    review: "2026-09-02"
+
+  - id: traces
+    path_prefix: /umrs/traces
+    methods: [GET, POST, DELETE]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: owner-scope
+    ux_gate: none
+    verified_by: traces
+    notes: trace capture/expiry. Id-shaped canary covers the family's auth chain (pure-denied GET on a false execution id)
+    review: "2026-09-02"
+
+  - id: vision
+    path_prefix: /umrs/vision
+    methods: [GET, POST]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: verified-identity
+    ux_gate: none
+    verified_by: vision
+    notes: BentoML async queue submit/cancel
+    review: "2026-09-02"
+
+  - id: knowledge-legacy-graph
+    path_prefix: /umrs/knowledge-graph
+    methods: [GET, POST, DELETE]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: verified-identity
+    ux_gate: none
+    verification_exempt: "family retired and unmounted (ADR-026 wave C, 2026-09-17) — no live surface exists for a deny-canary; row stays as the spec witness until an audit page calls it back"
+    notes: RETIRED by ADR-026 wave C — route unmounted AND lane class dropped from v1beta (2026-09-17); spec-only witness until a future audit page calls this family back
+    review: "2026-09-17"
+
+  - id: chat
+    path_prefix: /umrs/chat
+    methods: [GET, POST]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: verified-identity
+    ux_gate: none
+    verified_by: chat
+    notes: "assistant-service chat surface (ADR-012); the body project_id must pass rag._require_rag_scope (H-1 item 6). That scope and _get_caller_identity take identity and admin from the HMAC-verified tuple (H-1 2026-10-18; chat.py must land with the rag.py change)"
+    review: "2026-10-18"
+
+  - id: evidence
+    path_prefix: /umrs/evidence
+    methods: [GET, POST]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: verified-identity
+    ux_gate: none
+    verified_by: evidence
+    notes: evidence rows for knowledge verification
+    review: "2026-09-02"
+
+  - id: experiment-registry
+    path_prefix: /umrs/experiment-registry
+    methods: [GET, POST, PUT]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: verified-identity
+    ux_gate: none
+    verified_by: experiment-registry
+    notes: "experiment tracking rows; project-scoped (H-1 2026-10-17): writes need project_writable, reads project_readable, a foreign experiment id reads as 404"
+    review: "2026-10-18"
+
+  - id: reflective-memory
+    path_prefix: /umrs/reflective-memory
+    methods: [GET, POST, DELETE]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: ops-admin
+    ux_gate: none
+    verified_by: reflective-memory
+    notes: "platform-global heuristics; every method HMAC-verified admin only (H-1 2026-10-17)"
+    review: "2026-10-18"
+
+  - id: scientific-memory
+    path_prefix: /umrs/scientific-memory
+    methods: [GET, POST]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: owner-scope
+    ux_gate: none
+    verified_by: scientific-memory
+    notes: scientific memory store
+    review: "2026-09-02"
+
+  - id: k2-knowledge
+    path_prefix: /umrs/k2
+    methods: [GET, POST, DELETE]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: mutation-guard
+    ux_gate: approval-card
+    verified_by: k2-knowledge
+    notes: knowledge spine ingress (ADR-027); mutations flow through guard
+    review: "2026-09-02"
+
+  - id: egress-audit
+    path_prefix: /umrs/egress
+    methods: [GET, POST]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: ops-admin
+    ux_gate: none
+    verified_by: egress-audit
+    notes: "egress audit; POST HMAC-verified admin only; GET = the caller's own user trail in their verified project, admins unrestricted (H-1 2026-10-17)"
+    review: "2026-10-18"
+
+  - id: catalog
+    path_prefix: /umrs/catalog
+    methods: [GET]
+    mutating: false
+    gateway_auth: auth_request
+    umrs_authz: read-only
+    ux_gate: none
+    verified_by: catalog
+    notes: ADR-011 data catalog reads
+    review: "2026-09-02"
+
+  - id: components
+    path_prefix: /umrs/components
+    methods: [GET]
+    mutating: false
+    gateway_auth: auth_request
+    umrs_authz: read-only
+    ux_gate: none
+    verified_by: components
+    notes: component listing
+    review: "2026-09-02"
+
+  - id: provenance
+    path_prefix: /umrs/provenance
+    methods: [GET]
+    mutating: false
+    gateway_auth: auth_request
+    umrs_authz: read-only
+    ux_gate: none
+    verified_by: provenance
+    notes: provenance reads
+    review: "2026-09-02"
+
+  - id: usage
+    path_prefix: /umrs/usage
+    methods: [GET]
+    mutating: false
+    gateway_auth: auth_request
+    umrs_authz: verified-identity
+    ux_gate: none
+    verified_by: usage
+    notes: "usage metering reads; HMAC-verified caller (H-1 item 7, 2026-10-17; admin was an unverified header): non-admins see their own rows, billing is admin-only"
+    review: "2026-10-18"
+
+  # ── Asset index (Review F4 read-model) ──────────────────────────────────
+  - id: asset-index
+    path_prefix: /umrs/assets
+    methods: [GET, POST]
+    mutating: false
+    gateway_auth: auth_request
+    umrs_authz: read-only
+    ux_gate: none
+    verified_by: asset-index-cross-scope
+    notes: cross-subsystem read-model; POST /patch is the F4 wire-lane follow-through (caller-held base, never a server-held cookie); visibility via per-store AccessContext; group rows resolve via the ADR-050 §3 membership authority
+    review: "2026-09-16"
+
+  # ── Secrets broker (R0/R1 wave; router-wide envelope identity, G-6) ───────
+  - id: secrets-broker
+    path_prefix: /umrs/secrets
+    methods: [GET, POST]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: verified-identity
+    ux_gate: none
+    verified_by: secrets-broker
+    notes: router-wide Depends(get_caller_scope); lease mint/validate/revoke/renew are job-scoped under the caller envelope; /audit is read; presign material never crosses the edge
+    review: "2026-09-16"
+
+  # ── User sources + source grants (R0/R1 wave) ────────────────────────────
+  - id: user-sources
+    path_prefix: /umrs/user-sources
+    methods: [GET, POST, DELETE]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: owner-scope
+    ux_gate: none
+    verified_by: user-sources
+    notes: router-wide Depends(get_caller_scope); sealed secrets and grants are attributed to the caller only — no cross-user mutation; grants cover both /umrs/user-sources and /umrs/user-sources/grants prefixes
+    review: "2026-09-16"
+
+  # ── Asset grants (WP-06 static write ladder) ──────────────────────────────
+  - id: asset-grants
+    path_prefix: /umrs/grants
+    methods: [GET, POST]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: owner-scope
+    ux_gate: none
+    verified_by: asset-grants
+    notes: "mint/revoke require _asset_writable (asset must be the caller's to share); unwritable assets answer 404-shaped — existence never leaks; revoke = tombstone, never DELETE. grants._caller takes the HMAC-verified tuple (forged tuple 401 in strict); revoke needs the grantor, an asset writer or a verified admin, anyone else reads not found (H-1 2026-10-18)"
+    review: "2026-10-18"
+
+  # ── Quota gauge (ADR-051 read model; /units) ─────────────────────────────
+  - id: quota-status
+    path_prefix: /umrs/quota
+    methods: [GET]
+    mutating: false
+    gateway_auth: auth_request
+    umrs_authz: verified-identity
+    ux_gate: none
+    verified_by: quota-status
+    notes: caller-attributed gauge of the two resource poles; anonymous refused in both mvp and strict (shared scope layer); read-only
+    review: "2026-09-16"
+
+  # ── Researcher buckets (ADR-079 / ADR-080) ──────────────────────────────
+  - id: user-buckets
+    path_prefix: /umrs/buckets
+    methods: [GET, POST, PUT]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: owner-scope
+    ux_gate: none
+    verified_by: user-buckets
+    notes: "<user>.<project>.<alias> buckets owned by the HMAC-verified caller (get_verified_caller); the project segment is a free experiment label (ADR-079 D-2), so access changes audit under the caller's verified project with the label in the details (H-1 2026-10-18); a name owned by another user is bucket_taken; access lists are owner or admin. PUT /{bucket}/access answers a caller the access list does not admit files.not_found, like an unknown bucket and like GET (no oracle on guessable names); an admitted reader gets 403 bucket_denied (H-1 2026-10-18). Canary: the anonymous /gw/buckets deny (edge authn; the owner-scope claim is the row text)"
+    review: "2026-10-20"
+
+  # ── Circles + membership (ADR-086; supersedes the ADR-050 §3 groups) ────
+  - id: circles-authority
+    path_prefix: /umrs/circles
+    methods: [GET, POST, PATCH, DELETE]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: owner-scope
+    ux_gate: none
+    verified_by: circles-authority
+    notes: "project-scoped owner-attributed circles; retire is owner-or-admin tombstone; roster ops owner/circle-admin/platform-admin; personal circles (circle_id == owner) never gain members; retired circles stop resolving for access lookups immediately. H-1 (2026-10-17): GET circle and members need identity and read as 404 to unaffiliated callers; H-1 (2026-10-18): GET /{project_id} reads as 404 unless the caller is admin, project owner, affiliated, has its own circle there or is verified into the project. DEFERRED H-1 (escalated, ADR-086 §3): POST personal-cell self-entry in any project is an existence oracle and self-affiliates"
+    review: "2026-10-18"
+
+  # ── Projects registry (ADR-051) ──────────────────────────────────────────
+  - id: projects-registry
+    path_prefix: /umrs/projects
+    methods: [GET, POST, PATCH]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: verified-identity
+    ux_gate: none
+    verified_by: projects-registry
+    notes: "ADR-051 casual-projects registry; edge family /gw/projects/ added 2026-09-16 (live at next gateway converge); create is caller-attributed, retire is admin-gated, tombstones never DELETE. H-1 (2026-10-17): GET project and budget read as 404 except to owner, admin, signed project or affiliated caller. H-1 (2026-10-18): POST with a taken id returns the row only to a caller who may read it, else 409 projects.conflict; PUT budget reads as 404 to non-readers. DEFERRED H-1: PATCH and the /storage routes still answer 403, not 404, to non-readers"
+    review: "2026-10-18"
+
+  # ── Work-level scope tokens (ADR-108 D-3, W2b) ──────────────────────────
+  - id: scope-tokens
+    path_prefix: /umrs/scopes
+    methods: [POST]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: owner-scope
+    ux_gate: none
+    notes: "ADR-108 D-3 (2026-11-04). POST issues a token on the caller's verified identity (get_caller_identity); a child token must sit beneath its parent's path with a subset of its grants and no later expiry, else 403 scopes.forbidden. POST /revoke revokes a path prefix for the caller's own user and project only. A token never adds a right: routes that read x-r4-scope (ingest, upload, workflow trigger) refuse one bound to another user or project. No canary probe yet (specification only)"
+    review: "2026-11-04"
+
+  # ── Catch-all row: any surface not listed above ───────────────────────────
+  # ── Scientific catalogs (bundle registry) ────────────────────────────
+  - id: scientific-catalogs
+    path_prefix: /umrs/scientific-catalogs
+    methods: [GET, POST, PATCH, PUT, DELETE]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: owner-scope
+    ux_gate: none
+    verified_by: scientific-catalogs
+    notes: "catalog create/patch/retire + pins + access (H-12 live-catch-all row, 2026-10-20). Every handler takes the verified caller (get_caller_identity); writes then require the caller's project to match the row's (_require_project_scope, admin bypass); reads admit the owning project, admin, or the row's ADR-080 access list (_catalog_read_allowed)"
+    review: "2026-10-20"
+
+  # ── Admin session control + session policy (RS-0 / ADR-099) ──────────
+  - id: admin-sessions
+    path_prefix: /umrs/admin/sessions
+    methods: [GET, POST]
+    mutating: true
+    gateway_auth: exclude
+    umrs_authz: ops-admin
+    ux_gate: none
+    verification_exempt: "not edge-exposed: no gateway location serves /umrs/admin (/gw/ops/ rewrites to /umrs/ops/ only; the operator CLI calls UMRS directly), so a /gw deny-canary would only witness the edge 404; the server-side 401/403 is pinned by umrs/tests/test_rs0_admin_sessions.py::TestAdminAuth (2026-10-27)"
+    notes: "list/show/stop any user's venue session (H-12 live-catch-all row, issue #594, 2026-10-27). Every route takes require_session_admin (admin JWT, or the gateway-signed X-Verified-* admin tuple + HMAC; strict and mvp alike): no credential 401, non-admin or disabled account 403 audited as venue.admin.denied. POST /{session_id}/stop runs the owner stop path (FrontendVenueService.admin_stop -> stop) and writes venue.session.stop with cause=admin; show/list write venue.admin.show/list"
+    review: "2026-10-27"
+
+  - id: admin-session-policy
+    path_prefix: /umrs/admin/session-policy
+    methods: [GET, PUT, DELETE]
+    mutating: true
+    gateway_auth: exclude
+    umrs_authz: ops-admin
+    ux_gate: none
+    verification_exempt: "not edge-exposed: no gateway location serves /umrs/admin (/gw/ops/ rewrites to /umrs/ops/ only), so a /gw deny-canary would only witness the edge 404; the server-side 401/403 on every verb is pinned by umrs/tests/test_session_policy_routes.py::TestAdminAccess (2026-10-27)"
+    notes: "ADR-099 admin rule layer (H-12 live-catch-all row, issue #594, 2026-10-27). Every route takes require_session_admin: no credential 401, non-admin 403. PUT /{scope}/{subject} writes the admin rule and audits venue.policy.set; DELETE removes one rule and audits venue.policy.delete; an unknown rule is sessionpolicy.not_found. The project owner's layer is PUT /umrs/projects/{id}/session-policy (projects-registry row)"
+    review: "2026-10-27"
+
+  - id: platform-default
+    path_prefix: /umrs
+    methods: [GET, POST, PUT, PATCH, DELETE]
+    mutating: true
+    gateway_auth: auth_request
+    umrs_authz: verified-identity
+    ux_gate: none
+    verification_exempt: "no single probe can stand for the catch-all; the row-verified-missing advisory here was ADR-035's intended permanent reminder, now carried by this field (2026-10-20)"
+    notes: catch-all fallback; a mutating route matching ONLY this row flags the family for a dedicated audit row (validator reports it separately). The row-verified-missing advisory on this row is the intended permanent reminder, per ADR-035
+    review: "2026-09-02"

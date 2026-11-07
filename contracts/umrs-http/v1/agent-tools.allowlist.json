@@ -1,0 +1,22 @@
+{
+  "$comment": "ADR-105 D-1: the hand-curated allowlist of UMRS operations exposed to agents. tools/umrs_agent_manifest.py --write generates agent-tools.json and agent-openapi.json from it and the UMRS app; --check fails on drift. An operation enters only with an explicit operation_id and a typed request and response (type before expose). risk: safe | elevated | privileged (generalises r4_contracts WORKFLOW_CAPABILITY_RISK); taint: the r4_contracts TOOL_TAINT_CLASSES class, or none; scope: mcp-eligible | companion-only (ADR-030); site: the native tool takes the multi-site site parameter.",
+  "version": 1,
+  "operations": [
+    {"operation_id": "workflow_list", "tool": "workflow_list", "risk": "safe", "taint": "none", "scope": "mcp-eligible", "site": false},
+    {"operation_id": "workflow_describe", "tool": "workflow_describe", "risk": "safe", "taint": "none", "scope": "mcp-eligible", "site": false},
+    {"operation_id": "workflow_run", "tool": "workflow_run", "risk": "elevated", "taint": "none", "scope": "mcp-eligible", "site": true},
+    {"operation_id": "workflow_status", "tool": "workflow_status", "risk": "safe", "taint": "none", "scope": "mcp-eligible", "site": true},
+    {"operation_id": "workflow_results", "tool": "workflow_results", "risk": "safe", "taint": "none", "scope": "mcp-eligible", "site": true},
+    {"operation_id": "workflow_plan", "tool": "workflow_plan", "risk": "safe", "taint": "none", "scope": "mcp-eligible", "site": false},
+    {"operation_id": "workflow_commit", "tool": "job_commit", "risk": "elevated", "taint": "none", "scope": "companion-only", "site": false},
+    {"operation_id": "workflow_cancel", "tool": "workflow_cancel", "risk": "elevated", "taint": "none", "scope": "mcp-eligible", "site": true},
+    {"operation_id": "job_list", "tool": "job_list", "risk": "safe", "taint": "none", "scope": "mcp-eligible", "site": true},
+    {"operation_id": "job_status", "tool": "job_status", "risk": "safe", "taint": "none", "scope": "mcp-eligible", "site": true},
+    {"operation_id": "job_cancel", "tool": "job_cancel", "risk": "elevated", "taint": "none", "scope": "mcp-eligible", "site": true},
+    {"operation_id": "job_events", "tool": "job_wait_any", "risk": "safe", "taint": "none", "scope": "mcp-eligible", "site": false},
+    {"operation_id": "job_retry", "tool": "job_retry", "risk": "elevated", "taint": "none", "scope": "mcp-eligible", "site": true},
+    {"operation_id": "rag_query", "tool": "rag_query", "risk": "safe", "taint": "rag_chunk", "scope": "mcp-eligible", "site": false},
+    {"operation_id": "rag_list_documents", "tool": "rag_list_documents", "risk": "safe", "taint": "none", "scope": "mcp-eligible", "site": false},
+    {"operation_id": "rag_upload", "tool": "rag_upload", "risk": "elevated", "taint": "none", "scope": "mcp-eligible", "site": false}
+  ]
+}

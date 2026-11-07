@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/provenance.lineage.schema.json",
+  "title": "provenance.lineage",
+  "description": "provenance.lineage: UMRS ``LineageGraph.to_dict`` for one job.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/LineageGraph",
+  "$defs": {
+    "LineageEdge": {
+      "type": "object",
+      "description": "A parent \u2192 child edge between two lineage nodes.",
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "target"
+      ],
+      "additionalProperties": true
+    },
+    "LineageGraph": {
+      "type": "object",
+      "description": "provenance.lineage: UMRS ``LineageGraph.to_dict`` for one job.",
+      "properties": {
+        "job_id": {
+          "type": "string"
+        },
+        "execution_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LineageNode"
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LineageEdge"
+          }
+        },
+        "root_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "leaf_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "metrics": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "job_id",
+        "execution_id",
+        "nodes",
+        "edges",
+        "root_ids",
+        "leaf_ids",
+        "metrics"
+      ],
+      "additionalProperties": true
+    },
+    "LineageNode": {
+      "type": "object",
+      "description": "One execution step of a lineage graph (UMRS ``LineageNode.to_dict``).",
+      "properties": {
+        "trace_id": {
+          "type": "string"
+        },
+        "step_name": {
+          "type": "string"
+        },
+        "step_type": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "duration_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "model_ref": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "artifact_refs": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "trace_id",
+        "step_name",
+        "step_type",
+        "status",
+        "started_at",
+        "finished_at",
+        "duration_seconds"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

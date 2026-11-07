@@ -1,0 +1,3 @@
+KNOWN_DEFECT: This analysis contains a circular reference in methodology.
+KNOWN_DEFECT: Sample size n=3 is statistically invalid.
+KNOWN_DEFECT: Results contradict established literature.

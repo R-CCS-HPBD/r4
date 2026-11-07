@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/load_latest_checkpoint.schema.json",
+  "title": "load_latest_checkpoint",
+  "description": "load_latest_checkpoint: the stored state (null when none exists).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/LoadLatestCheckpointResult",
+  "$defs": {
+    "LoadLatestCheckpointResult": {
+      "type": "object",
+      "description": "load_latest_checkpoint: the stored state (null when none exists).",
+      "properties": {
+        "state": {}
+      },
+      "required": [
+        "state"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

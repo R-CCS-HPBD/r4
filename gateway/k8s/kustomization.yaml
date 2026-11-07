@@ -1,0 +1,27 @@
+# Kustomization for Gateway K8s manifests
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: rivault-system
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secrets.yaml
+  - deployment.yaml
+  - service.yaml
+  - networkpolicy.yaml
+  - pdb.yaml
+  # Uncomment for external access
+  # - ingress.yaml
+  # Uncomment for auto-scaling
+  # - hpa.yaml
+
+commonLabels:
+  app.kubernetes.io/part-of: ai-platform
+  app.kubernetes.io/managed-by: kustomize
+
+images:
+  - name: ghcr.io/rccs/rivault-gateway
+    newName: rivault-gateway
+    newTag: latest

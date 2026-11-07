@@ -1,0 +1,11 @@
+model_id,model_name,architecture,parameters_m,size_gb,task,framework,license,huggingface_id
+1,Qwen2.5-7B-Instruct,transformer-decoder,7000,15.0,text-generation,transformers,apache-2.0,Qwen/Qwen2.5-7B-Instruct
+2,Llama-3.1-8B-Instruct,transformer-decoder,8000,16.5,text-generation,transformers,llama3.1,meta-llama/Llama-3.1-8B-Instruct
+3,DeepSeek-R1-Distill-Qwen-7B,transformer-decoder,7000,15.0,reasoning,transformers,deepseek,deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+4,BERT-base-scientific,transformer-encoder,110,0.5,text-classification,transformers,apache-2.0,allenai/scibert_scivocab_uncased
+5,ESM-2-650M,transformer-encoder,650,2.5,protein-embedding,transformers,mit,facebook/esm2_t33_650M_UR50D
+6,Stable-Diffusion-3,diffusion-transformer,2000,12.0,image-generation,diffusers,stability-ai,stabilityai/stable-diffusion-3-medium
+7,Whisper-large-v3,transformer-encoder-decoder,1550,6.2,speech-recognition,transformers,mit,openai/whisper-large-v3
+8,GNN-Materials,graph-neural,50,0.2,materials-property,pytorch-geometric,apache-2.0,custom/gnn-materials-v1
+9,SE3-Transformer,equivariant-transformer,25,0.1,molecular-dynamics,e3nn,mit,custom/se3-transformer
+10,ColBERT-v2,transformer-encoder,110,0.5,retrieval,transformers,apache-2.0,colbert-ir/colbertv2.0

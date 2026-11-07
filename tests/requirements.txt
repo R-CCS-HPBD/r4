@@ -1,0 +1,47 @@
+# Test Requirements for AI-for-Science Platform
+# See TESTING.md for comprehensive testing documentation
+
+# Core testing framework
+pytest>=7.4.0
+pytest-cov>=4.0.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.10.0
+pytest-timeout>=2.1.0
+pytest-xdist>=3.3.0  # Parallel test execution
+
+# HTTP testing
+httpx>=0.25.0
+requests>=2.28.0
+aiohttp>=3.8.0
+
+# Authentication
+python-jose[cryptography]>=3.4.0
+
+# Mocking and faking
+moto>=4.0.0          # AWS/S3 mocking
+fakeredis>=2.10.0    # Redis mocking
+
+# Database testing
+psycopg2-binary>=2.9.0
+pgvector>=0.2.0
+
+# API testing
+fastapi>=0.100.0
+uvicorn>=0.22.0
+
+# Data handling
+numpy>=1.24.0
+Pillow>=9.0.0
+
+# JSON/YAML
+pyyaml>=6.0.0
+jsonschema>=4.17.0
+
+# Kubernetes testing (optional)
+kubernetes>=26.1.0
+
+# Code quality (optional - for pre-commit)
+# black>=23.0.0
+# isort>=5.12.0
+# flake8>=6.0.0
+# mypy>=1.0.0

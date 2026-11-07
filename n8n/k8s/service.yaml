@@ -1,0 +1,51 @@
+# n8n Kubernetes Service
+#
+# Deploy: kubectl apply -f service.yaml
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: n8n
+  namespace: rivault
+  labels:
+    app: n8n
+    component: workflow
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 5678
+      targetPort: http
+      protocol: TCP
+  selector:
+    app: n8n
+
+---
+# Optional: Ingress for external access
+# Uncomment and configure for your ingress controller
+#
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: n8n
+#   namespace: rivault
+#   annotations:
+#     nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+#     nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+# spec:
+#   ingressClassName: nginx
+#   rules:
+#     - host: n8n.example.com
+#       http:
+#         paths:
+#           - path: /
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: n8n
+#                 port:
+#                   number: 5678
+#   tls:
+#     - hosts:
+#         - n8n.example.com
+#       secretName: n8n-tls

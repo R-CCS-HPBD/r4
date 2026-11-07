@@ -1,0 +1,29 @@
+{
+  "name": "fugaku",
+  "version": "1.0.0",
+  "description": "Fugaku operations (jobs, staging, status, manuals) via the RIKEN-RCCS/fugaku-mcp stdio server",
+  "author": "RIKEN R-CCS (fugaku-mcp, adapted by AI4S Platform)",
+  "license": "MIT",
+  "tools": [
+    "cluster_status", "account_info", "list_jobs", "run_job", "submit_job",
+    "fetch_result", "job_status", "cancel_job", "stage_in", "stage_out",
+    "run_command", "check_update", "fugaku_help", "search_manual"
+  ],
+  "dependencies": ["mcp"],
+  "tags": ["hpc", "fugaku", "jobs", "default"],
+  "capabilities": {
+    "category": "hpc",
+    "risk": "privileged",
+    "transport": "stdio",
+    "network": {"outbound": ["api.fugaku.r-ccs.riken.jp"]},
+    "filesystem": {"readonly": []},
+    "requires": ["fugaku-cert"],
+    "auth": {
+      "current": "FUGAKU_CERT env (X.509 client PEM)",
+      "broker_model": "umrs-credential-broker (planned, ADR-022 §5; reuses Slurm per-user-ssh delegation plumbing)"
+    },
+    "approval": {
+      "dangerous_tools": ["submit_job", "run_job", "cancel_job", "stage_in", "run_command"]
+    }
+  }
+}

@@ -1,0 +1,43 @@
+# Test-import hygiene allowlist (structure-hardening plan step 1.5).
+# One repo-relative path per line; `#` starts a comment. An entry means:
+# "this file's path splice / spec-load is intentional and reviewed".
+# Keep entries append-only; removal requires the load to become obsolete.
+
+# --- Isolated foundation-module pins: plain import would let a heavyweight
+# dependency leak past the stdlib-only assertion.
+umrs/tests/test_provision_roster.py
+umrs/tests/test_provision_roster_alias.py
+
+# --- Non-packaged script targets: no dotted-import route exists.
+umrs/tests/test_sts_renewal.py          # umrs/src/umrs/mini-rivault-llm (hyphenated dir)
+umrs/tests/test_mark_ambient_corpus.py  # umrs/tools/ shadows repo-root tools/ package
+umrs/tests/test_sidecar_sign_parity.py  # gateway/sidecar/main.py — sibling-tree script
+umrs/tests/test_presigned_ttl_edges.py  # gateway/sidecar/main.py — sibling-tree script
+umrs/tests/test_ttl_clamp.py            # gateway/sidecar/main.py via sys.path
+umrs/tests/test_umrs_step_helper.py     # umrs/deploy/_common/umrs_step_helper.py — stdlib login-node script, no package route (2026-09-26)
+
+# --- Standalone per-server package dirs / scripts trees (one `server.py`
+# module name per server; name collision is inherent to the layout).
+mcp-servers/tests/test_adapter_fallback.py
+mcp-servers/tests/test_mcp_contract_pinning.py
+mcp-servers/tests/test_persistent_mcp_client.py
+mcp-servers/tests/test_frontend_default_mcp_registration.py  # mcp-servers/scripts/frontend_default_mcp.py — stdlib-only launcher script run by systemd, no package route
+
+# --- Cross-repo test helper import (umrs/tests has no package route).
+r4/tests/test_blank_project_cli_e2e.py
+
+# --- benchmarks/ is a repo-root namespace tree WITHOUT packaging today; the
+# bench suite imports benchmarks.team_engines.* and CI runs it from
+# working-directory=r4. Packaging benchmarks as a workspace member is the
+# long-term answer; the splice remains until that wave is scheduled.
+r4/tests/test_team_bench.py
+
+# --- Non-packaged script targets (added 2026-10-09).
+mcp-servers/tests/test_default_packages_source_resolution.py  # hatch-registry/packages/<hyphenated>/server.py — standalone package scripts, no dotted-import route
+mcp-servers/tests/test_knowledge_tools_search_query.py  # same class as the source-resolution test above (C-3a, 2026-10-19)
+
+# --- ADR-093 retrieval eval harness (added 2026-10-10): benchmarks/retrieval/
+# is a script tree (run.py imports arms, backends, scifact... as bare siblings),
+# with no dotted-import route; same standing as r4/tests/test_team_bench.py.
+tests/test_bench_retrieval.py
+tests/test_adr093_profiles_seams.py  # drives the same harness (arms.PRESETS["large"], backends.Stack) against the real routes (wave C integrator, 2026-10-10)

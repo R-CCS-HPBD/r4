@@ -1,0 +1,2764 @@
+{
+  "components": {
+    "schemas": {
+      "AttemptResponse": {
+        "description": "Attempt data for API responses.",
+        "properties": {
+          "attempt_id": {
+            "title": "Attempt Id",
+            "type": "string"
+          },
+          "attempt_no": {
+            "title": "Attempt No",
+            "type": "integer"
+          },
+          "backend": {
+            "title": "Backend",
+            "type": "string"
+          },
+          "backend_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Backend Ref"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "exit_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Reason"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "log_uri": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Log Uri"
+          },
+          "metrics": {
+            "additionalProperties": true,
+            "title": "Metrics",
+            "type": "object"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "status_detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Detail"
+          }
+        },
+        "required": [
+          "attempt_id",
+          "job_id",
+          "attempt_no",
+          "backend",
+          "backend_ref",
+          "status",
+          "started_at",
+          "ended_at",
+          "exit_reason",
+          "log_uri",
+          "status_detail",
+          "metrics",
+          "created_at"
+        ],
+        "title": "AttemptResponse",
+        "type": "object"
+      },
+      "Body_rag_upload": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_rag_upload",
+        "type": "object"
+      },
+      "DocumentInfo": {
+        "description": "Document information.",
+        "properties": {
+          "chunks": {
+            "default": 0,
+            "title": "Chunks",
+            "type": "integer"
+          },
+          "document_id": {
+            "title": "Document Id",
+            "type": "string"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "document_id",
+          "filename",
+          "project_id"
+        ],
+        "title": "DocumentInfo",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "JobActionResponse": {
+        "description": "Response for job actions (cancel, retry).",
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "job_id",
+          "action",
+          "success",
+          "message"
+        ],
+        "title": "JobActionResponse",
+        "type": "object"
+      },
+      "JobEvent": {
+        "description": "One job-terminal event (a ``platform_notifications`` row, ADR-105 D-5).",
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "detail": {
+            "additionalProperties": true,
+            "description": "job_id, job_type, status, execution_id, session_id, exit_reason, finished_at",
+            "title": "Detail",
+            "type": "object"
+          },
+          "id": {
+            "description": "Row id; the cursor for the next read",
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "description": "job.succeeded|job.failed|job.cancelled|job.lost",
+            "title": "Kind",
+            "type": "string"
+          },
+          "project_id": {
+            "default": "",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "title": {
+            "default": "",
+            "description": "One-line summary",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind"
+        ],
+        "title": "JobEvent",
+        "type": "object"
+      },
+      "JobEventsResponse": {
+        "description": "A cursor page of the caller's job events (ascending by id).",
+        "properties": {
+          "cursor": {
+            "description": "Last returned id (or `after` when none): the next `after`",
+            "title": "Cursor",
+            "type": "integer"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/JobEvent"
+            },
+            "title": "Events",
+            "type": "array"
+          }
+        },
+        "required": [
+          "events",
+          "cursor"
+        ],
+        "title": "JobEventsResponse",
+        "type": "object"
+      },
+      "JobListResponse": {
+        "description": "Response for job listing.",
+        "properties": {
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/JobResponse"
+            },
+            "title": "Jobs",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "jobs",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "JobListResponse",
+        "type": "object"
+      },
+      "JobResponse": {
+        "description": "Job data for API responses.",
+        "example": {
+          "active_attempt_id": "att-xyz789",
+          "created_at": "2024-01-15T10:30:00Z",
+          "desired_max_attempts": 3,
+          "job_id": "job-abc123",
+          "job_type": "endpoint_provision",
+          "last_state_change_at": "2024-01-15T10:31:00Z",
+          "priority": 0,
+          "project_id": "proj-123",
+          "restart_policy": "on_crash",
+          "spec": {
+            "model": "rivault-gpt-oss-static"
+          },
+          "status": "running",
+          "ttl_seconds": 300,
+          "updated_at": "2024-01-15T10:31:00Z",
+          "user_id": "user-456"
+        },
+        "properties": {
+          "active_attempt_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Attempt Id"
+          },
+          "attempts": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AttemptResponse"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attempts"
+          },
+          "commit_attempt_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commit Attempt Id"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "desired_max_attempts": {
+            "title": "Desired Max Attempts",
+            "type": "integer"
+          },
+          "fan_out_child_job_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Fan Out Child Job Ids",
+            "type": "array"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "job_type": {
+            "title": "Job Type",
+            "type": "string"
+          },
+          "last_state_change_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last State Change At"
+          },
+          "next_run_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Run At"
+          },
+          "priority": {
+            "title": "Priority",
+            "type": "integer"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "remaining_alive_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remaining Alive Seconds"
+          },
+          "restart_policy": {
+            "title": "Restart Policy",
+            "type": "string"
+          },
+          "spec": {
+            "additionalProperties": true,
+            "title": "Spec",
+            "type": "object"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "ttl_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ttl Seconds"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          },
+          "venue": {
+            "default": "",
+            "title": "Venue",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "project_id",
+          "user_id",
+          "job_type",
+          "spec",
+          "status",
+          "priority",
+          "desired_max_attempts",
+          "restart_policy",
+          "next_run_at",
+          "active_attempt_id",
+          "commit_attempt_id",
+          "created_at",
+          "updated_at",
+          "last_state_change_at"
+        ],
+        "title": "JobResponse",
+        "type": "object"
+      },
+      "RAGQueryRequest": {
+        "description": "RAG query request.",
+        "properties": {
+          "filters": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Metadata filters",
+            "title": "Filters"
+          },
+          "include_sources": {
+            "default": true,
+            "description": "Include source documents",
+            "title": "Include Sources",
+            "type": "boolean"
+          },
+          "project_id": {
+            "description": "Project ID",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "query": {
+            "description": "Query text",
+            "title": "Query",
+            "type": "string"
+          },
+          "threshold": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Legacy absolute similarity cut (top_k at or above it). Unset (ADR-093 D-3): the adaptive cut and calibrated sufficiency",
+            "title": "Threshold"
+          },
+          "top_k": {
+            "default": 5,
+            "description": "Most passages: k in threshold mode. In adaptive mode the cut's k_max (capped at 12) when sent with a value other than the legacy default 5, which every pre-ADR-093 client serializes; unset or the legacy default means the site's UMRS_RAG_FINAL_K_MAX",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "query",
+          "project_id"
+        ],
+        "title": "RAGQueryRequest",
+        "type": "object"
+      },
+      "RAGQueryResponse": {
+        "description": "RAG query response.",
+        "properties": {
+          "answer": {
+            "title": "Answer",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/RAGSource"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "usage": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usage"
+          }
+        },
+        "required": [
+          "answer"
+        ],
+        "title": "RAGQueryResponse",
+        "type": "object"
+      },
+      "RAGSource": {
+        "description": "A source document from RAG retrieval.",
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "document_id": {
+            "title": "Document Id",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          }
+        },
+        "required": [
+          "document_id",
+          "content",
+          "score"
+        ],
+        "title": "RAGSource",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "WorkflowCommitRequest": {
+        "description": "``POST /umrs/workflows/{name}/commit`` body: a plan's ``signed`` dict\nand ``digest`` exactly as ``.../plan`` returned them.",
+        "properties": {
+          "auto": {
+            "default": false,
+            "description": "An unattended commit: refused unless the project's auto-commit threshold is set and the re-resolved max_gpu_hours is within it",
+            "title": "Auto",
+            "type": "boolean"
+          },
+          "digest": {
+            "description": "The plan's digest (64 lowercase hex characters)",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Digest",
+            "type": "string"
+          },
+          "signed": {
+            "additionalProperties": true,
+            "description": "The plan's signed dict, unchanged",
+            "title": "Signed",
+            "type": "object"
+          }
+        },
+        "required": [
+          "signed",
+          "digest"
+        ],
+        "title": "WorkflowCommitRequest",
+        "type": "object"
+      },
+      "WorkflowCommitResponse": {
+        "additionalProperties": true,
+        "description": "``POST /umrs/workflows/{workflow_name}/commit`` (operation\n``workflow_commit``): the trigger payload plus the plan it committed.",
+        "properties": {
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action"
+          },
+          "durable_job": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Durable Job"
+          },
+          "durable_job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Durable Job Id"
+          },
+          "execution_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Id"
+          },
+          "existing_run": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "True when this plan was already committed: the payload names that run",
+            "title": "Existing Run"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Params"
+          },
+          "plan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Id"
+          },
+          "source_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Path"
+          },
+          "status": {
+            "description": "'ok'",
+            "title": "Status",
+            "type": "string"
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Declared step count",
+            "title": "Steps"
+          },
+          "workflow_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Name"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "WorkflowCommitResponse",
+        "type": "object"
+      },
+      "WorkflowDescribeResponse": {
+        "additionalProperties": true,
+        "description": "``GET /umrs/workflows/{workflow_name}`` (operation ``workflow_describe``).",
+        "properties": {
+          "contract_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Version"
+          },
+          "description": {
+            "title": "Description"
+          },
+          "parameter_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Free-form JSON Schema the trigger parameters must satisfy",
+            "title": "Parameter Schema"
+          },
+          "requirements": {
+            "title": "Requirements"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope"
+          },
+          "status": {
+            "description": "'ok'",
+            "title": "Status",
+            "type": "string"
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps"
+          },
+          "triggers": {
+            "title": "Triggers"
+          },
+          "user_id": {
+            "title": "User Id"
+          },
+          "version": {
+            "title": "Version"
+          },
+          "workflow_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Name"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "WorkflowDescribeResponse",
+        "type": "object"
+      },
+      "WorkflowExecution": {
+        "additionalProperties": true,
+        "description": "One execution row (registry record, or derived from the durable job).",
+        "properties": {
+          "artifacts": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifacts"
+          },
+          "cancel_requested": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancel Requested"
+          },
+          "durable_job": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Durable Job"
+          },
+          "durable_job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Durable Job Id"
+          },
+          "error": {
+            "title": "Error"
+          },
+          "execution_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Id"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "gates": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gates"
+          },
+          "identity_provenance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identity Provenance"
+          },
+          "params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Params"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Progress"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          },
+          "workflow_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Name"
+          }
+        },
+        "title": "WorkflowExecution",
+        "type": "object"
+      },
+      "WorkflowExecutionResponse": {
+        "additionalProperties": true,
+        "description": "Execution status and cancel (``workflow_status``, ``workflow_cancel``).",
+        "properties": {
+          "execution": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkflowExecution"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "description": "'ok'",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "WorkflowExecutionResponse",
+        "type": "object"
+      },
+      "WorkflowListResponse": {
+        "additionalProperties": true,
+        "description": "``GET /umrs/workflows`` (operation ``workflow_list``).",
+        "properties": {
+          "count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Number of rows",
+            "title": "Count"
+          },
+          "status": {
+            "description": "'ok'",
+            "title": "Status",
+            "type": "string"
+          },
+          "workflows": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Catalog rows (own, shared, system)",
+            "title": "Workflows"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "WorkflowListResponse",
+        "type": "object"
+      },
+      "WorkflowPlanQuota": {
+        "additionalProperties": true,
+        "description": "The caller's agent-unit budget (``api/agent_quota``); reported, not\ncharged: a workflow run is not an agent unit.",
+        "properties": {
+          "active_units": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Live agent units now (null when unreadable)",
+            "title": "Active Units"
+          },
+          "max_units": {
+            "description": "Per-user ceiling (0 = uncapped)",
+            "title": "Max Units",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "max_units"
+        ],
+        "title": "WorkflowPlanQuota",
+        "type": "object"
+      },
+      "WorkflowPlanRequest": {
+        "description": "``POST /umrs/workflows/{name}/plan`` body (ADR-105 D-4): the trigger's\ninputs; nothing runs and nothing is stored.",
+        "properties": {
+          "input_files": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional input file keys",
+            "title": "Input Files"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "description": "Runtime parameters",
+            "title": "Parameters",
+            "type": "object"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Project context (MVP mode only; strict uses verified headers)",
+            "title": "Project Id"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Caller (MVP mode only)",
+            "title": "User Id"
+          }
+        },
+        "title": "WorkflowPlanRequest",
+        "type": "object"
+      },
+      "WorkflowPlanResponse": {
+        "additionalProperties": true,
+        "description": "``POST /umrs/workflows/{workflow_name}/plan`` (operation ``workflow_plan``).\n\nNothing is stored: send ``signed`` and ``digest`` back unchanged to\n``.../commit`` before ``expires_at``.",
+        "properties": {
+          "account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Slurm account when a step runs on an HPC lane",
+            "title": "Account"
+          },
+          "auto_commit_allowed": {
+            "description": "Threshold set and max_gpu_hours <= threshold",
+            "title": "Auto Commit Allowed",
+            "type": "boolean"
+          },
+          "auto_commit_max_gpu_hours": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The project's auto-commit threshold (null = none)",
+            "title": "Auto Commit Max Gpu Hours"
+          },
+          "digest": {
+            "description": "Server HMAC-SHA256 over the canonical `signed`",
+            "title": "Digest",
+            "type": "string"
+          },
+          "expires_at": {
+            "description": "UTC ISO-8601; commit refuses after it",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "gpu_steps": {
+            "description": "Steps that get a GPU",
+            "title": "Gpu Steps",
+            "type": "integer"
+          },
+          "lane": {
+            "description": "The run's lane (the uploaded-code lane when any)",
+            "title": "Lane",
+            "type": "string"
+          },
+          "max_gpu_hours": {
+            "description": "Upper bound: sum over GPU steps of max_wall_seconds x gpus / 3600; signed, and re-checked on commit",
+            "title": "Max Gpu Hours",
+            "type": "number"
+          },
+          "max_wall_seconds": {
+            "description": "Upper bound: the sum of every step's attempt bound x attempts, as if the steps ran one after another; queue wait and a crash re-dispatch of the whole run are not counted",
+            "title": "Max Wall Seconds",
+            "type": "integer"
+          },
+          "partition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Slurm partition when a step runs on an HPC lane",
+            "title": "Partition"
+          },
+          "plan_id": {
+            "description": "'plan-' + digest[:24]; the run's idempotency key",
+            "title": "Plan Id",
+            "type": "string"
+          },
+          "quota": {
+            "$ref": "#/components/schemas/WorkflowPlanQuota"
+          },
+          "require_plan": {
+            "description": "Whether the project refuses direct triggers",
+            "title": "Require Plan",
+            "type": "boolean"
+          },
+          "signed": {
+            "additionalProperties": true,
+            "description": "The exact dict the digest covers",
+            "title": "Signed",
+            "type": "object"
+          },
+          "status": {
+            "description": "'ok'",
+            "title": "Status",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowPlanStep"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "version": {
+            "title": "Version"
+          },
+          "workflow_name": {
+            "title": "Workflow Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "plan_id",
+          "digest",
+          "expires_at",
+          "signed",
+          "workflow_name",
+          "steps",
+          "lane",
+          "gpu_steps",
+          "max_wall_seconds",
+          "max_gpu_hours",
+          "quota",
+          "require_plan",
+          "auto_commit_allowed"
+        ],
+        "title": "WorkflowPlanResponse",
+        "type": "object"
+      },
+      "WorkflowPlanStep": {
+        "additionalProperties": true,
+        "description": "One step as the plan resolved it.",
+        "properties": {
+          "attempt_seconds": {
+            "description": "Wall bound of one attempt (the HPC --time, else the step timeout)",
+            "title": "Attempt Seconds",
+            "type": "integer"
+          },
+          "attempts": {
+            "description": "1 + the step's max_retries",
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "gate": {
+            "description": "Manual-approval gate (runs no code)",
+            "title": "Gate",
+            "type": "boolean"
+          },
+          "gpu": {
+            "description": "Whether the step gets a GPU",
+            "title": "Gpu",
+            "type": "boolean"
+          },
+          "gpus": {
+            "description": "GPUs per attempt (0 without a GPU)",
+            "title": "Gpus",
+            "type": "integer"
+          },
+          "lane": {
+            "description": "Executor lane the step runs on",
+            "title": "Lane",
+            "type": "string"
+          },
+          "max_wall_seconds": {
+            "description": "attempt_seconds x attempts",
+            "title": "Max Wall Seconds",
+            "type": "integer"
+          },
+          "name": {
+            "description": "Step name",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "lane",
+          "gate",
+          "gpu",
+          "gpus",
+          "attempt_seconds",
+          "attempts",
+          "max_wall_seconds"
+        ],
+        "title": "WorkflowPlanStep",
+        "type": "object"
+      },
+      "WorkflowResultsBody": {
+        "additionalProperties": true,
+        "description": "Per-step and final outputs gathered so far.",
+        "properties": {
+          "final": {
+            "title": "Final"
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps"
+          }
+        },
+        "title": "WorkflowResultsBody",
+        "type": "object"
+      },
+      "WorkflowResultsResponse": {
+        "additionalProperties": true,
+        "description": "``GET \u2026/executions/{execution_id}/results`` (operation ``workflow_results``).",
+        "properties": {
+          "artifacts": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifacts"
+          },
+          "durable_job": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Durable Job"
+          },
+          "durable_job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Durable Job Id"
+          },
+          "error": {
+            "title": "Error"
+          },
+          "execution_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Id"
+          },
+          "execution_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Status"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Progress"
+          },
+          "results": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkflowResultsBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "description": "'ok'",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "WorkflowResultsResponse",
+        "type": "object"
+      },
+      "WorkflowTriggerRequest": {
+        "description": "Workflow trigger request body (UMRS + public Gateway contract).",
+        "properties": {
+          "input_files": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional input file keys",
+            "title": "Input Files"
+          },
+          "parameters": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Public contract runtime parameters",
+            "title": "Parameters"
+          },
+          "params": {
+            "additionalProperties": true,
+            "description": "Legacy UMRS runtime parameters",
+            "title": "Params",
+            "type": "object"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Project context (MVP mode only; strict uses verified headers)",
+            "title": "Project Id"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Workflow owner or caller (MVP mode only)",
+            "title": "User Id"
+          }
+        },
+        "title": "WorkflowTriggerRequest",
+        "type": "object"
+      },
+      "WorkflowTriggerResponse": {
+        "additionalProperties": true,
+        "description": "``POST /umrs/workflows/{workflow_name}/trigger`` (operation ``workflow_run``).",
+        "properties": {
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action"
+          },
+          "durable_job": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Durable Job"
+          },
+          "durable_job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Durable Job Id"
+          },
+          "execution_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Id"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Params"
+          },
+          "source_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Path"
+          },
+          "status": {
+            "description": "'ok'",
+            "title": "Status",
+            "type": "string"
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Declared step count",
+            "title": "Steps"
+          },
+          "workflow_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Name"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "WorkflowTriggerResponse",
+        "type": "object"
+      },
+      "umrs__api__rag__UploadResponse": {
+        "description": "Document upload response.",
+        "properties": {
+          "chunks": {
+            "default": 0,
+            "title": "Chunks",
+            "type": "integer"
+          },
+          "document_id": {
+            "title": "Document Id",
+            "type": "string"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "knowledge_nodes_minted": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Knowledge Nodes Minted"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "document_id",
+          "filename",
+          "status"
+        ],
+        "title": "UploadResponse",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "UMRS agent surface (ADR-105 D-1); generated",
+    "title": "UMRS Endpoint Discovery API",
+    "version": "0.3.0",
+    "x-generated-with": {
+      "fastapi": "0.138.0",
+      "pydantic": "2.13.4"
+    }
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/umrs/jobs": {
+      "get": {
+        "description": "List jobs with optional filters by project, status, and type.",
+        "operationId": "job_list",
+        "parameters": [
+          {
+            "description": "Filter by project ID",
+            "in": "query",
+            "name": "project_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by project ID",
+              "title": "Project Id"
+            }
+          },
+          {
+            "description": "Filter by status",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by status",
+              "title": "Status"
+            }
+          },
+          {
+            "description": "Filter by job type",
+            "in": "query",
+            "name": "job_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by job type",
+              "title": "Job Type"
+            }
+          },
+          {
+            "description": "Max results to return",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "description": "Max results to return",
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Offset for pagination",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Offset for pagination",
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List jobs",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/umrs/jobs/events": {
+      "get": {
+        "description": "ADR-105 D-5: durable job.succeeded|failed|cancelled|lost events for the verified caller in the verified project, ascending by id. Pass the returned cursor as the next `after`; `tail=true` returns no events and the current newest id, so a new watcher starts at now.",
+        "operationId": "job_events",
+        "parameters": [
+          {
+            "description": "Return events with id > after",
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Return events with id > after",
+              "minimum": 0,
+              "title": "After",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Max events to return",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Max events to return",
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Only events of jobs this session started",
+            "in": "query",
+            "name": "session_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only events of jobs this session started",
+              "title": "Session Id"
+            }
+          },
+          {
+            "description": "Kind prefix (job.*)",
+            "in": "query",
+            "name": "kind_prefix",
+            "required": false,
+            "schema": {
+              "default": "job.",
+              "description": "Kind prefix (job.*)",
+              "maxLength": 64,
+              "title": "Kind Prefix",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Return the newest id, no events",
+            "in": "query",
+            "name": "tail",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Return the newest id, no events",
+              "title": "Tail",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobEventsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "The caller's job-terminal events after a cursor",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/umrs/jobs/{job_id}": {
+      "get": {
+        "description": "Get detailed information about a job including all attempts.",
+        "operationId": "job_status",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Include attempt history",
+            "in": "query",
+            "name": "include_attempts",
+            "required": false,
+            "schema": {
+              "default": true,
+              "description": "Include attempt history",
+              "title": "Include Attempts",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get job details",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/umrs/jobs/{job_id}/cancel": {
+      "post": {
+        "description": "Cancel a job. Stops scheduling further attempts but does not kill running backend jobs.",
+        "operationId": "job_cancel",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Cancellation reason",
+            "in": "query",
+            "name": "reason",
+            "required": false,
+            "schema": {
+              "default": "user_cancelled",
+              "description": "Cancellation reason",
+              "title": "Reason",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobActionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel a job",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/umrs/jobs/{job_id}/retry": {
+      "post": {
+        "description": "Force retry a failed or cancelled job. Admin operation.",
+        "operationId": "job_retry",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobActionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Retry a job",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/umrs/rag/documents": {
+      "get": {
+        "description": "List all documents in a project.\n\n``project_id`` was not a parameter, so the r4 client's project (``r4 rag\ndocs <project>``, ``/rag docs <project>``) was dropped and the caller's own\ncorpus listed under it (TUI audit 2026-10-17). It now names the corpus,\nchecked like ``/query``: read tier, then the ADR-080 access list.\n\nK1.3 (2026-10-24): with the central upload facade (the default) the\ndocuments are the spine's artifacts this caller may read (``_rag_spine``);\nthe endpoint corpus answered ``[]`` after every upload.",
+        "operationId": "rag_list_documents",
+        "parameters": [
+          {
+            "description": "Corpus to list (default: the caller's)",
+            "in": "query",
+            "name": "project_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Corpus to list (default: the caller's)",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DocumentInfo"
+                  },
+                  "title": "Response Rag List Documents",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Documents",
+        "tags": [
+          "rag-proxy"
+        ]
+      }
+    },
+    "/umrs/rag/query": {
+      "post": {
+        "description": "Answer a question: the knowledge spine first, per UMRS_RAG_QUERY_FACADE.\n\nUploads feed only the spine (WP-15), so the endpoint corpus alone could\nnever answer from them.",
+        "operationId": "rag_query",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RAGQueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RAGQueryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Query Rag",
+        "tags": [
+          "rag-proxy"
+        ]
+      }
+    },
+    "/umrs/rag/upload": {
+      "post": {
+        "description": "Upload a document for RAG indexing.\n\nWP-15 dual-corpus dwell (owner decision 2026-09-11): NEW uploads write\nto the CENTRAL durable ingest plane at ``/umrs/knowledge/upload``;\nthe endpoint-corpus proxy stays available only behind the explicit\n``UMRS_RAG_UPLOAD_FACADE=endpoint`` opt-in (endpoint corpus is read-only\nfor standing data). There is no silent dual-write.",
+        "operationId": "rag_upload",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_rag_upload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/umrs__api__rag__UploadResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upload Document",
+        "tags": [
+          "rag-proxy"
+        ]
+      }
+    },
+    "/umrs/workflows": {
+      "get": {
+        "operationId": "workflow_list",
+        "parameters": [
+          {
+            "description": "Optional workflow scope filter",
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional workflow scope filter",
+              "title": "Scope"
+            }
+          },
+          {
+            "description": "Optional workflow-name filter",
+            "in": "query",
+            "name": "name",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional workflow-name filter",
+              "title": "Name"
+            }
+          },
+          {
+            "description": "Admin-only: list the full catalog across owners",
+            "in": "query",
+            "name": "all_users",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Admin-only: list the full catalog across owners",
+              "title": "All Users",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Workflows",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/umrs/workflows/executions/{execution_id}": {
+      "get": {
+        "description": "Return workflow execution status, backed by durable job state when present.",
+        "operationId": "workflow_status",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "execution_id",
+            "required": true,
+            "schema": {
+              "title": "Execution Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowExecutionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Execution Status",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/umrs/workflows/executions/{execution_id}/cancel": {
+      "post": {
+        "description": "Request cancellation of a workflow execution.",
+        "operationId": "workflow_cancel",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "execution_id",
+            "required": true,
+            "schema": {
+              "title": "Execution Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowExecutionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Execution",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/umrs/workflows/executions/{execution_id}/results": {
+      "get": {
+        "description": "Return the structured outputs of a finished execution.\n\nFor unfinished executions, returns the partial results gathered so\nfar (so clients can render progressive UIs without retrying).",
+        "operationId": "workflow_results",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "execution_id",
+            "required": true,
+            "schema": {
+              "title": "Execution Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowResultsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Execution Results",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/umrs/workflows/{workflow_name}": {
+      "get": {
+        "description": "Return declared parameter schema and metadata for a workflow.\n\nOwner-scoped (ADR-074 D-8): the caller's own or a system workflow;\nanother owner's only for admins.",
+        "operationId": "workflow_describe",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow_name",
+            "required": true,
+            "schema": {
+              "title": "Workflow Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowDescribeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Describe Workflow",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/umrs/workflows/{workflow_name}/commit": {
+      "post": {
+        "description": "Start the run a plan describes (ADR-105 D-4): verify the signature,\nexpiry and caller, re-resolve (a changed target is ``plan_stale``), check\n``auto`` against the project's threshold, then trigger with the plan id\nas the idempotency key: a second commit answers the run already started.\nThe project's ``require_plan`` does not apply here.\n# auth: verified",
+        "operationId": "workflow_commit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow_name",
+            "required": true,
+            "schema": {
+              "title": "Workflow Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowCommitRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowCommitResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Commit Workflow",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/umrs/workflows/{workflow_name}/plan": {
+      "post": {
+        "description": "Resolve and sign a run plan (ADR-105 D-4). The same identity,\nauthorization, resolution and parameter validation as trigger; nothing\nis written (no job, no catalog change). Commit before ``expires_at``.\n# auth: verified",
+        "operationId": "workflow_plan",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow_name",
+            "required": true,
+            "schema": {
+              "title": "Workflow Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowPlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowPlanResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Plan Workflow",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/umrs/workflows/{workflow_name}/trigger": {
+      "post": {
+        "description": "Start a run. Refused (typed 403 ``workflows.plan_required``) when the\nproject requires plan -> commit (ADR-105 D-4); a work level's request\nneeds its scope's ``workflow:<name>`` grant (ADR-108 D-3).\n# auth: verified",
+        "operationId": "workflow_run",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow_name",
+            "required": true,
+            "schema": {
+              "title": "Workflow Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowTriggerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowTriggerResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Trigger Workflow",
+        "tags": [
+          "workflows"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/session.venue_policy.schema.json",
+  "title": "session.venue_policy",
+  "description": "session.venue_policy: the server's preview of a remote start's caps.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SessionVenuePolicyResult",
+  "$defs": {
+    "SessionVenuePolicyResult": {
+      "type": "object",
+      "description": "session.venue_policy: the server's preview of a remote start's caps.",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "choice_required": {
+          "type": "boolean"
+        },
+        "limits": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "current": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "error": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "project_id",
+        "choice_required",
+        "limits",
+        "current"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

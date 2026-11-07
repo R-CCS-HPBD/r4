@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/save_checkpoint.schema.json",
+  "title": "save_checkpoint",
+  "description": "save_checkpoint: the new checkpoint id.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SaveCheckpointResult",
+  "$defs": {
+    "SaveCheckpointResult": {
+      "type": "object",
+      "description": "save_checkpoint: the new checkpoint id.",
+      "properties": {
+        "checkpoint_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "checkpoint_id"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

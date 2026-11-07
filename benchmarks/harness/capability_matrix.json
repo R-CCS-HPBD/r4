@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "frozen_at": "2026-08-20",
+  "source": "docs/ai-harness-analysis-ja-en.md sections 3-7",
+  "levels": ["full", "partial", "missing", "unique"],
+  "harnesses": ["r4_companion", "claude_code", "github_copilot"],
+  "capabilities": {
+    "agent_loop":              {"r4_companion": "full",    "claude_code": "full",    "github_copilot": "full"},
+    "context_management":      {"r4_companion": "full",    "claude_code": "full",    "github_copilot": "full"},
+    "tool_management":         {"r4_companion": "full",    "claude_code": "full",    "github_copilot": "full"},
+    "planning":                {"r4_companion": "partial", "claude_code": "full",    "github_copilot": "full"},
+    "verification":            {"r4_companion": "partial", "claude_code": "full",    "github_copilot": "partial"},
+    "memory":                  {"r4_companion": "full",    "claude_code": "partial", "github_copilot": "partial"},
+    "knowledge_integration":   {"r4_companion": "full",    "claude_code": "partial", "github_copilot": "partial"},
+    "workflow_orchestration":  {"r4_companion": "full",    "claude_code": "partial", "github_copilot": "partial"},
+    "permission_gating":       {"r4_companion": "full",    "claude_code": "full",    "github_copilot": "full"},
+    "mcp_first_class_schemas": {"r4_companion": "missing", "claude_code": "full",    "github_copilot": "full"},
+    "native_ide_edits":        {"r4_companion": "missing", "claude_code": "full",    "github_copilot": "full"},
+    "test_fix_loop":           {"r4_companion": "missing", "claude_code": "full",    "github_copilot": "partial"},
+    "apply_patch_tool":        {"r4_companion": "missing", "claude_code": "full",    "github_copilot": "partial"},
+    "mid_loop_cancel_remote":  {"r4_companion": "missing", "claude_code": "full",    "github_copilot": "full"},
+    "terminal_streaming":      {"r4_companion": "missing", "claude_code": "full",    "github_copilot": "full"},
+    "model_routing":           {"r4_companion": "unique",  "claude_code": "missing", "github_copilot": "missing"},
+    "hpc_slurm_awareness":     {"r4_companion": "unique",  "claude_code": "missing", "github_copilot": "missing"},
+    "steering_self_correction":{"r4_companion": "unique",  "claude_code": "missing", "github_copilot": "missing"},
+    "artifact_lineage_a2l":    {"r4_companion": "unique",  "claude_code": "missing", "github_copilot": "missing"},
+    "governance_egress":       {"r4_companion": "unique",  "claude_code": "partial", "github_copilot": "missing"},
+    "bayesian_research_loop":  {"r4_companion": "unique",  "claude_code": "missing", "github_copilot": "missing"}
+  },
+  "gaps": [
+    {"id": "G1", "title": "No harness-level benchmark vs world", "priority": "P0", "addressed_by": "benchmarks/harness/"},
+    {"id": "G2", "title": "MCP tools not first-class in companion loop", "priority": "P1"},
+    {"id": "G3", "title": "File edits bypass VS Code WorkspaceEdit", "priority": "P1"},
+    {"id": "G4", "title": "No iterative test-fix composite loop", "priority": "P1"},
+    {"id": "G5", "title": "No unified-diff apply_patch tool", "priority": "P2"},
+    {"id": "G6", "title": "No extension-layer mid-loop cancellation", "priority": "P2"},
+    {"id": "G7", "title": "No terminal streaming into VS Code", "priority": "P2"},
+    {"id": "G8", "title": "Slurm job logs poll-only", "priority": "P3"}
+  ]
+}

@@ -1,0 +1,20 @@
+# Test Runner for E2E Tests
+#
+# Runs pytest with the E2E test suite
+
+FROM python:3.11-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir \
+    pytest \
+    pytest-asyncio \
+    httpx \
+    requests
+
+WORKDIR /app
+
+# Tests will be mounted at runtime
+CMD ["pytest", "-v", "--tb=short"]

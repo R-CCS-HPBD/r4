@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/control/v1/tool_selection.schema.json",
+  "title": "tool_selection",
+  "description": "Per-step tool-selection record (ADR-037).",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "type",
+    "payload"
+  ],
+  "properties": {
+    "type": {
+      "const": "tool_selection"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "version": {
+          "type": "integer",
+          "default": 1
+        },
+        "session_id": {
+          "type": "string",
+          "default": ""
+        },
+        "turn_id": {
+          "type": "string",
+          "default": ""
+        },
+        "step_index": {
+          "type": "integer",
+          "default": 0
+        },
+        "available_tools": {
+          "type": "integer",
+          "default": 0
+        },
+        "discovered": {
+          "type": "object"
+        },
+        "filtered_out": {
+          "type": "object"
+        },
+        "candidate_tools": {
+          "type": "integer",
+          "default": 0
+        },
+        "selected_tools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "selected_skills": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "strategy": {
+          "type": "string",
+          "default": "passthrough"
+        },
+        "ranking": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "selection_latency_ms": {
+          "type": "integer",
+          "default": 0
+        },
+        "schema_tokens_estimate": {
+          "type": "object"
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "would_filter": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+╭─Chat with R4──────────────────────────────────────────────────────────────────────────────────╮╭─Work · Tab──────────────────────────────╮
+│                                                                                               ││                                         │
+│ R4 12:57:36                                                                                   ││                                         │
+│ Hi — I'm R4. Ask anything, or type /help. Ctrl+P lists keyboard shortcuts.                    ││  work — agentic control (local +        │
+│                                                                                               ││                                         │
+│ • 12:57:38                                                                                    ││                                         │
+│ ⌂ workspace ready: /home/mnagaso/workspace/RCCS/ai4s-platform/packages/r4-tui-v3              ││  jobs (1)                               │
+│ ↵ expand details                                                                              ││  ▸ ✖ job-3c7dc13fcc88 ·                 │
+│                                                                                               ││                                         │
+│ You 12:57:38                                                                                  ││  workflows (12)                         │
+│ /work                                                                                         ││    ▸ trigger: demo08_yield_eval         │
+│                                                                                               ││      Demo 08 YieldPredictor vs batch-3  │
+│                                                                                               ││    ▸ trigger: video-ai                  │
+│                                                                                               ││      Video AI YOLO mock pipeline (      │
+│                                                                                               ││    ▸ trigger: video-ai-arm              │
+│                                                                                               ││      Video AI YOLO real-site profile    │
+│                                                                                               ││    ▸ trigger: hackathon-smoke           │
+│                                                                                               ││      Guide-verification smoke:          │
+│                                                                                               ││    ▸ trigger: hackathon-fail            │
+│                                                                                               ││      trap                               │
+│                                                                                               ││    ▸ trigger: hackathon-fail            │
+│                                                                                               ││      trap                               │
+│                                                                                               ││    ▸ trigger: hackathon-smoke           │
+│                                                                                               ││      Guide-verification smoke:          │
+│                                                                                               ││    ▸ trigger: r4-complex-dag-demo       │
+│                                                                                               ││      R4 demo workflow with parallel     │
+│                                                                                               ││    ▸ trigger: video-ai-demo             │
+│                                                                                               ││      Example video analysis pipeline:   │
+│                                                                                               ││    ▸ trigger: fs-probe                  │
+│                                                                                               ││      One-shot filesystem probe of the   │
+│                                                                                               ││    ▸ trigger: fs-probe                  │
+│                                                                                               ││      One-shot filesystem probe of the   │
+│ Alt+Enter newline · Ctrl+E $EDITOR · Shift+Tab/Ctrl+G transcript → c copy · Shift+drag        ││    ▸ trigger: fs-probe2                 │
+│                                                                                               ││      One-shot filesystem probe of the   │
+│ ┌───────────────────────────────────────────────────────────────────────────────────────────┐ ││                                         │
+│ │ ›Message R4…  (↑/↓ history, @ file, ! shell)                                              │ ││  ↑↓ select · Enter detail · jobs: r     │
+│ └───────────────────────────────────────────────────────────────────────────────────────────┘ ││                                         │
+│                                                                                               ││                                         │
+╰───────────────────────────────────────────────────────────────────────────────────────────────╯╰─────────────────────────────────────────╯
+ default/tj-047 · agents 0/0             Qwen3.8-Flash… · mode:chat · perm:auto-…              gw:connected  umrs:connected  hpc:connected

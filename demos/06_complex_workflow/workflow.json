@@ -1,0 +1,135 @@
+{
+  "name": "r4-complex-dag-demo",
+  "version": "1.0",
+  "description": "R4 demo workflow with parallel analysis branches and fan-in synthesis.",
+  "parameter_schema": {
+    "type": "object",
+    "properties": {
+      "sample_id": {
+        "type": "string",
+        "description": "Sample the brief is about (free text, e.g. an ID from your notebook)."
+      },
+      "question": {
+        "type": "string",
+        "description": "The research question the review should answer."
+      }
+    },
+    "required": [
+      "sample_id",
+      "question"
+    ]
+  },
+  "source": {
+    "type": "local_path",
+    "path": "."
+  },
+  "execution_mode": "in_process",
+  "requirements": [],
+  "resources": {
+    "gpu_count": 0,
+    "cpu_limit": "1",
+    "memory_limit": "1Gi",
+    "timeout_seconds": 600
+  },
+  "steps": [
+    {
+      "name": "collect_context",
+      "entrypoint": "umrs.pipeline_sdk.templates.llm_step:LLMStep",
+      "model_type": "llm",
+      "model": "{{model}}",
+      "config": {
+        "temperature": 0,
+        "max_tokens": 512,
+        "system_prompt": "You are preparing a concise research workflow context.",
+        "prompt_template": "Create a compact context brief for project {{ params.project_id }}. Sample: {{ params.sample_id }}. Question: {{ params.question }}."
+      },
+      "depends_on": []
+    },
+    {
+      "name": "methods_review",
+      "entrypoint": "umrs.pipeline_sdk.templates.llm_step:LLMStep",
+      "model_type": "llm",
+      "model": "{{model}}",
+      "config": {
+        "temperature": 0,
+        "max_tokens": 512,
+        "system_prompt": "You review methods and reproducibility concerns.",
+        "prompt_template": "From this context, extract methods, inputs, assumptions, and reproducibility checks: {{ steps.collect_context.response_text }}"
+      },
+      "depends_on": [
+        "collect_context"
+      ]
+    },
+    {
+      "name": "risk_review",
+      "entrypoint": "umrs.pipeline_sdk.templates.llm_step:LLMStep",
+      "model_type": "llm",
+      "model": "{{model}}",
+      "config": {
+        "temperature": 0,
+        "max_tokens": 512,
+        "system_prompt": "You identify operational and data risks for HPC workflow execution.",
+        "prompt_template": "From this context, list risks, missing inputs, and validation gates: {{ steps.collect_context.response_text }}"
+      },
+      "depends_on": [
+        "collect_context"
+      ]
+    },
+    {
+      "name": "merge_findings",
+      "entrypoint": "umrs.pipeline_sdk.templates.llm_step:LLMStep",
+      "model_type": "llm",
+      "model": "{{model}}",
+      "config": {
+        "temperature": 0,
+        "max_tokens": 512,
+        "system_prompt": "You merge two independent analyses into one balanced plan.",
+        "prompt_template": "Merge the method review and risk review into a single execution plan. Methods: {{ steps.methods_review.response_text }}\nRisks: {{ steps.risk_review.response_text }}"
+      },
+      "depends_on": [
+        "methods_review",
+        "risk_review"
+      ]
+    },
+    {
+      "name": "final_report",
+      "entrypoint": "umrs.pipeline_sdk.templates.llm_step:LLMStep",
+      "model_type": "llm",
+      "model": "{{model}}",
+      "config": {
+        "temperature": 0,
+        "max_tokens": 512,
+        "system_prompt": "Return a short JSON report for the R4 workflow demo.",
+        "prompt_template": "Create a final JSON report with report, next_actions, and confidence from this merged plan: {{ steps.merge_findings.response_text }}",
+        "output_schema": {
+          "type": "object",
+          "required": [
+            "report",
+            "next_actions",
+            "confidence"
+          ],
+          "properties": {
+            "report": {
+              "type": "string"
+            },
+            "next_actions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "confidence": {
+              "type": "number"
+            }
+          }
+        }
+      },
+      "depends_on": [
+        "merge_findings"
+      ]
+    }
+  ],
+  "output": {
+    "return_type": "file"
+  }
+}

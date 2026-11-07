@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/control/v1/turn_progress.schema.json",
+  "title": "turn_progress",
+  "description": "Heartbeat counters mid-turn (drives the live budget/progress UI).",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "type",
+    "payload"
+  ],
+  "properties": {
+    "type": {
+      "const": "turn_progress"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "version": {
+          "type": "integer",
+          "default": 1
+        },
+        "session_id": {
+          "type": "string",
+          "default": ""
+        },
+        "round_index": {
+          "type": "integer",
+          "default": 0
+        },
+        "tool_calls_so_far": {
+          "type": "integer",
+          "default": 0
+        },
+        "llm_calls_so_far": {
+          "type": "integer",
+          "default": 0
+        }
+      }
+    }
+  }
+}

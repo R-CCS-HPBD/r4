@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/stop_job.schema.json",
+  "title": "stop_job",
+  "description": "stop_job: whether a running job was stopped.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/StopJobResult",
+  "$defs": {
+    "StopJobResult": {
+      "type": "object",
+      "description": "stop_job: whether a running job was stopped.",
+      "properties": {
+        "stopped": {
+          "type": "boolean"
+        },
+        "job_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "stopped",
+        "job_id"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

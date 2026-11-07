@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/workflow.approve_gate.schema.json",
+  "title": "workflow.approve_gate",
+  "description": "workflow.cancel / workflow.approve_gate: the new status, acknowledged.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/WorkflowStatusAck",
+  "$defs": {
+    "WorkflowStatusAck": {
+      "type": "object",
+      "description": "workflow.cancel / workflow.approve_gate: the new status, acknowledged.",
+      "properties": {
+        "execution_id": {
+          "type": "string"
+        },
+        "workflow_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "type": "string"
+        },
+        "progress": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ok": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "execution_id",
+        "workflow_name",
+        "status",
+        "progress",
+        "error",
+        "ok"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

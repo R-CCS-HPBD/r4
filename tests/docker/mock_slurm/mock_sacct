@@ -1,0 +1,64 @@
+#!/bin/bash
+# Mock sacct - Display job accounting data
+#
+# Reads job state from /var/spool/slurm/jobs.json
+
+set -e
+
+STATE_FILE="/var/spool/slurm/jobs.json"
+
+# Parse arguments
+JOB_ID=""
+FORMAT=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -j|--job)
+            JOB_ID="$2"
+            shift 2
+            ;;
+        -o|--format)
+            FORMAT="$2"
+            shift 2
+            ;;
+        --json)
+            if [ -n "$JOB_ID" ]; then
+                jq --arg id "$JOB_ID" '.jobs[$id] // empty' "$STATE_FILE"
+            else
+                jq '.jobs' "$STATE_FILE"
+            fi
+            exit 0
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
+# Header
+echo "JobID    JobName  Partition    State      Start               End"
+echo "-------- -------- ------------ ---------- ------------------- -------------------"
+
+# Check if state file exists
+if [ ! -f "$STATE_FILE" ]; then
+    exit 0
+fi
+
+# Output jobs
+if [ -n "$JOB_ID" ]; then
+    jq -r --arg id "$JOB_ID" '
+        .jobs[$id] // empty |
+        [.job_id, .name, .partition, .state,
+         (.start_time | todate),
+         (if .state == "RUNNING" then "Unknown" else (.end_time | todate) end)] |
+        @tsv
+    ' "$STATE_FILE" | column -t
+else
+    jq -r '
+        .jobs | to_entries[] | .value |
+        [.job_id, .name, .partition, .state,
+         (.start_time | todate),
+         (if .state == "RUNNING" then "Unknown" else (.end_time | todate) end)] |
+        @tsv
+    ' "$STATE_FILE" | column -t
+fi

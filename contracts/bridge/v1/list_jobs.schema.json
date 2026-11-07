@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/list_jobs.schema.json",
+  "title": "list_jobs",
+  "description": "list_jobs: this session's background jobs, newest first.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ListJobsResult",
+  "$defs": {
+    "ListJobsResult": {
+      "type": "object",
+      "description": "list_jobs: this session's background jobs, newest first.",
+      "properties": {
+        "jobs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LocalJobRow"
+          }
+        }
+      },
+      "required": [
+        "jobs"
+      ],
+      "additionalProperties": true
+    },
+    "LocalJobRow": {
+      "type": "object",
+      "description": "One detached-agent job (the job manager's sqlite row).",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "pid": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "type": "string"
+        },
+        "started_at": {
+          "type": "string"
+        },
+        "ended_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "log_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "task_description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "session_id",
+        "pid",
+        "status",
+        "started_at",
+        "ended_at",
+        "log_path",
+        "task_description"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

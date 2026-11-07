@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/knowledge.save.schema.json",
+  "title": "knowledge.save",
+  "description": "knowledge.save: one turn kept in project knowledge, verbatim (K1.6).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/KnowledgeSaveResult",
+  "$defs": {
+    "KnowledgeSaveResult": {
+      "type": "object",
+      "description": "knowledge.save: one turn kept in project knowledge, verbatim (K1.6).",
+      "properties": {
+        "job_id": {
+          "type": "string"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "graph_id": {
+          "type": "string"
+        },
+        "turn_id": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "tier": {
+          "type": "string"
+        },
+        "origin": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "chars": {
+          "type": "integer"
+        },
+        "line": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "job_id",
+        "project_id",
+        "graph_id",
+        "turn_id",
+        "role",
+        "tier",
+        "origin",
+        "title",
+        "chars",
+        "line"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

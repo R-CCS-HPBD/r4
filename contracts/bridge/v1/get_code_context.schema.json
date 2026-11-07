@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/get_code_context.schema.json",
+  "title": "get_code_context",
+  "description": "get_code_context: the snapshot under one key.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/GetCodeContextResult",
+  "$defs": {
+    "CodeContext": {
+      "type": "object",
+      "description": "detect_code_context's compact root snapshot.",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "root": {
+          "type": "string"
+        },
+        "languages": {
+          "type": "object"
+        },
+        "primary_language": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "build_systems": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "make_targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tools": {
+          "type": "object"
+        },
+        "language_servers": {
+          "type": "object"
+        },
+        "source_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "suggested_commands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "path",
+        "root",
+        "languages",
+        "primary_language",
+        "build_systems",
+        "make_targets",
+        "tools",
+        "language_servers",
+        "source_files",
+        "suggested_commands"
+      ],
+      "additionalProperties": true
+    },
+    "GetCodeContextResult": {
+      "type": "object",
+      "description": "get_code_context: the snapshot under one key.",
+      "properties": {
+        "code_context": {
+          "$ref": "#/$defs/CodeContext"
+        }
+      },
+      "required": [
+        "code_context"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

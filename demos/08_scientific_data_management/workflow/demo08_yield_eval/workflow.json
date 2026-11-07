@@ -1,0 +1,29 @@
+{
+  "name": "demo08_yield_eval",
+  "version": "1.0",
+  "description": "Demo 08 YieldPredictor vs batch-3 lab yields (durable research experiment).",
+  "source": {
+    "type": "local_path",
+    "path": "."
+  },
+  "execution_mode": "in_process",
+  "requirements": [],
+  "resources": {
+    "gpu_count": 0,
+    "cpu_limit": "1",
+    "memory_limit": "512Mi",
+    "timeout_seconds": 120
+  },
+  "steps": [
+    {
+      "name": "yield_eval",
+      "entrypoint": "yield_eval:YieldEvalStep",
+      "config": {
+        "batch_id": "batch-3",
+        "yield_pct": 85.0,
+        "co2_uptake_mmol_g": 4.21
+      },
+      "depends_on": []
+    }
+  ]
+}

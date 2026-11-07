@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/session.pin.schema.json",
+  "title": "session.pin",
+  "description": "session.pin / session.unpin: the row's new pin state.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SessionPinResult",
+  "$defs": {
+    "SessionPinResult": {
+      "type": "object",
+      "description": "session.pin / session.unpin: the row's new pin state.",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "pinned": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "session_id",
+        "pinned"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

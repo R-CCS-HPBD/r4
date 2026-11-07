@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/get_science_loop.schema.json",
+  "title": "get_science_loop",
+  "description": "get_science_loop: trajectory rows and counters.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/GetScienceLoopResult",
+  "$defs": {
+    "GetScienceLoopResult": {
+      "type": "object",
+      "description": "get_science_loop: trajectory rows and counters.",
+      "properties": {
+        "trajectory": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ScienceTrajectoryRow"
+          }
+        },
+        "stats": {
+          "$ref": "#/$defs/ScienceStats"
+        },
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "trajectory",
+        "stats",
+        "session_id"
+      ],
+      "additionalProperties": true
+    },
+    "ScienceStats": {
+      "type": "object",
+      "description": "get_science_loop's aggregate counters.",
+      "properties": {
+        "total_iterations": {
+          "type": "integer"
+        },
+        "cumulative_reward": {
+          "type": "number"
+        },
+        "avg_reward": {
+          "type": "number"
+        },
+        "total_performance": {
+          "type": "number"
+        },
+        "total_novelty": {
+          "type": "number"
+        },
+        "total_information_gain": {
+          "type": "number"
+        },
+        "avg_entropy": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "total_iterations",
+        "cumulative_reward",
+        "avg_reward",
+        "total_performance",
+        "total_novelty",
+        "total_information_gain",
+        "avg_entropy"
+      ],
+      "additionalProperties": true
+    },
+    "ScienceTrajectoryRow": {
+      "type": "object",
+      "description": "One recorded science-loop iteration (science_loop sqlite row).",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "hypothesis": {
+          "type": "string"
+        },
+        "experiment_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reward_total": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "performance": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "novelty": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "information_gain": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reproducibility": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cost": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "belief_entropy": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "timestamp": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "session_id",
+        "hypothesis",
+        "experiment_id",
+        "reward_total",
+        "performance",
+        "novelty",
+        "information_gain",
+        "reproducibility",
+        "cost",
+        "belief_entropy",
+        "timestamp"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

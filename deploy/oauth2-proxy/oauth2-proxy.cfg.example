@@ -1,0 +1,60 @@
+# =============================================================================
+# oauth2-proxy configuration for Okta OIDC
+# =============================================================================
+# Place this file at /etc/oauth2-proxy/oauth2-proxy.cfg on the gateway host,
+# then start oauth2-proxy.  See deploy/oauth2-proxy/README.md for the full
+# integration guide.
+#
+# Replace placeholders:
+#   COOKIE_SECRET  — generate with: python -c "import os,base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())"
+#   YOUR_CLIENT_ID — from Okta Application → Client Credentials
+#   YOUR_CLIENT_SECRET — from Okta Application → Client Credentials
+#   YOUR_OKTA_DOMAIN — e.g. dev-12345678.okta.com
+#   YOUR_HOST — public hostname of this gateway (e.g. ai.example.com)
+# =============================================================================
+
+provider = "oidc"
+
+# Listen on loopback only; NGINX fronts this.
+http_address = "127.0.0.1:4180"
+
+# Accept any email domain (Okta controls who can authenticate)
+email_domains = [ "*" ]
+scope = "openid email profile"
+
+# Pass the OIDC access token / ID token to upstream so the Gateway
+# auth sidecar can validate it with JWKS.
+set_authorization_header = true
+pass_authorization_header = true
+set_xauthrequest  = true
+pass_access_token = true
+
+# Claim used as the authenticated user's email
+oidc_email_claim = "email"
+
+# PKCE (S256) for added security on the authorization code exchange
+code_challenge_method = "S256"
+
+# We sit behind NGINX, so trust X-Forwarded-* headers.
+reverse_proxy = true
+
+# Upstream is NGINX (or the Gateway directly).
+# oauth2-proxy only handles auth; it proxies all validated traffic here.
+upstreams = [ "http://127.0.0.1:8080" ]
+
+# ----- Secrets -----
+cookie_secret = "COOKIE_SECRET"
+cookie_secure  = false        # Set to true when TLS is terminated at NGINX
+cookie_refresh = "1h"
+
+# ----- Okta OIDC Provider -----
+oidc_issuer_url = "https://YOUR_OKTA_DOMAIN"
+client_id       = "YOUR_CLIENT_ID"
+client_secret   = "YOUR_CLIENT_SECRET"
+
+# Callback URL that Okta redirects to after login.
+# Must match the redirect URI registered in the Okta Application.
+redirect_url = "https://YOUR_HOST/oauth2/callback"
+
+# Skip the "Login with …" interstitial and go straight to Okta.
+skip_provider_button = true

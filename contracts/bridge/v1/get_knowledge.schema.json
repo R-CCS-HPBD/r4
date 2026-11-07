@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/get_knowledge.schema.json",
+  "title": "get_knowledge",
+  "description": "get_knowledge: stats and the newest patterns/lessons.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/GetKnowledgeResult",
+  "$defs": {
+    "GetKnowledgeResult": {
+      "type": "object",
+      "description": "get_knowledge: stats and the newest patterns/lessons.",
+      "properties": {
+        "stats": {
+          "$ref": "#/$defs/KnowledgeStats"
+        },
+        "patterns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/KnowledgePatternRow"
+          }
+        },
+        "lessons": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/KnowledgeLessonRow"
+          }
+        },
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "stats",
+        "patterns",
+        "lessons",
+        "session_id"
+      ],
+      "additionalProperties": true
+    },
+    "KnowledgeLessonRow": {
+      "type": "object",
+      "description": "One knowledge_lessons row.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "lesson": {
+          "type": "string"
+        },
+        "context": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "lesson",
+        "context",
+        "category",
+        "created_at"
+      ],
+      "additionalProperties": true
+    },
+    "KnowledgePatternRow": {
+      "type": "object",
+      "description": "One knowledge_patterns row.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "pattern_type": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "evidence": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "created_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "pattern_type",
+        "title",
+        "description",
+        "evidence",
+        "confidence",
+        "created_at"
+      ],
+      "additionalProperties": true
+    },
+    "KnowledgeStats": {
+      "type": "object",
+      "description": "Knowledge-base counters (``get_stats``).",
+      "properties": {
+        "patterns": {
+          "type": "integer"
+        },
+        "anti_patterns": {
+          "type": "integer"
+        },
+        "lessons": {
+          "type": "integer"
+        },
+        "avg_confidence": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "patterns",
+        "anti_patterns",
+        "lessons",
+        "avg_confidence"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

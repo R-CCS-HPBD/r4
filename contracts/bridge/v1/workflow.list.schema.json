@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/workflow.list.schema.json",
+  "title": "workflow.list",
+  "description": "workflow.list: the caller's workflow catalog.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/WorkflowListResult",
+  "$defs": {
+    "WorkflowCatalogRow": {
+      "type": "object",
+      "description": "One registered workflow (``workflow_list``); shared: ``owner`` shared it with the caller.",
+      "properties": {
+        "workflow_name": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "scope": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "shared": {
+          "type": "boolean"
+        },
+        "access": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "workflow_name",
+        "name",
+        "description",
+        "tags",
+        "scope",
+        "owner",
+        "shared",
+        "access"
+      ],
+      "additionalProperties": true
+    },
+    "WorkflowListResult": {
+      "type": "object",
+      "description": "workflow.list: the caller's workflow catalog.",
+      "properties": {
+        "workflows": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/WorkflowCatalogRow"
+          }
+        },
+        "count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "workflows",
+        "count"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

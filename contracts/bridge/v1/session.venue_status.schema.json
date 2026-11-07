@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/session.venue_status.schema.json",
+  "title": "session.venue_status",
+  "description": "session.venue_status: server venue row and seconds left on its lease.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SessionVenueStatusResult",
+  "$defs": {
+    "SessionVenueStatusResult": {
+      "type": "object",
+      "description": "session.venue_status: server venue row and seconds left on its lease.",
+      "properties": {
+        "venue": {
+          "type": "object"
+        },
+        "lease_remaining_sec": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "venue",
+        "lease_remaining_sec"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

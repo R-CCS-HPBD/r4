@@ -1,0 +1,6 @@
+Attention Is All You Need
+Authors: Vaswani et al.
+
+The dominant sequence transduction models are based on complex recurrent or convolutional neural networks that include an encoder and a decoder. The best performing models also connect the encoder and decoder through an attention mechanism.
+
+We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely. Experiments on two machine translation tasks show this model to be superior in quality while being more parallelizable and requiring significantly less time to train.

@@ -1,0 +1,54 @@
+# =============================================================================
+# R4 Web Console — /app/ location
+# =============================================================================
+# Serves static r4-web assets (Vite-built SPA) at /app/.
+# Requires authentication via auth_request sidecar.
+# Unauthenticated requests redirect to /saml/login (SAML) or /auth/login (OIDC).
+# All non-static requests under /app/ are proxied to UMRS for API calls.
+# =============================================================================
+
+# Static assets — serve r4-web build output at /app/
+location /app/ {
+    # Authentication gate
+    auth_request /auth/validate;
+    auth_request_set $auth_user_id $upstream_http_x_user_id;
+    auth_request_set $auth_project_id $upstream_http_x_project_id;
+
+    # Security headers
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' {{ r4_web_api_base | default('') }}; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+
+    # Serve static files from r4-web build output
+    alias {{ r4_web_static_root }}/dist/;
+    index index.html;
+
+    # SPA routing: try file, then directory, then fall back to index.html
+    try_files $uri $uri/ /index.html;
+
+    # Cache rules for static assets
+    location ~* ^/app/assets/ {
+        expires 365d;
+        add_header Cache-Control "public, immutable";
+        access_log off;
+    }
+
+    # HTML files — no cache (always fetch fresh index)
+    location ~* ^/app/.*\.html$ {
+        expires -1;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Pragma "no-cache";
+    }
+}
+
+# Root redirect — / → /app/ (web console entry point)
+location = / {
+    return 302 /app/;
+}
+
+# Unauthenticated redirect handler for /app/ — triggers on auth_request 401
+location @app_error401 {
+    return 302 /saml/login?redirect_to=$request_uri;
+}

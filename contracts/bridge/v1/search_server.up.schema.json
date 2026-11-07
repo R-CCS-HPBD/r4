@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/search_server.up.schema.json",
+  "title": "search_server.up",
+  "description": "search_server.up: accepted at once; the start runs on a worker thread",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SearchServerUpResult",
+  "$defs": {
+    "SearchServerUpResult": {
+      "type": "object",
+      "description": "search_server.up: accepted at once; the start runs on a worker thread",
+      "properties": {
+        "accepted": {
+          "type": "boolean"
+        },
+        "state": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "accepted",
+        "state"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

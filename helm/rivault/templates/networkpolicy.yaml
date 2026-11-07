@@ -1,0 +1,43 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "rivault.fullname" . }}
+  labels:
+    {{- include "rivault.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "rivault.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow traffic from specified namespaces
+    {{- range .Values.networkPolicy.allowedNamespaces }}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ . }}
+      ports:
+        - protocol: TCP
+          port: {{ $.Values.litellm.port }}
+    {{- end }}
+    # Allow internal pod communication
+    - from:
+        - podSelector: {}
+  egress:
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Allow internal pod communication
+    - to:
+        - podSelector: {}
+    # Block external internet (HPC requirement)
+    # Add specific egress rules if needed
+{{- end }}

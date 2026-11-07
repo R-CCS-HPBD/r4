@@ -1,0 +1,4 @@
+{
+  "_comment": "Ratchet for tools/doc_sanity_gate.py over docs/development (docs/adr is STRICT and never baselined). Created 2026-10-18 (hardening plan H-11.8) with zero findings: the scope was clean. Add a fingerprint only after a human has read the line; the list only shrinks.",
+  "known_findings": []
+}

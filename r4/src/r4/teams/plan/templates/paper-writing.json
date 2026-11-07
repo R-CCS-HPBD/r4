@@ -1,0 +1,193 @@
+{
+  "plan_version": 1,
+  "name": "paper-writing",
+  "description": "The paper-writing crew (ADR-092 slice 4): draft to camera-ready for a research paper. The editor plans the sections from the project's material, a drafter writes each section with its claims and their evidence, a verifier checks each section's claims and citations against that evidence, and the copy editor makes the camera-ready pass and carries every unresolved finding into its notes. Read-only: the draft comes back as the result; nothing is written to your files.",
+  "params": {
+    "subject": {"type": "string", "required": true, "description": "the paper's subject"},
+    "context": {"type": "string", "default": "", "description": "the material to use, the venue, what is known so far"},
+    "max_sections": {"type": "integer", "default": 6, "min": 1, "max": 8},
+    "reviewer_model": {"type": "string", "default": null, "description": "a different model for the verifier; the plan warns when it checks on the drafter's model"}
+  },
+  "agents": {
+    "editor": {
+      "instructions": {"ref": "crew_role:paper-writing/editor"},
+      "tools": ["knowledge_query", "file_read", "grep_search", "glob_search", "list_dir"],
+      "max_tool_rounds": 6
+    },
+    "drafter": {
+      "instructions": {"ref": "crew_role:paper-writing/drafter"},
+      "tools": ["knowledge_query", "file_read", "grep_search", "glob_search", "list_dir"],
+      "max_tool_rounds": 8
+    },
+    "verifier": {
+      "instructions": {"ref": "crew_role:paper-writing/verifier"},
+      "model": "{{params.reviewer_model}}",
+      "tools": ["knowledge_query", "file_read", "grep_search"],
+      "max_tool_rounds": 6,
+      "reviews": ["drafter"]
+    },
+    "copyeditor": {
+      "instructions": {"ref": "crew_role:paper-writing/copyeditor"},
+      "tools": ["file_read", "grep_search"],
+      "max_tool_rounds": 4
+    }
+  },
+  "concurrency": 4,
+  "budget": {"max_tokens": 1200000, "max_agents": 24, "max_wallclock_sec": 5400},
+  "phases": [
+    {
+      "id": "outline",
+      "title": "Plan the sections",
+      "steps": [
+        {
+          "id": "outline",
+          "kind": "agent",
+          "use": "editor",
+          "label": "editor",
+          "prompt": "Produce a submission-ready draft for '{{params.subject}}'.\nThe material, the venue and what is known: {{params.context}}\nPlan the paper's sections in order, at most {{params.max_sections}}. Each section must merge into a LaTeX manuscript, and every claim in it must stay verifiable against the project's knowledge. For each section give its title, what it must establish and the key points with the material each rests on.",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "sections": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 8,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "title": {"type": "string", "maxLength": 120},
+                    "purpose": {"type": "string", "maxLength": 600},
+                    "key_points": {"type": "array", "maxItems": 10, "items": {"type": "string", "maxLength": 400}}
+                  },
+                  "required": ["title", "purpose", "key_points"]
+                }
+              }
+            },
+            "required": ["sections"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "draft",
+      "title": "Draft each section",
+      "steps": [
+        {
+          "id": "drafts",
+          "kind": "map",
+          "over": "steps.outline.output.sections",
+          "max_items": "{{params.max_sections}}",
+          "label": "drafter",
+          "stages": [
+            {
+              "kind": "agent",
+              "use": "drafter",
+              "prompt": "Paper: '{{params.subject}}'\nThe whole outline:\n{{steps.outline.output.sections|json}}\nWrite section {{item_index}} as LaTeX-mergeable prose:\n{{item|json}}\nList every factual claim you make with the evidence behind it (a cited passage, a file, a result).",
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {"type": "string", "maxLength": 120},
+                  "text": {"type": "string", "maxLength": 12000},
+                  "claims": {
+                    "type": "array",
+                    "maxItems": 30,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "claim": {"type": "string", "maxLength": 600},
+                        "evidence": {"type": "string", "maxLength": 600}
+                      },
+                      "required": ["claim", "evidence"]
+                    }
+                  }
+                },
+                "required": ["title", "text", "claims"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "verify",
+      "title": "Verify claims and citations",
+      "steps": [
+        {
+          "id": "checks",
+          "kind": "map",
+          "over": "steps.drafts.output",
+          "max_items": "{{params.max_sections}}",
+          "label": "verifier",
+          "stages": [
+            {
+              "kind": "agent",
+              "use": "verifier",
+              "prompt": "Verify this drafted section of '{{params.subject}}' (section {{item_index}}): check each claim against its evidence and the project's material, and each citation against a source you can find.\n{{item|json}}",
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {"type": "string", "maxLength": 120},
+                  "verdict": {"type": "string", "enum": ["supported", "needs_work"]},
+                  "problems": {
+                    "type": "array",
+                    "maxItems": 30,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "claim": {"type": "string", "maxLength": 600},
+                        "issue": {"type": "string", "enum": ["unsupported", "overstated", "citation"]},
+                        "fix": {"type": "string", "maxLength": 600}
+                      },
+                      "required": ["claim", "issue", "fix"]
+                    }
+                  }
+                },
+                "required": ["title", "verdict", "problems"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "camera_ready",
+      "title": "Camera-ready pass",
+      "steps": [
+        {
+          "id": "camera_ready",
+          "kind": "agent",
+          "use": "copyeditor",
+          "label": "copyeditor",
+          "prompt": "Make the camera-ready pass over the draft of '{{params.subject}}'.\nThe drafted sections, in order:\n{{steps.drafts.output|json}}\nThe verifier's report per section, in the same order:\n{{steps.checks.output|json}}\nReturn the polished sections, the claim-to-evidence checklist, the references whose DOI still needs verifying, and notes that carry every unresolved finding.",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "sections": {
+                "type": "array",
+                "maxItems": 8,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "title": {"type": "string", "maxLength": 120},
+                    "text": {"type": "string", "maxLength": 12000}
+                  },
+                  "required": ["title", "text"]
+                }
+              },
+              "claim_evidence": {"type": "array", "maxItems": 60, "items": {"type": "string", "maxLength": 600}},
+              "references_to_verify": {"type": "array", "maxItems": 60, "items": {"type": "string", "maxLength": 400}},
+              "notes": {"type": "array", "maxItems": 30, "items": {"type": "string", "maxLength": 600}}
+            },
+            "required": ["sections", "claim_evidence", "references_to_verify", "notes"]
+          }
+        }
+      ]
+    }
+  ],
+  "output": {
+    "outline": "steps.outline.output.sections",
+    "drafts": "steps.drafts.output",
+    "checks": "steps.checks.output",
+    "camera_ready": "steps.camera_ready.output"
+  }
+}

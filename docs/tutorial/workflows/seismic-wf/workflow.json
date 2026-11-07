@@ -1,0 +1,64 @@
+{
+  "name": "seismic-model-search",
+  "version": "1.0",
+  "description": "Tutorial Part 2: fit a 1-D P-velocity model to first-P picks with 3-D eikonal solves (fan-out search, gather and rank).",
+  "source": {
+    "type": "local_path",
+    "path": "."
+  },
+  "execution_mode": "in_process",
+  "requirements": [],
+  "resources": {
+    "gpu_count": 0,
+    "cpu_limit": "2",
+    "memory_limit": "2Gi",
+    "timeout_seconds": 1800
+  },
+  "steps": [
+    {
+      "name": "search_low",
+      "description": "Score candidate models with a shallow Moho (24-28 km), plus the ak135 baseline.",
+      "entrypoint": "steps:ModelSearchStep",
+      "config": {
+        "event_key": "event.json",
+        "picks_key": "p_picks.csv",
+        "grid_km": 4.0,
+        "upper": [5.7, 5.9, 6.1],
+        "lower": [6.5, 6.7, 6.9],
+        "moho_km": [24.0, 26.0, 28.0],
+        "mantle": [7.7, 7.9, 8.1],
+        "include_ak135": true
+      },
+      "depends_on": [],
+      "timeout_seconds": 900
+    },
+    {
+      "name": "search_high",
+      "description": "Score candidate models with a deeper Moho (30-35 km).",
+      "entrypoint": "steps:ModelSearchStep",
+      "config": {
+        "event_key": "event.json",
+        "picks_key": "p_picks.csv",
+        "grid_km": 4.0,
+        "upper": [5.7, 5.9, 6.1],
+        "lower": [6.5, 6.7, 6.9],
+        "moho_km": [30.0, 32.0, 35.0],
+        "mantle": [7.7, 7.9, 8.1]
+      },
+      "depends_on": [],
+      "timeout_seconds": 900
+    },
+    {
+      "name": "rank",
+      "description": "Gather both searches, rank all models, write the residual report.",
+      "entrypoint": "steps:RankStep",
+      "config": {
+        "event_key": "event.json",
+        "picks_key": "p_picks.csv",
+        "grid_km": 4.0
+      },
+      "depends_on": ["search_low", "search_high"],
+      "timeout_seconds": 300
+    }
+  ]
+}

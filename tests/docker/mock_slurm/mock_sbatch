@@ -1,0 +1,130 @@
+#!/bin/bash
+# Mock sbatch - Submit a batch job
+#
+# Simulates job submission and writes job info file
+
+set -e
+
+STATE_FILE="/var/spool/slurm/jobs.json"
+JOB_INFO_DIR="/var/run/rivault"
+COMPUTE_NODE="${MOCK_SLURM_COMPUTE_NODE:-compute-mock}"
+DELAY="${MOCK_SLURM_DELAY:-2}"
+
+# Parse arguments to extract job script
+JOB_SCRIPT=""
+JOB_NAME="mock-job"
+PARTITION="gpu"
+TIME="01:00:00"
+GPUS="1"
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --job-name=*)
+            JOB_NAME="${1#*=}"
+            shift
+            ;;
+        -J)
+            JOB_NAME="$2"
+            shift 2
+            ;;
+        --partition=*)
+            PARTITION="${1#*=}"
+            shift
+            ;;
+        -p)
+            PARTITION="$2"
+            shift 2
+            ;;
+        --time=*)
+            TIME="${1#*=}"
+            shift
+            ;;
+        -t)
+            TIME="$2"
+            shift 2
+            ;;
+        --gres=*)
+            GPUS="${1#*=}"
+            shift
+            ;;
+        -*)
+            shift
+            ;;
+        *)
+            JOB_SCRIPT="$1"
+            shift
+            ;;
+    esac
+done
+
+# Generate job ID
+if [ -f "$STATE_FILE" ]; then
+    JOB_ID=$(jq -r '.next_id' "$STATE_FILE")
+    NEXT_ID=$((JOB_ID + 1))
+else
+    JOB_ID=1000
+    NEXT_ID=1001
+    echo '{"jobs": {}, "next_id": 1000}' > "$STATE_FILE"
+fi
+
+# Calculate end time
+START_TIME=$(date +%s)
+END_TIME=$((START_TIME + 3600))  # 1 hour default
+
+# Update state file
+jq --arg id "$JOB_ID" \
+   --arg name "$JOB_NAME" \
+   --arg node "$COMPUTE_NODE" \
+   --arg partition "$PARTITION" \
+   --arg start "$START_TIME" \
+   --arg end "$END_TIME" \
+   --argjson next "$NEXT_ID" \
+   '.jobs[$id] = {
+      "job_id": ($id | tonumber),
+      "name": $name,
+      "state": "PENDING",
+      "node": $node,
+      "partition": $partition,
+      "start_time": ($start | tonumber),
+      "end_time": ($end | tonumber)
+    } | .next_id = $next' \
+   "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${STATE_FILE}.tmp" "$STATE_FILE"
+
+echo "Submitted batch job $JOB_ID"
+
+# Background process to simulate job lifecycle
+(
+    sleep "$DELAY"
+
+    # Update to RUNNING
+    jq --arg id "$JOB_ID" \
+       '.jobs[$id].state = "RUNNING"' \
+       "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${STATE_FILE}.tmp" "$STATE_FILE"
+
+    # Write job info file (simulating what mini-rivault-slurm.sh does)
+    mkdir -p "$JOB_INFO_DIR"
+
+    cat > "${JOB_INFO_DIR}/rivault-job-${JOB_ID}.info" <<INFOEOF
+RIVAULT_JOB_ID=${JOB_ID}
+RIVAULT_NODE=${COMPUTE_NODE}
+RIVAULT_LITELLM_PORT=11434
+RIVAULT_VLLM_PORT=8000
+RIVAULT_STATUS=READY
+RIVAULT_START_TIME=${START_TIME}
+INFOEOF
+
+    cat > "${JOB_INFO_DIR}/rivault-job-${JOB_ID}.json" <<JSONEOF
+{
+  "job_id": ${JOB_ID},
+  "node": "${COMPUTE_NODE}",
+  "litellm_port": 11434,
+  "vllm_port": 8000,
+  "status": "READY",
+  "start_time": ${START_TIME},
+  "model": "mock-model"
+}
+JSONEOF
+
+) &
+
+exit 0

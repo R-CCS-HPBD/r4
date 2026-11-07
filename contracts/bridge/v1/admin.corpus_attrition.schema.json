@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/admin.corpus_attrition.schema.json",
+  "title": "admin.corpus_attrition",
+  "description": "admin.corpus_attrition: the session project's attrition report (relayed).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/AdminCorpusAttritionResult",
+  "$defs": {
+    "AdminCorpusAttritionResult": {
+      "type": "object",
+      "description": "admin.corpus_attrition: the session project's attrition report (relayed).",
+      "properties": {
+        "report": {
+          "type": "object"
+        },
+        "project_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "report",
+        "project_id"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

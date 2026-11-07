@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/quota.units.schema.json",
+  "title": "quota.units",
+  "description": "quota.units: both poles, caller-attributed.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/QuotaUnitsResult",
+  "$defs": {
+    "QuotaPoleRow": {
+      "type": "object",
+      "description": "One ADR-051 pole gauge (``PoleRow``).",
+      "properties": {
+        "current": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "current",
+        "limit"
+      ],
+      "additionalProperties": true
+    },
+    "QuotaUnitsResult": {
+      "type": "object",
+      "description": "quota.units: both poles, caller-attributed.",
+      "properties": {
+        "user_id": {
+          "type": "string"
+        },
+        "cpu_process": {
+          "$ref": "#/$defs/QuotaPoleRow"
+        },
+        "disk_bytes": {
+          "$ref": "#/$defs/QuotaPoleRow"
+        }
+      },
+      "required": [
+        "user_id",
+        "cpu_process",
+        "disk_bytes"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

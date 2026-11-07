@@ -1,0 +1,30 @@
+apiVersion: v2
+name: rivault
+description: R4 Platform (RiVault) - HPC-first GenAI inference
+
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+keywords:
+  - r4
+  - genai
+  - llm
+  - vllm
+  - litellm
+  - hpc
+  - inference
+
+home: https://github.com/R-CCS-HPBD/r4/tree/main/helm/rivault
+sources:
+  - https://github.com/R-CCS-HPBD/r4
+
+maintainers:
+  - name: RCCS AI Platform Team
+    url: https://github.com/R-CCS-HPBD/r4
+
+dependencies: []
+
+annotations:
+  artifacthub.io/category: ai-machine-learning
+  artifacthub.io/license: Apache-2.0

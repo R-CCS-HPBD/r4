@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/export_session.schema.json",
+  "title": "export_session",
+  "description": "export_session: the markdown export and the session's own identity.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ExportSessionResult",
+  "$defs": {
+    "ExportSessionResult": {
+      "type": "object",
+      "description": "export_session: the markdown export and the session's own identity.",
+      "properties": {
+        "markdown": {
+          "type": "string"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "project": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "markdown",
+        "model",
+        "project"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

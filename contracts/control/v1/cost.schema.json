@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/control/v1/cost.schema.json",
+  "title": "cost",
+  "description": "C3 per-turn token/cost/context read-model (chip payload).",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "type",
+    "payload"
+  ],
+  "properties": {
+    "type": {
+      "const": "cost"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "version": {
+          "type": "integer",
+          "default": 1
+        },
+        "session_id": {
+          "type": "string",
+          "default": ""
+        },
+        "model": {
+          "type": "string",
+          "default": ""
+        },
+        "turn_tokens": {
+          "type": "integer",
+          "default": 0
+        },
+        "total_tokens": {
+          "type": "integer",
+          "default": 0
+        },
+        "cost_usd_turn": {
+          "type": "number",
+          "default": 0.0
+        },
+        "cost_usd_total": {
+          "type": "number",
+          "default": 0.0
+        },
+        "price_known": {
+          "type": "boolean",
+          "default": false
+        },
+        "context_used_tokens": {
+          "type": "integer",
+          "default": 0
+        },
+        "context_limit_tokens": {
+          "type": "integer",
+          "default": 0
+        }
+      }
+    }
+  }
+}

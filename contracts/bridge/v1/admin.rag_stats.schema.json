@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/admin.rag_stats.schema.json",
+  "title": "admin.rag_stats",
+  "description": "admin.rag_stats: UMRS rag/stats for the session project (relayed).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/AdminRagStatsResult",
+  "$defs": {
+    "AdminRagStatsResult": {
+      "type": "object",
+      "description": "admin.rag_stats: UMRS rag/stats for the session project (relayed).",
+      "properties": {
+        "stats": {
+          "type": "object"
+        },
+        "project_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "stats",
+        "project_id"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

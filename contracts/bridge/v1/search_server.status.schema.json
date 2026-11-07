@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/search_server.status.schema.json",
+  "title": "search_server.status",
+  "description": "search_server.status: the local SearXNG for ``web_search``.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SearchServerStatusResult",
+  "$defs": {
+    "SearchServerStatusResult": {
+      "type": "object",
+      "description": "search_server.status: the local SearXNG for ``web_search``.",
+      "properties": {
+        "state": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "engine": {
+          "type": "string"
+        },
+        "starting": {
+          "type": "boolean"
+        },
+        "external_url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "state",
+        "url",
+        "engine",
+        "starting",
+        "external_url"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

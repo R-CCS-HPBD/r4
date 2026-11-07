@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/research_loop.status.schema.json",
+  "title": "research_loop.status",
+  "description": "Result union for research_loop.status (see branches).",
+  "x-bridge-protocol": 1,
+  "anyOf": [
+    {
+      "$ref": "#/$defs/ResearchLoopStatusFound"
+    },
+    {
+      "$ref": "#/$defs/ResearchLoopStatusNotFound"
+    }
+  ],
+  "$defs": {
+    "ResearchLoopStatusFound": {
+      "type": "object",
+      "description": "research_loop.status, visible loop: serialized state + recent iterations.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "research_loop_status"
+          ]
+        },
+        "project_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "loop_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "phase": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "research_goal": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "current_iteration": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_iterations": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tracks": {
+          "anyOf": [
+            {
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_tracks": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "runtime": {
+          "type": "string"
+        },
+        "durable": {
+          "type": "boolean"
+        },
+        "distributed": {
+          "type": "boolean"
+        },
+        "backends": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "recent_iterations": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      },
+      "required": [
+        "type",
+        "project_id",
+        "loop_id",
+        "status",
+        "phase",
+        "research_goal",
+        "current_iteration",
+        "max_iterations",
+        "runtime",
+        "durable",
+        "distributed",
+        "backends",
+        "recent_iterations"
+      ],
+      "additionalProperties": true
+    },
+    "ResearchLoopStatusNotFound": {
+      "type": "object",
+      "description": "research_loop.status, hidden loop (owner-scoped 404 card).",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "research_loop_status"
+          ]
+        },
+        "project_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "loop_id": {
+          "type": "string"
+        },
+        "found": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "project_id",
+        "loop_id",
+        "found",
+        "status",
+        "message"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

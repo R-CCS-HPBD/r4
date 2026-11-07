@@ -1,0 +1,113 @@
+
+# Ignore deploy keys (NEVER commit private keys!)
+.github/deploy-keys/
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md
+
+# HuggingFace model cache and locks
+models/embeddings/.hf_cache/
+models/embeddings/.locks/
+models/embeddings/models--*/blobs/
+models/embeddings/models--*/refs/
+models/embeddings/models--*/snapshots/
+models/embeddings/models--*/.no_exist/
+
+# Python cache
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Accidental pytest/mock sqlite artifacts in repo root
+*MagicMock*
+
+# Virtual environments
+.venv
+**/.venv
+venv/
+**/venv/
+env/
+**/env/
+
+# Node.js
+node_modules/
+*.tsbuildinfo
+dist/
+!r4/companion-tui-js/dist/
+.cache/
+
+# Editor / OS artifacts
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Secrets / local config
+*.env.local
+.env.local
+secrets/
+# Generated mini-RiVault per-job env files written at the repo root
+# (shape env.<uuid>, carry LITELLM_*/VLLM_API_KEY). Anchored to the root and
+# to the 8-4-4-4-12 hex shape so env.example / .env.template stay tracked.
+/env.[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]-[0-9a-f]*-[0-9a-f]*-[0-9a-f]*-[0-9a-f]*
+
+# Logs
+*.log
+logs/
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+
+# Local scratch / external project checkouts
+tmp/
+jobs/
+
+# Demo runtime state
+demos/.state/
+
+.windsurf
+.agents
+
+# Loop Engineering worktrees
+.worktrees/
+
+# Engineering loop runtime state (generated, do not commit)
+
+virtual_user_test
+.clinerules
+.cursor
+skills-lock.json
+
+papers
+
+# video-feed local ops state (clips, manifests, drops)
+demos/video-feed/.client/
+
+# Codacy CLI state files are agent-run side effects, not source
+.codacy/codacy.config*.json
+
+# Journey-test outputs written into the tracked fixture dir (2026-09-14).
+# tests/test_research_journey_e2e.py exports its report/artifacts next to the
+# tj-047 fixtures; the fixtures are tracked, these products are not.
+tests/samples/tj-047/exports/
+tests/samples/tj-047/journey_report.json
+.lockctl-uv-lock-constraints.txt
+
+# Generated per machine by demos/tiers/*/setup.sh (holds a LiteLLM master key); never tracked (2026-11-06).
+demos/tiers/*/env.local

@@ -1,0 +1,182 @@
+{{- if .Values.vllm.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "rivault.fullname" . }}
+  labels:
+    {{- include "rivault.labels" . | nindent 4 }}
+    app.kubernetes.io/component: inference
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "rivault.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: inference
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "rivault.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: inference
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        # vLLM container
+        - name: vllm
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: {{ include "rivault.vllmImage" . }}
+          imagePullPolicy: {{ .Values.vllm.image.pullPolicy }}
+          args:
+            - --model
+            - {{ .Values.vllm.model.path }}
+            - --served-model-name
+            - {{ .Values.vllm.model.name }}
+            - --port
+            - "{{ .Values.vllm.port }}"
+            - --max-model-len
+            - "{{ .Values.vllm.maxModelLen }}"
+            - --max-num-seqs
+            - "{{ .Values.vllm.maxNumSeqs }}"
+            - --tensor-parallel-size
+            - "{{ .Values.vllm.tensorParallelSize }}"
+            - --gpu-memory-utilization
+            - "{{ .Values.vllm.gpuMemoryUtilization }}"
+            {{- if .Values.vllm.enableToolCalling }}
+            - --enable-auto-tool-choice
+            - --tool-call-parser
+            - hermes
+            {{- end }}
+          ports:
+            - name: vllm
+              containerPort: {{ .Values.vllm.port }}
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "rivault.fullname" . }}-env
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          volumeMounts:
+            - name: models
+              mountPath: /models
+              readOnly: true
+            - name: cache
+              mountPath: /root/.cache
+          resources:
+            {{- toYaml .Values.vllm.resources | nindent 12 }}
+          {{- if .Values.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: vllm
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: vllm
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+          {{- end }}
+
+        {{- if .Values.litellm.enabled }}
+        # LiteLLM sidecar
+        - name: litellm
+          image: {{ include "rivault.litellmImage" . }}
+          imagePullPolicy: {{ .Values.litellm.image.pullPolicy }}
+          args:
+            - --config
+            - /app/config/litellm-config.yaml
+            - --port
+            - "{{ .Values.litellm.port }}"
+          ports:
+            - name: litellm
+              containerPort: {{ .Values.litellm.port }}
+              protocol: TCP
+          env:
+            - name: LITELLM_MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rivault.fullname" . }}-secrets
+                  key: litellm-master-key
+            - name: VLLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rivault.fullname" . }}-secrets
+                  key: vllm-api-key
+                  optional: true
+          volumeMounts:
+            - name: litellm-config
+              mountPath: /app/config
+              readOnly: true
+          resources:
+            {{- toYaml .Values.litellm.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health/liveliness
+              port: litellm
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health/readiness
+              port: litellm
+            initialDelaySeconds: 15
+            periodSeconds: 10
+        {{- end }}
+
+      volumes:
+        - name: models
+          {{- if .Values.storage.models.existingClaim }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.models.existingClaim }}
+          {{- else if .Values.storage.models.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "rivault.fullname" . }}-models
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: cache
+          {{- if .Values.storage.cache.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "rivault.fullname" . }}-cache
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: litellm-config
+          configMap:
+            name: {{ include "rivault.fullname" . }}-config
+
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

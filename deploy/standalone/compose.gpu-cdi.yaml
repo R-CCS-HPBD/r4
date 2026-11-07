@@ -1,0 +1,14 @@
+# Stand-alone — NVIDIA GPU for the container ollama through CDI (2026-10-15):
+# podman, or Docker without the nvidia toolkit whose daemon has CDI enabled
+# (`docker info --format '{{json .CDISpecDirs}}'` is not []; before Engine
+# 28.2 that needs "features": {"cdi": true} in daemon.json), on a host with a
+# CDI spec (`sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml`).
+#
+# standalone.sh adds it on Linux when the model runs in the `models` container,
+# nvidia-smi works and a spec is in /etc/cdi or /var/run/cdi
+# (lib/state.sh gpu_overlay_choice). A failed NVML is a CPU host: no overlay.
+# STANDALONE_GPU=auto|off|nvidia|cdi, exported or in env/local.env, overrides.
+services:
+  models:
+    devices:
+      - nvidia.com/gpu=all

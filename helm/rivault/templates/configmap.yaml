@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "rivault.fullname" . }}-config
+  labels:
+    {{- include "rivault.labels" . | nindent 4 }}
+data:
+  litellm-config.yaml: |
+    # RiVault LiteLLM Configuration
+    model_list:
+      - model_name: {{ .Values.vllm.model.name }}
+        litellm_params:
+          model: hosted_vllm/{{ .Values.vllm.model.name }}
+          api_key: os.environ/VLLM_API_KEY
+          api_base: http://localhost:{{ .Values.vllm.port }}/v1
+        model_info:
+          supports_function_calling: {{ .Values.vllm.enableToolCalling }}
+
+    router_settings:
+      routing_strategy: simple-shuffle
+      num_retries: 2
+      retry_after: 1
+
+    litellm_settings:
+      request_timeout: 600
+      set_verbose: false
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "rivault.fullname" . }}-env
+  labels:
+    {{- include "rivault.labels" . | nindent 4 }}
+data:
+  VLLM_PORT: "{{ .Values.vllm.port }}"
+  VLLM_MAX_MODEL_LEN: "{{ .Values.vllm.maxModelLen }}"
+  VLLM_MAX_NUM_SEQS: "{{ .Values.vllm.maxNumSeqs }}"
+  VLLM_TENSOR_PARALLEL_SIZE: "{{ .Values.vllm.tensorParallelSize }}"
+  VLLM_PIPELINE_PARALLEL_SIZE: "{{ .Values.vllm.pipelineParallelSize }}"
+  VLLM_GPU_MEMORY_UTILIZATION: "{{ .Values.vllm.gpuMemoryUtilization }}"
+  LITELLM_PORT: "{{ .Values.litellm.port }}"
+  LITELLM_LOG_LEVEL: "{{ .Values.litellm.logLevel }}"
+  {{- range $key, $value := .Values.env }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}

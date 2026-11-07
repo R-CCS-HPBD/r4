@@ -1,0 +1,640 @@
+{
+  "name": "r4-platform",
+  "displayName": "R4 Platform",
+  "description": "R4 / RiVault AI Platform integration for VS Code — chat, endpoints, jobs, models, and MCP tools",
+  "version": "0.2.13",
+  "publisher": "mnagaso",
+  "icon": "resources/r4-icon.png",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/R-CCS-HPBD/r4"
+  },
+  "engines": {
+    "vscode": "^1.105.0"
+  },
+  "categories": [
+    "AI",
+    "Chat",
+    "Machine Learning",
+    "Other"
+  ],
+  "keywords": [
+    "r4",
+    "riken",
+    "copilot",
+    "github copilot",
+    "language model",
+    "language-models",
+    "byok",
+    "thinking",
+    "reasoning",
+    "agent",
+    "mcp"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "chatParticipants": [
+      {
+        "id": "r4.chat",
+        "name": "r4",
+        "fullName": "R4 Platform",
+        "description": "Chat with R4 Platform LLM endpoints through Gateway",
+        "isSticky": true,
+        "commands": [
+          {
+            "name": "models",
+            "description": "List available models from the UMRS registry"
+          },
+          {
+            "name": "endpoints",
+            "description": "List active inference endpoints"
+          },
+          {
+            "name": "jobs",
+            "description": "List recent jobs and their status"
+          },
+          {
+            "name": "tools",
+            "description": "List available MCP tools"
+          },
+          {
+            "name": "workflows",
+            "description": "List registered workflows"
+          },
+          {
+            "name": "companion",
+            "description": "Research companion — literature, hypothesis, experiments, analysis, code review"
+          },
+          {
+            "name": "stats",
+            "description": "Show current context window token usage"
+          }
+        ]
+      }
+    ],
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "r4",
+        "label": "R4 Platform"
+      }
+    ],
+    "languageModelChatProviders": [
+      {
+        "vendor": "r4",
+        "displayName": "R4 Platform",
+        "managementCommand": "r4.login"
+      }
+    ],
+    "configurationDefaults": {
+      "chat.byokUtilityModelDefault": "mainAgent"
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "r4-platform",
+          "title": "R4 Platform",
+          "icon": "resources/r4-icon.png"
+        }
+      ]
+    },
+    "views": {
+      "r4-platform": [
+        {
+          "id": "r4.agent",
+          "name": "Agent",
+          "type": "webview"
+        },
+        {
+          "id": "r4.endpoints",
+          "name": "Endpoints"
+        },
+        {
+          "id": "r4.jobs",
+          "name": "Jobs"
+        },
+        {
+          "id": "r4.models",
+          "name": "Models"
+        },
+        {
+          "id": "r4.mcp",
+          "name": "MCP Tools"
+        },
+        {
+          "id": "r4.workflows",
+          "name": "Workflows"
+        },
+        {
+          "id": "r4.companion",
+          "name": "Research Companion"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "r4.focusAgent",
+        "title": "R4: Focus Agent"
+      },
+      {
+        "command": "r4.openConsole",
+        "title": "R4: Open Console in Editor"
+      },
+      {
+        "command": "r4.tab.new",
+        "title": "R4: New Chat Tab",
+        "icon": "$(add)"
+      },
+      {
+        "command": "r4.tab.reopen",
+        "title": "R4: Reopen Closed Chat Tab"
+      },
+      {
+        "command": "r4.tab.open",
+        "title": "R4: Open Session in Chat Tab"
+      },
+      {
+        "command": "r4.edits.accept",
+        "title": "R4: Accept Agent Edit",
+        "enablement": "false"
+      },
+      {
+        "command": "r4.edits.reject",
+        "title": "R4: Reject Agent Edit",
+        "enablement": "false"
+      },
+      {
+        "command": "r4.edits.openDiff",
+        "title": "R4: Review Agent Edit Diff",
+        "enablement": "false"
+      },
+      {
+        "command": "r4.edits.acceptAll",
+        "title": "R4: Accept All Pending Agent Edits"
+      },
+      {
+        "command": "r4.edits.rejectAll",
+        "title": "R4: Reject All Pending Agent Edits"
+      },
+      {
+        "command": "r4.edits.acceptUri",
+        "title": "R4: Accept Agent Edit",
+        "enablement": "false"
+      },
+      {
+        "command": "r4.edits.rejectUri",
+        "title": "R4: Reject Agent Edit",
+        "enablement": "false"
+      },
+      {
+        "command": "r4.login",
+        "title": "R4: Login to Gateway"
+      },
+      {
+        "command": "r4.logout",
+        "title": "R4: Logout"
+      },
+      {
+        "command": "r4.switchSource",
+        "title": "R4: Switch Source",
+        "icon": "$(arrow-swap)"
+      },
+      {
+        "command": "r4.addSource",
+        "title": "R4: Add Public Source",
+        "icon": "$(add)"
+      },
+      {
+        "command": "r4.selectModel",
+        "title": "R4: Select Model"
+      },
+      {
+        "command": "r4.refreshEndpoints",
+        "title": "R4: Refresh Endpoints",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "r4.refreshJobs",
+        "title": "R4: Refresh Jobs",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "r4.refreshModels",
+        "title": "R4: Refresh Models",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "r4.endpointUp",
+        "title": "R4: Provision Endpoint",
+        "icon": "$(play)"
+      },
+      {
+        "command": "r4.endpointDown",
+        "title": "R4: Teardown Endpoint",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "r4.endpointCancel",
+        "title": "R4: Cancel Provisioning",
+        "icon": "$(stop-circle)"
+      },
+      {
+        "command": "r4.modelUp",
+        "title": "R4: Provision Endpoint from Model",
+        "icon": "$(play)"
+      },
+      {
+        "command": "r4.modelDown",
+        "title": "R4: Teardown Endpoint for Model",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "r4.useEndpoint",
+        "title": "R4: Use Endpoint for Chat",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "r4.selectEndpoint",
+        "title": "R4: Select Active Endpoint"
+      },
+      {
+        "command": "r4.jobCancel",
+        "title": "R4: Cancel Job",
+        "icon": "$(close)"
+      },
+      {
+        "command": "r4.jobLogs",
+        "title": "R4: View Job Logs",
+        "icon": "$(output)"
+      },
+      {
+        "command": "r4.refreshMCP",
+        "title": "R4: Refresh MCP Tools",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "r4.callTool",
+        "title": "R4: Call MCP Tool",
+        "icon": "$(play)"
+      },
+      {
+        "command": "r4.refreshWorkflows",
+        "title": "R4: Refresh Workflows",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "r4.triggerWorkflow",
+        "title": "R4: Trigger Workflow",
+        "icon": "$(play)"
+      },
+      {
+        "command": "r4.cancelWorkflow",
+        "title": "R4: Cancel Workflow Execution",
+        "icon": "$(close)"
+      },
+      {
+        "command": "r4.focusChat",
+        "title": "R4: Focus Chat"
+      },
+      {
+        "command": "r4.insertFileRef",
+        "title": "R4: Insert File Reference"
+      },
+      {
+        "command": "r4.companionChat",
+        "title": "R4: Start Companion Chat",
+        "icon": "$(mortar-board)"
+      },
+      {
+        "command": "r4.refreshCompanion",
+        "title": "R4: Refresh Companion",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "r4.configureVisionProxy",
+        "title": "R4: Configure Vision Proxy",
+        "category": "R4 Platform",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "r4.activateMcpApps",
+        "title": "Activate MCP Apps (SSE)",
+        "category": "R4 Platform",
+        "icon": ""
+      },
+      {
+        "command": "r4.mcpInstall",
+        "title": "Install Custom MCP Server...",
+        "category": "R4 Platform",
+        "icon": "$(package)"
+      },
+      {
+        "command": "r4.poolUp",
+        "title": "R4: Launch Model Pool...",
+        "icon": "$(rocket)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "r4.focusChat",
+        "key": "cmd+escape",
+        "mac": "cmd+escape",
+        "win": "ctrl+escape",
+        "linux": "ctrl+escape"
+      },
+      {
+        "command": "r4.insertFileRef",
+        "key": "cmd+alt+k",
+        "mac": "cmd+alt+k",
+        "win": "ctrl+alt+k",
+        "linux": "ctrl+alt+k",
+        "when": "editorTextFocus"
+      }
+    ],
+    "menus": {
+      "scm/title": [
+        {
+          "command": "r4.edits.acceptAll",
+          "when": "scmProvider == r4-agent-edits",
+          "group": "navigation"
+        },
+        {
+          "command": "r4.edits.rejectAll",
+          "when": "scmProvider == r4-agent-edits",
+          "group": "navigation"
+        }
+      ],
+      "scm/resourceState/context": [
+        {
+          "command": "r4.edits.acceptUri",
+          "when": "scmProvider == r4-agent-edits && scmResourceStateValue == r4Edit.pending",
+          "group": "1_modification"
+        },
+        {
+          "command": "r4.edits.rejectUri",
+          "when": "scmProvider == r4-agent-edits && scmResourceStateValue == r4Edit.pending",
+          "group": "1_modification"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "r4.refreshEndpoints",
+          "when": "view == r4.endpoints",
+          "group": "navigation"
+        },
+        {
+          "command": "r4.endpointUp",
+          "when": "view == r4.endpoints",
+          "group": "navigation"
+        },
+        {
+          "command": "r4.refreshJobs",
+          "when": "view == r4.jobs",
+          "group": "navigation"
+        },
+        {
+          "command": "r4.refreshModels",
+          "when": "view == r4.models",
+          "group": "navigation"
+        },
+        {
+          "command": "r4.poolUp",
+          "when": "view == r4.models",
+          "group": "navigation"
+        },
+        {
+          "command": "r4.refreshMCP",
+          "when": "view == r4.mcp",
+          "group": "navigation"
+        },
+        {
+          "command": "r4.refreshWorkflows",
+          "when": "view == r4.workflows",
+          "group": "navigation"
+        },
+        {
+          "command": "r4.triggerWorkflow",
+          "when": "view == r4.workflows",
+          "group": "navigation"
+        },
+        {
+          "command": "r4.refreshCompanion",
+          "when": "view == r4.companion",
+          "group": "navigation"
+        },
+        {
+          "command": "r4.tab.new",
+          "when": "view == r4.agent",
+          "group": "navigation@1"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "r4.endpointDown",
+          "when": "view == r4.endpoints && viewItem =~ /^endpoint-(ready|degraded)/",
+          "group": "inline"
+        },
+        {
+          "command": "r4.endpointCancel",
+          "when": "view == r4.endpoints && viewItem =~ /^endpoint-(provisioning|starting|pending)/",
+          "group": "inline"
+        },
+        {
+          "command": "r4.useEndpoint",
+          "when": "view == r4.endpoints && viewItem =~ /^endpoint-ready/",
+          "group": "inline"
+        },
+        {
+          "command": "r4.modelUp",
+          "when": "view == r4.models && viewItem =~ /^model-(system|project|user)$/",
+          "group": "inline"
+        },
+        {
+          "command": "r4.modelDown",
+          "when": "view == r4.models && viewItem =~ /^model-(project|user|system)$/",
+          "group": "inline"
+        },
+        {
+          "command": "r4.jobCancel",
+          "when": "view == r4.jobs && viewItem =~ /^job-(pending|running)$/",
+          "group": "inline"
+        },
+        {
+          "command": "r4.jobLogs",
+          "when": "view == r4.jobs",
+          "group": "inline"
+        },
+        {
+          "command": "r4.callTool",
+          "when": "view == r4.mcp && viewItem == mcp-tool",
+          "group": "inline"
+        },
+        {
+          "command": "r4.triggerWorkflow",
+          "when": "view == r4.workflows && viewItem == workflow",
+          "group": "inline"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "r4.tab.open",
+          "when": "false"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "R4 Platform",
+      "properties": {
+        "r4.gatewayUrl": {
+          "type": "string",
+          "default": "",
+          "description": "R4 Gateway URL (e.g. http://gateway.example.com:8000). Falls back to CLI profile or R4_GATEWAY_URL env var.",
+          "order": 1
+        },
+        "r4.profile": {
+          "type": "string",
+          "default": "",
+          "description": "R4 CLI profile name to use. Falls back to R4_PROFILE env var, then 'default'.",
+          "order": 2
+        },
+        "r4.cliPath": {
+          "type": "string",
+          "default": "r4",
+          "description": "Path to the r4 CLI executable. Defaults to 'r4' (expects it on PATH). Auto-resolves standard install locations (~/.r4/venv/bin/r4, ~/.local/bin/r4) when left at default.",
+          "order": 2
+        },
+        "r4.pythonPath": {
+          "type": "string",
+          "default": "",
+          "description": "Python interpreter that can import r4, used to run the companion bridge (the console's backend). Empty: R4_TUI_PYTHON, then the interpreter the r4 launcher runs, then <workspace>/.venv, then python3.",
+          "order": 2
+        },
+        "r4.agent.backend": {
+          "type": "string",
+          "enum": [
+            "acp",
+            "bridge"
+          ],
+          "enumDescriptions": [
+            "The r4 acp rail (the current agent view).",
+            "The companion bridge the console uses (ADR-103; wired in wave VP-2 of the parity plan)."
+          ],
+          "default": "acp",
+          "description": "Backend of the R4 Agent view. 'bridge' is the console's backend and becomes the default in wave VP-3 of the parity plan.",
+          "order": 2
+        },
+        "r4.defaultModel": {
+          "type": "string",
+          "default": "",
+          "description": "Default model name for chat requests. If empty, uses the first available model.",
+          "order": 3
+        },
+        "r4.modelContextWindows": {
+          "type": "object",
+          "default": {},
+          "additionalProperties": {
+            "type": "number"
+          },
+          "markdownDescription": "Override the context window (in tokens) advertised to the Copilot model picker for specific models, keyed by model id. Use this when a public/OpenAI-compatible gateway does not report a context window and the picker falls back to ~40k. Example: `{ \"kimi-k3\": 1048576 }`.",
+          "order": 3
+        },
+        "r4.autoRefreshInterval": {
+          "type": "number",
+          "default": 30,
+          "minimum": 5,
+          "maximum": 300,
+          "description": "Auto-refresh interval for endpoint and job views (seconds). Set to 0 to disable.",
+          "order": 4
+        },
+        "r4.tlsSkipVerify": {
+          "type": "boolean",
+          "default": false,
+          "description": "Skip TLS certificate verification for Gateway connections (for internal/self-signed certs).",
+          "order": 5
+        },
+        "r4.partitions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "HPC / Slurm partitions offered when provisioning an endpoint. Used to populate the partition picker; users can still enter a custom value.",
+          "order": 6
+        },
+        "r4.mcp.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Expose R4 Platform and RAG MCP servers to Copilot agent mode and Agent Window.",
+          "order": 4
+        },
+        "r4.mcp.command": {
+          "type": "string",
+          "default": "r4-mcp",
+          "description": "Command used to launch the R4 MCP server executable.",
+          "order": 5
+        },
+        "r4.mcp.projectId": {
+          "type": "string",
+          "default": "",
+          "description": "Default project ID for R4 RAG MCP tools. Falls back to R4_PROJECT_ID if unset.",
+          "order": 6
+        },
+        "r4.mcp.timeout": {
+          "type": "number",
+          "default": 30,
+          "minimum": 1,
+          "maximum": 300,
+          "description": "Timeout in seconds for R4 MCP Gateway requests.",
+          "order": 7
+        },
+        "r4.debugStream": {
+          "type": "boolean",
+          "default": false,
+          "description": "Log raw model stream deltas (content / reasoning / tool calls) to the 'R4 LM Stream' output channel. For diagnosing chat rendering issues.",
+          "order": 8
+        },
+        "r4.visionProxyModel": {
+          "type": "string",
+          "default": "",
+          "description": "Ready R4 vision/VLM model used to describe image attachments for text-only chat models. Empty selects the first ready vision endpoint automatically.",
+          "order": 9
+        },
+        "r4.visionProxyPrompt": {
+          "type": "string",
+          "default": "",
+          "editPresentation": "multilineText",
+          "description": "Prompt sent to the R4 vision proxy model when describing image attachments. Empty uses the built-in concise description prompt.",
+          "order": 10
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "npm run webview:build && npm run check-types && node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "watch:webview": "cd webview-ui && npm run dev",
+    "package": "npm run webview:build && npm run check-types && node esbuild.js --production",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src --ext ts",
+    "test": "npm run package && vscode-test",
+    "test:bundle": "./node_modules/.bin/esbuild webview-ui/src/lib/mgmt-slash.ts --bundle --format=cjs --outfile=test/mgmt-slash-parser.bundle.cjs && ./node_modules/.bin/esbuild src/mgmt-card-map.ts --bundle --format=cjs --outfile=test/mgmt-card.bundle.cjs && ./node_modules/.bin/esbuild src/prompt-history.ts --bundle --format=cjs --platform=node --outfile=test/prompt-history.bundle.cjs",
+    "test:unit": "npm run test:bundle && node --test test/manifest.test.mjs test/acp-client.test.mjs test/agent-tools.test.mjs test/agent-view.test.mjs test/agent-engine.test.mjs test/think-filter.test.mjs test/thinking-routing.test.mjs test/reasoning-roundtrip.test.mjs test/vision-proxy.test.mjs test/max-tokens.test.mjs test/auth-sources.test.mjs test/edit-session-core.test.mjs test/topic-graph.test.mjs test/store-catalog-scoping.test.mjs test/store-knowledge-scoping.test.mjs test/store-tool-selection.test.mjs test/store-stream-boundary.test.mjs test/mgmt-slash-parser.test.mjs test/mgmt-card.test.mjs test/prompt-history.test.mjs test/parity-matrix.test.mjs test/shared-modules.test.mjs test/companion-bridge.test.mjs test/companion-bridge-live.test.mjs test/bridge-agent-host.test.mjs test/bridge-view-router.test.mjs test/store-asks.test.mjs test/store-vp2b.test.mjs test/shell-runner.test.mjs test/chat-panels.test.mjs test/venue-host.test.mjs test/remote-turn.test.mjs test/store-agent-event-filter.test.mjs test/chat-verbs.test.mjs test/console-tools.test.mjs test/model-mode.test.mjs test/ops-verbs.test.mjs test/store-thinking.test.mjs test/teamup-verbs.test.mjs test/teamup-live.test.mjs test/work-verbs.test.mjs",
+    "webview:dev": "cd webview-ui && npm run dev",
+    "webview:build": "cd webview-ui && npm run build",
+    "webview:check-types": "cd webview-ui && npm run typecheck",
+    "install:all": "npm install && cd webview-ui && npm install"
+  },
+  "devDependencies": {
+    "@types/node": "20.x",
+    "@types/vscode": "^1.105.0",
+    "@typescript-eslint/eslint-plugin": "^8.31.1",
+    "@typescript-eslint/parser": "^8.31.1",
+    "esbuild": "^0.25.3",
+    "eslint": "^9.25.1",
+    "typescript": "^5.8.3",
+    "@vscode/test-cli": "^0.0.11",
+    "@vscode/test-electron": "^2.5.2"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/replay_session.schema.json",
+  "title": "replay_session",
+  "description": "replay_session: persisted event rows (their shape is the log's own).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ReplaySessionResult",
+  "$defs": {
+    "ReplaySessionResult": {
+      "type": "object",
+      "description": "replay_session: persisted event rows (their shape is the log's own).",
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "events",
+        "session_id"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

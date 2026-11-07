@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/session.venue_decide.schema.json",
+  "title": "session.venue_decide",
+  "description": "session.venue_decide: the decided approval row as the server answered it.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SessionVenueDecideResult",
+  "$defs": {
+    "SessionVenueDecideResult": {
+      "type": "object",
+      "description": "session.venue_decide: the decided approval row as the server answered it.",
+      "properties": {
+        "approval": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "approval"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

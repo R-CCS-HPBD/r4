@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/session.venue_approvals.schema.json",
+  "title": "session.venue_approvals",
+  "description": "session.venue_approvals: pending remote approval rows, relayed.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SessionVenueApprovalsResult",
+  "$defs": {
+    "SessionVenueApprovalsResult": {
+      "type": "object",
+      "description": "session.venue_approvals: pending remote approval rows, relayed.",
+      "properties": {
+        "approvals": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "approvals",
+        "count"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

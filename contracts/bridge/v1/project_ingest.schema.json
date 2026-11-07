@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/project_ingest.schema.json",
+  "title": "project_ingest",
+  "description": "project_ingest: the knowledge.graph_ingest payload verbatim.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ProjectIngestResult",
+  "$defs": {
+    "ProjectIngestResult": {
+      "type": "object",
+      "description": "project_ingest: the knowledge.graph_ingest payload verbatim.",
+      "properties": {
+        "ingest": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "ingest"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

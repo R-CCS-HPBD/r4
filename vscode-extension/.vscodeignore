@@ -1,0 +1,15 @@
+.vscode/**
+.vscode-test/**
+.vscode-test.mjs
+out/**
+src/**
+test/**
+node_modules/**
+# Webview React sources — only the compiled output in dist/webview/ ships.
+webview-ui/**
+.gitignore
+tsconfig.json
+esbuild.js
+eslint.config.mjs
+**/*.vsix
+**/*.map

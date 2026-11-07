@@ -1,0 +1,8 @@
+{
+    "admin_s3_configuration_file": "/root/s3cfg",
+    "users": [
+        "/root/user_files/demo_user.json"
+    ],
+    "embedding_backend": "local",
+    "embedding_model": "all-MiniLM-L6-v2"
+}

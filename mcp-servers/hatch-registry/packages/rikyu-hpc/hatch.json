@@ -1,0 +1,35 @@
+{
+  "name": "rikyu-hpc",
+  "version": "1.0.0",
+  "description": "RIKYU cluster operations (Slurm jobs, filesystem, resources) via the Rikyu-Agent stdio MCP server",
+  "author": "RIKEN R-CCS (Rikyu-Agent, adapted by AI4S Platform)",
+  "license": "MIT",
+  "tools": [
+    "get_facility",
+    "get_resources",
+    "get_resource",
+    "get_drained_nodes",
+    "submit_job",
+    "get_job_status",
+    "get_job_statuses",
+    "cancel_job",
+    "update_job",
+    "run_command_on_cluster",
+    "fs_ls", "fs_stat", "fs_view", "fs_head", "fs_tail", "fs_mkdir",
+    "fs_upload", "fs_download", "fs_checksum", "fs_cp", "fs_mv",
+    "fs_chmod", "fs_chown", "fs_symlink", "fs_compress", "fs_extract"
+  ],
+  "dependencies": ["mcp", "hpc-agent-core"],
+  "tags": ["hpc", "rikyu", "slurm", "default"],
+  "capabilities": {
+    "category": "hpc",
+    "risk": "privileged",
+    "transport": "stdio",
+    "network": {"outbound": ["login.rikyu.r-ccs.riken.jp"]},
+    "filesystem": {"readonly": []},
+    "requires": ["rikyu-ssh-key"],
+    "approval": {
+      "dangerous_tools": ["submit_job", "cancel_job", "update_job", "run_command_on_cluster"]
+    }
+  }
+}

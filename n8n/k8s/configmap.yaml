@@ -1,0 +1,72 @@
+# n8n Configuration
+#
+# Deploy: kubectl apply -f configmap.yaml
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: n8n-config
+  namespace: rivault
+  labels:
+    app: n8n
+data:
+  # Basic settings
+  N8N_BASIC_AUTH_ACTIVE: "true"
+  N8N_HOST: "0.0.0.0"
+  N8N_PROTOCOL: "http"
+  N8N_PORT: "5678"
+
+  # Database (SQLite for simplicity)
+  DB_TYPE: "sqlite"
+  DB_SQLITE_DATABASE: "/home/node/.n8n/database.sqlite"
+
+  # Timezone
+  GENERIC_TIMEZONE: "Asia/Tokyo"
+  TZ: "Asia/Tokyo"
+
+  # Execution settings
+  EXECUTIONS_DATA_PRUNE: "true"
+  EXECUTIONS_DATA_MAX_AGE: "168"  # 7 days
+
+  # Webhook URL (update for your deployment)
+  WEBHOOK_URL: "http://n8n.rivault.svc.cluster.local:5678"
+
+  # Platform Gateway URL
+  GATEWAY_URL: "http://gateway.rivault.svc.cluster.local:8000"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: n8n-secrets
+  namespace: rivault
+  labels:
+    app: n8n
+type: Opaque
+stringData:
+  # Basic auth credentials
+  N8N_BASIC_AUTH_USER: "admin"
+  N8N_BASIC_AUTH_PASSWORD: "CHANGE_ME"  # REQUIRED: Change this!
+
+  # Encryption key for credentials
+  # Generate with: openssl rand -hex 32
+  N8N_ENCRYPTION_KEY: "CHANGE_ME"  # REQUIRED: Generate and set!
+
+  # Gateway API key
+  GATEWAY_API_KEY: "CHANGE_ME"  # REQUIRED: Set your API key!
+
+---
+# Workflow templates ConfigMap
+# Add your workflow JSON files here
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: n8n-workflows
+  namespace: rivault
+  labels:
+    app: n8n
+data:
+  # Placeholder - add workflow files as needed
+  README.txt: |
+    Place workflow JSON files here.
+    They will be mounted at /workflows in the container.

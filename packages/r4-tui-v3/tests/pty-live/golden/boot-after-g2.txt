@@ -1,0 +1,40 @@
+╭─Chat with R4─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│                                                                                                                                          │
+│ R4 12:44:18                                                                                                                              │
+│ Hi — I'm R4. Demo mode: I won't create plans, index files, or update Tasks/Knowledge. Ctrl+P lists shortcuts.                            │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│  welcome to r4 console                                                                                                                   │
+│                                                                                                                                          │
+│  · type anything to chat — /help (F12) · /tour for a guided run                                                                          │
+│  · Ctrl+P command palette — verbs/chords live there                                                                                      │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│ Alt+Enter newline · Ctrl+E $EDITOR · Shift+Tab/Ctrl+G transcript → c copy · Shift+drag native select                                     │
+│                                                                                                                                          │
+│ ┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐ │
+│ │ ›Message R4…  (↑/↓ history, @ file, ! shell)                                                                                         │ │
+│ └──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                                                                          │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ ● literature: Searching catalog for Tue…  GLM-5.2-NVFP4 · mode:chat · perm:ask-al… r4-tui-v3 · gw ok · umrs ok · hpc ok · lsp none · mcp —

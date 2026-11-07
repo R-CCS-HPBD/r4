@@ -1,0 +1,4 @@
+[submodule "umrs"]
+	path = umrs
+	url = https://github.com/UMRS-org/umrs.git
+	branch = ai4s-platform

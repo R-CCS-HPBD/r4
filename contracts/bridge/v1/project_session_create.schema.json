@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/project_session_create.schema.json",
+  "title": "project_session_create",
+  "description": "project_session_create: the durable research session row (ADR-025).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ProjectSessionCreateResult",
+  "$defs": {
+    "ProjectSessionCreateResult": {
+      "type": "object",
+      "description": "project_session_create: the durable research session row (ADR-025).",
+      "properties": {
+        "session": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "session"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

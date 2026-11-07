@@ -1,0 +1,90 @@
+# =============================================================================
+# Server Deployment - Compose Override
+# =============================================================================
+# Multi-GPU server configuration.
+#
+# This file is the default template. Run ./setup.sh to regenerate with
+# hardware-specific values (GPU count, tensor parallel size, model path).
+#
+# Usage:
+#   docker compose -f ../../docker-compose.e2e.yaml -f docker-compose.server.yaml up
+# =============================================================================
+
+services:
+  vllm:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    environment:
+      - CUDA_VISIBLE_DEVICES=all
+      - NCCL_DEBUG=${NCCL_DEBUG:-WARN}
+      - NCCL_IB_DISABLE=${NCCL_IB_DISABLE:-0}
+    command: >
+      --model ${VLLM_MODEL_PATH}
+      --tensor-parallel-size ${VLLM_TENSOR_PARALLEL_SIZE:-1}
+      --pipeline-parallel-size ${VLLM_PIPELINE_PARALLEL_SIZE:-1}
+      --max-model-len ${VLLM_MAX_MODEL_LEN:-8192}
+      --max-num-seqs ${VLLM_MAX_NUM_SEQS:-32}
+      --dtype ${VLLM_DTYPE:-auto}
+      --kv-cache-dtype ${VLLM_KV_CACHE_DTYPE:-auto}
+      --trust-remote-code
+      --enable-auto-tool-choice
+      --tool-call-parser hermes
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      stack:
+        soft: 67108864
+        hard: 67108864
+    ipc: host
+    shm_size: "16gb"
+
+  litellm:
+    environment:
+      - LITELLM_NUM_WORKERS=${LITELLM_NUM_WORKERS:-4}
+    deploy:
+      resources:
+        limits:
+          cpus: "8"
+          memory: 16G
+
+  umrs:
+    environment:
+      - UMRS_WORKERS=${UMRS_WORKERS:-4}
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 8G
+
+  postgres:
+    environment:
+      - POSTGRES_MAX_CONNECTIONS=${POSTGRES_MAX_CONNECTIONS:-100}
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 8G
+    command: >
+      postgres
+      -c max_connections=100
+      -c shared_buffers=2GB
+      -c effective_cache_size=6GB
+      -c maintenance_work_mem=512MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+
+  minio:
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G

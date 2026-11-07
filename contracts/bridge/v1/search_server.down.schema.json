@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/search_server.down.schema.json",
+  "title": "search_server.down",
+  "description": "search_server.down: ``stopped``, or ``failed`` with ``reason``.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SearchServerDownResult",
+  "$defs": {
+    "SearchServerDownResult": {
+      "type": "object",
+      "description": "search_server.down: ``stopped``, or ``failed`` with ``reason``.",
+      "properties": {
+        "state": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "state"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

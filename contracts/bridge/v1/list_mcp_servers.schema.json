@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/list_mcp_servers.schema.json",
+  "title": "list_mcp_servers",
+  "description": "list_mcp_servers: registry + declared rows, annotated.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ListMcpServersResult",
+  "$defs": {
+    "ListMcpServersResult": {
+      "type": "object",
+      "description": "list_mcp_servers: registry + declared rows, annotated.",
+      "properties": {
+        "servers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/McpServerRow"
+          }
+        }
+      },
+      "required": [
+        "servers"
+      ],
+      "additionalProperties": true
+    },
+    "McpServerRow": {
+      "type": "object",
+      "description": "One MCP inventory row (registry entry or declared user-config row;",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "agent_visible": {
+          "type": "boolean"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "hint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "status",
+        "source",
+        "agent_visible"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

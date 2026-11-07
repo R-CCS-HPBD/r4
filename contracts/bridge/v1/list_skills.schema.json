@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/list_skills.schema.json",
+  "title": "list_skills",
+  "description": "list_skills: registered skills with activation state.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ListSkillsResult",
+  "$defs": {
+    "ListSkillsResult": {
+      "type": "object",
+      "description": "list_skills: registered skills with activation state.",
+      "properties": {
+        "skills": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SkillRow"
+          }
+        }
+      },
+      "required": [
+        "skills"
+      ],
+      "additionalProperties": true
+    },
+    "SkillRow": {
+      "type": "object",
+      "description": "One registered skill and whether it is active (``_skills_snapshot``).",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "source",
+        "active",
+        "tools"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

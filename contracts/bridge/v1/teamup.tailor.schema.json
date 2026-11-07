@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/teamup.tailor.schema.json",
+  "title": "teamup.tailor",
+  "description": "teamup.tailor (``tailor_role_prompts``); ``degraded`` names a failed meta call.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/TeamupTailorResult",
+  "$defs": {
+    "TeamupTailorResult": {
+      "type": "object",
+      "description": "teamup.tailor (``tailor_role_prompts``); ``degraded`` names a failed meta call.",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "root": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tailored": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "kept_default": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "answers_chars": {
+          "type": "integer"
+        },
+        "degraded": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "root",
+        "tailored",
+        "kept_default",
+        "answers_chars"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

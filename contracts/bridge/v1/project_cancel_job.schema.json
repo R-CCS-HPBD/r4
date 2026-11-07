@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/project_cancel_job.schema.json",
+  "title": "project_cancel_job",
+  "description": "project_cancel_job: signalled (jobId) or unknown (error).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ProjectCancelJobResult",
+  "$defs": {
+    "ProjectCancelJobResult": {
+      "type": "object",
+      "description": "project_cancel_job: signalled (jobId) or unknown (error).",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "jobId": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ok"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

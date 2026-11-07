@@ -1,0 +1,41 @@
+# Mock Slurm Controller for E2E Testing
+#
+# Provides mock implementations of Slurm commands:
+# - sinfo, sbatch, squeue, scancel, sacct
+#
+# Jobs are tracked in /var/spool/slurm/jobs.json
+# Job info files are written to /var/run/rivault/
+
+FROM python:3.11-slim
+
+ENV PATH="/usr/local/bin:$PATH"
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    jq \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create directories
+RUN mkdir -p /var/spool/slurm /var/run/rivault /usr/local/bin
+
+# Copy mock scripts
+COPY mock_slurm/ /usr/local/bin/
+
+# Make scripts executable
+RUN chmod +x /usr/local/bin/mock_* \
+    && ln -sf /usr/local/bin/mock_sinfo /usr/local/bin/sinfo \
+    && ln -sf /usr/local/bin/mock_sbatch /usr/local/bin/sbatch \
+    && ln -sf /usr/local/bin/mock_squeue /usr/local/bin/squeue \
+    && ln -sf /usr/local/bin/mock_scancel /usr/local/bin/scancel \
+    && ln -sf /usr/local/bin/mock_sacct /usr/local/bin/sacct
+
+# Initialize job state
+RUN echo '{"jobs": {}, "next_id": 1000}' > /var/spool/slurm/jobs.json
+
+WORKDIR /var/spool/slurm
+
+# Simple HTTP server for job management (optional)
+EXPOSE 6817
+
+# Keep container running and process job state
+CMD ["python", "-m", "http.server", "6817"]

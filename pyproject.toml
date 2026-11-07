@@ -1,0 +1,254 @@
+# R4 Monorepo — ___ are for ___
+#
+# This pyproject.toml configures the monorepo workspace using uv workspaces.
+# Each component has its own pyproject.toml and can be developed independently.
+#
+# Usage:
+#   uv sync --all-packages     # Install all workspace packages
+#   uv sync --package r4    # Install only r4
+#   uv sync --extra companion  # Install Companion TUI bridge deps (rich, …)
+#   uv run --all-packages --all-extras pytest  # Run tests across all packages
+#   uv build --package r4   # Build r4 wheel
+
+[project]
+name = "ai-platform"
+version = "0.2.0rc1"
+description = "R4 Platform - HPC-first GenAI infrastructure for science"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.11"
+authors = [
+    { name = "RCCS AI Platform Team" },
+]
+keywords = ["r4", "ai", "science", "llm", "rag", "hpc", "slurm"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+# No direct dependencies - workspace packages declare their own
+dependencies = []
+
+[project.optional-dependencies]
+# Development dependencies for the whole workspace
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "pytest-cov>=4.0",
+    "ruff==0.16.6",  # pinned (round-5 review): local + CI must agree
+    "mypy>=1.0",
+    "pre-commit>=3.0",
+]
+
+# Lightweight client lane: workspace-member extras via root forwarding
+# (uv 0.9.5 --extra only reads the root table; ADR-054 light default).
+client = [
+    "umrs[client]",
+]
+
+# Companion TUI / Python bridge (needs rich + prompt_toolkit)
+companion = [
+    "r4[companion]",
+]
+companion-lite = [
+    "r4[companion-lite]",
+]
+
+# All packages for integration testing
+all = [
+    "r4",
+    "r4[companion]",
+    "r4-mcp",
+]
+
+# What the remote-session worker image (r4/Dockerfile, built by the
+# umrs-front converge) installs. It exists so `uv export` can write that
+# image's lock from uv.lock (scripts/deps/lockctl.py, ADR-100).
+r4-worker-image = [
+    "r4[chat]",
+    "umrs[client]",
+    "diskcache",
+    "python-jose[cryptography]",
+]
+
+[project.urls]
+Homepage = "https://github.com/R-CCS-HPBD/r4"
+Documentation = "https://github.com/R-CCS-HPBD/r4/blob/main/docs/"
+Repository = "https://github.com/R-CCS-HPBD/r4"
+Issues = "https://github.com/R-CCS-HPBD/r4/issues"
+
+# =============================================================================
+# UV Workspace Configuration
+# =============================================================================
+[tool.uv]
+# Enable workspace mode
+managed = true
+# Release cooldown (ADR-100): uv resolves nothing uploaded after this date, so
+# a fresh, possibly broken release (preshed 3.0.14, 2026-10-25) cannot enter
+# uv.lock or the images exported from it. The monthly refresh
+# (.github/workflows/deps-refresh.yaml) moves it; never edit it by hand:
+#   python scripts/deps/lockctl.py cooldown && uv lock
+# >>> lockctl:cooldown
+# <<< lockctl:cooldown
+
+[dependency-groups]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "pytest-cov>=4.0",
+    "ruff==0.16.6",  # pinned (round-5 review): local + CI must agree
+    "mypy>=1.0",
+]
+
+[tool.uv.workspace]
+# Define workspace members (packages with their own pyproject.toml)
+# a2l/ and gateway/ (Python Gateway) were removed 2026-09-11 (ADR-014 / ADR-034);
+# their member rows left the workspace unresolvable until 2026-09-13 (R-09).
+members = [
+    "r4",
+    "r4-contracts",
+    "science",
+    "mcp-servers",
+    "packages/r4-teamengine-spi",
+    "engines/r4-engine-langgraph",
+    "umrs/src",
+]
+# Exclude directories that are not Python packages
+exclude = [
+    "n8n",
+    "tests",
+    "docs",
+]
+
+[tool.uv.sources]
+# Allow workspace packages to depend on each other
+r4 = { workspace = true }
+r4-contracts = { workspace = true }
+r4-mcp = { workspace = true }
+r4-teamengine-spi = { workspace = true }
+r4-engine-langgraph = { workspace = true }
+r4-science = { workspace = true }
+umrs = { workspace = true }
+
+# Cooldown exemptions (ADR-100), generated: a package whose LOCKED version is
+# newer than the cutoff keeps it (pinned at its upload time), so the refresh
+# never downgrades a deliberate recent bump; `lockctl.py allow-new <pkg>` is
+# the security fast path for a fix released inside the cooldown.
+# >>> lockctl:exemptions
+# <<< lockctl:exemptions
+
+# =============================================================================
+# Ruff Configuration (shared across workspace)
+# =============================================================================
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+    "ARG",    # flake8-unused-arguments
+    "SIM",    # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # do not perform function calls in argument defaults
+    "B009",   # do not call getattr with a constant attribute value
+    "ARG001", # unused function argument (common in APIs)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["ARG001", "S101"]
+# e2e tool-calling suite injects the side-effect fixtures by name (skip/auth
+# context) and intentionally does not consume some of them in every test.
+"tests/test_tool_calling.py" = ["ARG001", "S101", "ARG002"]
+# Package barrels re-export by design (ruff's own recommended per-file rule).
+"**/__init__.py" = ["F401"]
+# Science tests implement SPI fakes whose signatures must stay stable even
+# when the fake ignores parts of the protocol.
+"science/tests/**/*.py" = ["ARG001", "S101", "ARG002"]
+# e2e tool-gating suites inject e2e_mode/side-effect fixtures by name; the
+# standalone smoke script keeps its skip-before-imports runtime design.
+"tests/test_*_e2e.py" = ["ARG001", "S101", "ARG002"]
+"tests/test_e2e_smoke.py" = ["E402"]
+"tests/test_n8n_workflows.py" = ["ARG001", "S101", "ARG002"]
+"**/conftest.py" = ["ARG001"]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+    "r4",
+    "r4_mcp",
+    "gateway",
+    "r4_contracts",
+    "r4_teamengine_spi",
+    "r4_engine_langgraph",
+]
+
+# =============================================================================
+# MyPy Configuration (shared across workspace)
+# =============================================================================
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+
+# =============================================================================
+# Pytest Configuration (shared across workspace)
+# =============================================================================
+[tool.pytest.ini_options]
+testpaths = ["tests", "r4/tests", "mcp-servers/tests", "gateway/tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "e2e: marks tests as end-to-end tests",
+    "hpc: marks tests requiring HPC resources (Slurm, etc.)",
+    "nightly: marks tests for nightly CI runs",
+    "k8s: marks tests requiring Kubernetes",
+    "execution: marks tests that perform actual execution (as opposed to static validation)",
+    "asyncio: marks tests as async tests",
+]
+asyncio_mode = "auto"
+pythonpath = [".", "r4/src", "mcp-servers/src"]
+
+# =============================================================================
+# Coverage Configuration
+# =============================================================================
+[tool.coverage.run]
+source = ["r4/src", "mcp-servers/src", "gateway/sidecar", "umrs/src"]
+omit = ["*/tests/*", "*/conftest.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]

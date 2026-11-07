@@ -1,0 +1,151 @@
+# Paths of mnagaso/r4 that never reach the public export (R-CCS-HPBD/r4).
+# A line ending in '/' drops that directory; any other line is an exact path
+# or an fnmatch glob. Reviewed with the plan
+# docs/development/repo-rename-public-release-plan-2026-11-05.md (P5a).
+
+# Internal records: append-only ledger, plans, history, state, agent memory.
+docs/development/
+docs/history/
+STATE.md
+memories/
+bug.memo.history
+reports/
+
+# Measurements and fixtures from internal machines and accounts.
+benchmarks/results/
+extended_virtual_user_test/
+virtual_user_test/
+
+# Operations: site inventories and their rendered baselines, ops tooling
+# (ADR-107 moves these to r4-ops anyway).
+ops/
+deploy/ansible/inventory/
+deploy/ansible/.baselines/
+
+# Dated internal records and audits (P5b-1, 2026-11-06): verification
+# snapshots, the retired engineering-loop docs, archived TUI reviews, a dated
+# demo status, benchmark result dumps. They name hosts, paths and accounts and
+# describe nothing a public user needs.
+docs/verification/
+docs/loop-engineering/
+r4/docs/archive/
+demos/STATUS-2026-08-27.md
+benchmarks/decision_model/results/
+
+# Talk and tutorial decks (built artefacts, embedded minified libraries); the
+# tutorial material is handed out separately.
+docs/slides/
+
+# R-CCS's own operations runbooks and the agent instructions that carry the
+# real host paths agents need (P5b-2, 2026-11-06): kept intact privately,
+# never exported. ADR-107 moves operations material to r4-ops.
+docs/admin/
+docs/operations/
+.github/instructions/hpc-deployment.instructions.md
+.github/instructions/development.instructions.md
+
+# Site-specific operations scripts (rccs e2e demo, umrs-front OIDC gateway).
+scripts/e2e-demo-setup.sh
+scripts/e2e-demo-suite.sh
+scripts/deploy-oidc-gateway.sh
+
+# Tests and helpers of the PRIVATE CI (its workflows are never exported, and
+# they name private demo jobs) (P5b-3, 2026-11-06).
+scripts/ci_change_scope.py
+tests/test_ci_workflow_contract.py
+tests/test_image_dependency_locks.py
+
+# The overlay's files land at their relative paths over the export (apply_overlay), not here.
+scripts/public_export/public-overlay/
+
+# P5b-4 (2026-11-06): a site walkthrough, a testers' guide for a site client
+# image, and the sites' own converge (Ansible; ADR-107 moves it to r4-ops).
+docs/guides/user-setup-and-vision-demo.md
+docs/r4/QUICKSTART_TESTERS.md
+deploy/ansible/
+
+# P5b-5 (2026-11-07, first-push verification): an R-CCS operations runbook and
+# site inventory exported as a user-manual chapter, AI4S site build recipes and
+# job scripts with the site account's paths, internal audits, the deployment
+# operations agent instruction, root-level internal records and planning notes.
+docs/user-manual/25-umrs-front-deployment.md
+deploy/ai4s/
+deploy/singularity/
+docs/audits/
+.github/instructions/deployment-operations.instructions.md
+bug.memo
+loop-budget.md
+loop-incidents.md
+loop-run-log.md
+ROADMAP.md
+DEVELOPMENT_OBJECTIVES.md
+# The tutorial's planning page (owners, internal reports); the deck and labs stay.
+docs/tutorial/slides/tutorial-plan-overview.html
+
+# P5b-5 round 3 (2026-11-07, second verification): the sites' production
+# configuration checks and their DR/canary scripts.
+tools/config_drift_validator.py
+tests/test_config_drift_validator.py
+tests/dr_rehearsal.sh
+scripts/e2e-canary.sh
+scripts/dr-rehearsal.sh
+scripts/sync-umrs-fork.sh
+# Site client profiles (R-CCS gateways, an inactive institutional IdP app).
+deploy/r4-client-env/
+# Tests and tools of the R-CCS deployment: they read deploy/ansible (not
+# exported) and pin front facts (ports, paths, login nodes).
+tests/test_bundle_signing_key_wiring.py
+tests/test_converge_idempotency.py
+tests/test_converge_workflow_contract.py
+tests/test_deployment_script_guardrails.py
+tests/test_front_end_check_mode.py
+tests/test_gateway_topology.py
+tests/test_institutional_allowlist_parity.py
+tests/test_login_node_postgres_logging.py
+tests/test_observability_startup_noise.py
+tests/test_public_gateway_url_wiring.py
+tests/test_step_lane_converge_wiring.py
+tests/test_umrs_front_backend_probe.py
+tests/test_umrs_front_edge_probe_fail_safe.py
+tests/test_umrs_front_podman_boot.py
+tests/test_umrs_front_reserved_ports.py
+tests/test_umrs_front_volume_cleanup.py
+tools/service_status.py
+tests/test_service_status.py
+tools/ops_watch.py
+tests/test_ops_watch.py
+tools/audit_sweep.py
+tests/test_audit_sweep.py
+# Maintainers' agent personas (they drive the internal wave workflow).
+.github/agents/
+# Internal working notes and run dumps.
+# Round 4: repository-hygiene tests over the maintainers' records, and the
+# contract test of a site job wrapper (both read excluded paths).
+tests/test_doc_index_hygiene.py
+tests/test_stability_governance_s12.py
+tests/test_finetune_wrapper_contract.py
+# Round 5: another converge test, an internal claim checker, a benchmark
+# launcher with the sites' model endpoints.
+tests/test_converge_restart_failure.py
+tools/claim_verifier.py
+benchmarks/harness/terminal/run_tb4_lanes.sh
+docs/AGENT_TASK_QUEUE.md
+docs/companion/
+docs/research/multi-agent-tomography-control-plane.md
+docs/benchmarks/report.md
+docs/benchmarks/report.ja.md
+packages/r4-tui-v3/r4-session-*.md
+*.bak
+
+# The export gate's own site-specific patterns (P5b-2): site facts themselves.
+scripts/public_export/private-patterns.txt
+
+# Editor, agent and analysis tool state.
+.vscode/
+.claude/
+.codacy/
+deploy/ansible/.vscode/
+
+# The private CI (self-hosted runner, private secrets); the export ships
+# public-workflows/ instead (replace_workflows).
+.github/workflows/

@@ -1,0 +1,4 @@
+{"case": "unknown-type-skips-with-warning", "expect": "skip", "envelope": {"type": "hello_v2", "payload": {"version": 1}}}
+{"case": "v1-decodes-any-control-type", "expect": "ok", "envelope": {"type": "thinking_delta", "payload": {"version": 1, "session_id": "s", "seq": 0, "text": "hmm", "partial": true}}}
+{"case": "payload-not-object-raises", "expect": "error", "envelope": {"type": "thinking_done", "payload": [1]}}
+{"case": "missing-version-decodes-with-version-default", "expect": "ok", "envelope": {"type": "budget_state", "payload": {"llm_calls_used": 3}}, "canonical": {"type": "budget_state", "payload": {"version": 1, "llm_calls_used": 3, "llm_calls_limit": null, "tool_rounds_used": 0, "tool_rounds_limit": 1000, "context_used_tokens": 0, "context_limit_tokens": 120000, "session_id": ""}}}

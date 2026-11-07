@@ -1,0 +1,18 @@
+# R4 Platform Gateway - Auth Sidecar Dependencies
+
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+asyncpg>=0.29.0
+httpx>=0.26.0
+pydantic>=2.6.0
+python-jose[cryptography]>=3.3.0
+python-multipart>=0.0.9
+
+# SAML SP support (optional — set SAML_ENABLED=true to activate)
+python3-saml>=1.16.0
+
+# OTel (WP-12 round 2) — optional at runtime: setup is a no-op unless
+# OTEL_EXPORTER_OTLP_ENDPOINT is set. Small, pinned above the floor.
+opentelemetry-sdk>=1.27.0
+opentelemetry-exporter-otlp-proto-http>=1.27.0
+opentelemetry-instrumentation-fastapi>=0.48b0

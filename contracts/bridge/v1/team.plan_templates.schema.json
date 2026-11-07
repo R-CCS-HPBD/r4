@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/team.plan_templates.schema.json",
+  "title": "team.plan_templates",
+  "description": "team.plan_templates: the template inventory and how to run one.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/TeamPlanTemplatesResult",
+  "$defs": {
+    "TeamPlanParamSpec": {
+      "type": "object",
+      "description": "One declared parameter of a plan template (template JSON, verbatim).",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "default": {},
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "TeamPlanTemplateRow": {
+      "type": "object",
+      "description": "One built-in plan template (``r4.teams.plan.templates.list_templates``).",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/TeamPlanParamSpec"
+          }
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "params"
+      ],
+      "additionalProperties": true
+    },
+    "TeamPlanTemplatesResult": {
+      "type": "object",
+      "description": "team.plan_templates: the template inventory and how to run one.",
+      "properties": {
+        "templates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TeamPlanTemplateRow"
+          }
+        },
+        "next": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "templates",
+        "next"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/teamup.run.schema.json",
+  "title": "teamup.run",
+  "description": "teamup.run: one iteration started in the background (events stream).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/TeamupRunResult",
+  "$defs": {
+    "TeamupRunResult": {
+      "type": "object",
+      "description": "teamup.run: one iteration started in the background (events stream).",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "started": {
+          "type": "boolean"
+        },
+        "expected_iteration": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ok",
+        "session_id",
+        "started",
+        "expected_iteration",
+        "status"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

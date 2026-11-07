@@ -1,0 +1,145 @@
+# Promtail Configuration for RiVault (O-003)
+# Log collector for Docker containers
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # ==========================================================================
+  # Docker Container Logs
+  # ==========================================================================
+  - job_name: containers
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: containerlogs
+          __path__: /var/lib/docker/containers/*/*log
+
+    pipeline_stages:
+      # Parse Docker JSON log format
+      - json:
+          expressions:
+            output: log
+            stream: stream
+            timestamp: time
+            attrs: attrs
+
+      # Parse application JSON logs
+      - json:
+          expressions:
+            level: level
+            message: msg
+            request_id: request_id
+            user_id: user_id
+            project_id: project_id
+            job_id: job_id
+            model: model
+            duration: duration
+          source: output
+
+      # Extract container labels
+      - regex:
+          expression: '/var/lib/docker/containers/(?P<container_id>[^/]+)/.*'
+          source: filename
+
+      # Add labels from Docker container info
+      - labels:
+          stream:
+          level:
+          container_id:
+
+      # Set timestamp
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano
+
+      # Output the log message
+      - output:
+          source: message
+
+  # ==========================================================================
+  # System Logs
+  # ==========================================================================
+  - job_name: syslog
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: syslog
+          __path__: /var/log/syslog
+
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\w+\s+\d+\s+\d+:\d+:\d+)\s+(?P<host>\S+)\s+(?P<app>\S+)(\[(?P<pid>\d+)\])?:\s+(?P<message>.*)$'
+      - labels:
+          host:
+          app:
+      - timestamp:
+          source: timestamp
+          format: Jan _2 15:04:05
+          location: Local
+
+  # ==========================================================================
+  # RiVault Application Logs (if using file-based logging)
+  # ==========================================================================
+  - job_name: rivault-gateway
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: gateway
+          app: gateway
+          __path__: /var/log/rivault/gateway*.log
+
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            message: msg
+            timestamp: timestamp
+            request_id: request_id
+            user_id: user_id
+            project_id: project_id
+            method: method
+            path: path
+            status: status
+            duration: duration
+      - labels:
+          level:
+          method:
+          status:
+      - timestamp:
+          source: timestamp
+          format: RFC3339
+
+  - job_name: rivault-umrs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: umrs
+          app: umrs
+          __path__: /var/log/rivault/umrs*.log
+
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            message: msg
+            timestamp: timestamp
+            job_id: job_id
+            endpoint_id: endpoint_id
+            model: model
+      - labels:
+          level:
+      - timestamp:
+          source: timestamp
+          format: RFC3339

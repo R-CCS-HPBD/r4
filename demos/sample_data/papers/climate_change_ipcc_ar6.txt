@@ -1,0 +1,90 @@
+Climate Change: IPCC AR6 Key Findings Summary
+
+The Intergovernmental Panel on Climate Change (IPCC) Sixth Assessment
+Report (AR6) provides the most comprehensive scientific assessment of
+climate change to date.
+
+Observed Changes:
+
+Global Temperature:
+- 1.1°C warming since pre-industrial era (1850-1900)
+- Warmest period in at least 2000 years
+- Last decade was the warmest on record
+- Human influence is unequivocal
+
+Extreme Events:
+- Heat waves more frequent and intense
+- Heavy precipitation events increasing
+- Droughts more severe in some regions
+- Tropical cyclones intensifying
+
+Cryosphere:
+- Arctic sea ice declining 13% per decade
+- Greenland and Antarctic ice sheets losing mass
+- Mountain glaciers retreating globally
+- Permafrost thawing accelerating
+
+Sea Level:
+- Rising 3.7 mm/year (2006-2018)
+- Faster than 20th century average
+- Thermal expansion + ice melt
+- Committed rise even with zero emissions
+
+Future Projections (by 2100):
+
+SSP1-1.9 (Very Low Emissions):
+- 1.0-1.8°C warming
+- Limited additional impacts
+- Requires rapid decarbonization
+
+SSP2-4.5 (Intermediate):
+- 2.1-3.5°C warming
+- Significant impacts on ecosystems
+- Considerable adaptation needed
+
+SSP5-8.5 (Very High Emissions):
+- 3.3-5.7°C warming
+- Severe and irreversible impacts
+- Many tipping points crossed
+
+Tipping Points:
+
+Potential irreversible changes:
+- Amazon rainforest dieback
+- Atlantic circulation collapse
+- Coral reef loss (>99% at 2°C)
+- Permafrost carbon release
+- West Antarctic ice sheet collapse
+
+Carbon Budget:
+
+To limit warming to 1.5°C:
+- ~500 GtCO2 remaining (from 2020)
+- ~14 years at current emission rates
+- Requires 45% reduction by 2030
+- Net zero by 2050
+
+To limit warming to 2°C:
+- ~1350 GtCO2 remaining
+- ~35 years at current rates
+- Requires 25% reduction by 2030
+
+Solutions:
+
+Mitigation:
+- Renewable energy deployment
+- Energy efficiency improvements
+- Electrification of transport
+- Sustainable agriculture
+- Carbon capture and storage
+- Reduced deforestation
+
+Adaptation:
+- Infrastructure resilience
+- Early warning systems
+- Ecosystem-based approaches
+- Water management
+- Climate-resilient agriculture
+
+The report emphasizes that every fraction of a degree matters,
+and immediate action is required to avoid the worst impacts.

@@ -1,0 +1,156 @@
+{
+  "name": "LLM Chat Workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "inputSource": "define",
+        "definitions": [
+          {
+            "id": "prompt",
+            "name": "prompt",
+            "type": "string",
+            "value": "Hello, how can you help me with scientific computing?"
+          },
+          {
+            "id": "model",
+            "name": "model",
+            "type": "string",
+            "value": "rivault-gpt-oss-static"
+          }
+        ]
+      },
+      "id": "set_input",
+      "name": "Set Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.GATEWAY_URL }}/gw/llm/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $json.model }}\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.prompt }}\"\n    }\n  ],\n  \"max_tokens\": 1024,\n  \"temperature\": 0.7\n}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "llm_request",
+      "name": "LLM Chat Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "gateway-credential",
+          "name": "AI-for-Science Platform Gateway"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputSource": "define",
+        "definitions": [
+          {
+            "id": "response",
+            "name": "response",
+            "type": "string",
+            "value": "={{ $json.choices[0].message.content }}"
+          },
+          {
+            "id": "model_used",
+            "name": "model_used",
+            "type": "string",
+            "value": "={{ $json.model }}"
+          },
+          {
+            "id": "tokens_used",
+            "name": "tokens_used",
+            "type": "number",
+            "value": "={{ $json.usage.total_tokens }}"
+          }
+        ]
+      },
+      "id": "extract_response",
+      "name": "Extract Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [850, 300]
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Set Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Input": {
+      "main": [
+        [
+          {
+            "node": "LLM Chat Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM Chat Request": {
+      "main": [
+        [
+          {
+            "node": "Extract Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "saveExecutionProgress": true
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "llm"
+    },
+    {
+      "name": "ai-platform"
+    }
+  ],
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

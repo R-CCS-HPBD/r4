@@ -1,0 +1,12 @@
+[
+ {
+  "id": "smoke-alpha-freq",
+  "project": "alpha",
+  "question": "What is the current best value of the resonance frequency of widget W7, and which calibration run does it come from?"
+ },
+ {
+  "id": "smoke-alpha-image",
+  "project": "alpha",
+  "question": "What colour is the W7 calibration marker shown in the image file of project alpha? If you cannot inspect images, say so and describe what you can determine about the file instead."
+ }
+]

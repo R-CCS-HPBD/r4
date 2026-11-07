@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/session.side_question.schema.json",
+  "title": "session.side_question",
+  "description": "session.side_question (/btw): an answer outside the recorded transcript.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SessionSideQuestionResult",
+  "$defs": {
+    "SessionSideQuestionResult": {
+      "type": "object",
+      "description": "session.side_question (/btw): an answer outside the recorded transcript.",
+      "properties": {
+        "question": {
+          "type": "string"
+        },
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "question",
+        "answer"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

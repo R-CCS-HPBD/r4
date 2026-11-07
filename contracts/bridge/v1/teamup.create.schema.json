@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/teamup.create.schema.json",
+  "title": "teamup.create",
+  "description": "teamup.create: the persisted session (started only on request).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/TeamupCreateResult",
+  "$defs": {
+    "TeamupCreateResult": {
+      "type": "object",
+      "description": "teamup.create: the persisted session (started only on request).",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "started": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "session_id",
+        "name",
+        "status",
+        "roles",
+        "started"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

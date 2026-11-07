@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/session.turns.schema.json",
+  "title": "session.turns",
+  "description": "session.turns: stored turn payloads, relayed from the server index.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SessionTurnsResult",
+  "$defs": {
+    "SessionTurnsResult": {
+      "type": "object",
+      "description": "session.turns: stored turn payloads, relayed from the server index.",
+      "properties": {
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "count": {
+          "type": "integer"
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "turn_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "rows",
+        "count",
+        "session_id",
+        "turn_id"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

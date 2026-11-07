@@ -1,0 +1,50 @@
+# Pre-commit hooks for architectural enforcement.
+#
+# Install:  pre-commit install
+# Run all:  pre-commit run --all-files
+#
+# These hooks enforce architectural invariants that are also checked in CI.
+# Running them locally gives immediate feedback before push.
+
+repos:
+  - repo: local
+    hooks:
+      - id: import-boundary-validator
+        name: Import boundary validator
+        entry: python tools/import_boundary_validator.py
+        language: python
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
+      - id: contracts-fence
+        name: Contracts zero-dependency fence
+        entry: python tools/contracts_fence.py
+        language: python
+        pass_filenames: false
+        files: r4-contracts/pyproject\.toml
+        stages: [pre-push]
+
+      - id: stale-name-validator
+        name: Stale package name validator
+        entry: python tools/stale_name_validator.py
+        language: python
+        pass_filenames: false
+        files: (Makefile|pyproject\.toml|\.github/workflows/)
+        stages: [pre-push]
+
+      - id: schema-version-tracker
+        name: Schema version tracker
+        entry: python tools/schema_version_tracker.py
+        language: python
+        pass_filenames: false
+        files: umrs/src/umrs/.*/schema\.py
+        stages: [pre-push]
+
+      - id: runtime-support-matrix
+        name: Runtime support matrix validator
+        entry: python tools/runtime_support_matrix.py
+        language: python
+        pass_filenames: false
+        files: (tools/runtime_support_matrix\.(py|json)|docs/UMRS_DEPLOYMENT_PROFILES\.md)
+        stages: [pre-push]

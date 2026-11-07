@@ -1,0 +1,61 @@
+Attention Is All You Need - Summary
+
+The Transformer architecture was introduced by Vaswani et al. at Google in 2017.
+It fundamentally changed natural language processing by eliminating the need
+for recurrent neural networks.
+
+Key Innovations:
+
+1. Self-Attention Mechanism
+   - Computes attention scores between all pairs of positions
+   - Allows parallel processing of entire sequences
+   - Captures long-range dependencies efficiently
+
+2. Multi-Head Attention
+   - Runs multiple attention operations in parallel
+   - Each head learns different aspects of relationships
+   - Outputs are concatenated and projected
+
+3. Positional Encoding
+   - Injects sequence order information
+   - Uses sine and cosine functions of different frequencies
+   - Allows the model to learn relative positions
+
+4. Feed-Forward Networks
+   - Applied to each position independently
+   - Two linear transformations with ReLU activation
+   - Adds non-linearity to the model
+
+Architecture Components:
+
+Encoder:
+- Stack of 6 identical layers
+- Each layer has multi-head attention + feed-forward
+- Residual connections and layer normalization
+
+Decoder:
+- Stack of 6 identical layers
+- Masked self-attention prevents looking ahead
+- Cross-attention attends to encoder outputs
+- Feed-forward network
+
+Training:
+- Trained on WMT 2014 English-German (4.5M pairs)
+- Adam optimizer with custom learning rate schedule
+- Label smoothing regularization
+- Dropout for regularization
+
+Results:
+- 28.4 BLEU on WMT 2014 English-German
+- 41.0 BLEU on WMT 2014 English-French
+- 3.5x faster training than previous state-of-the-art
+
+Impact:
+This paper has been cited over 100,000 times and led to:
+- BERT (bidirectional encoder)
+- GPT (generative pre-trained)
+- T5 (text-to-text transfer)
+- Modern large language models
+
+The attention mechanism is now the foundation of virtually all
+state-of-the-art NLP models.

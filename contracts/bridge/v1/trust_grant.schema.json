@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/trust_grant.schema.json",
+  "title": "trust_grant",
+  "description": "trust_grant: the stored row as UMRS answered it, and what was asked.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/TrustGrantResult",
+  "$defs": {
+    "TrustGrantResult": {
+      "type": "object",
+      "description": "trust_grant: the stored row as UMRS answered it, and what was asked.",
+      "properties": {
+        "granted": {
+          "$ref": "#/$defs/TrustRow"
+        },
+        "tool_name": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "granted",
+        "tool_name",
+        "scope"
+      ],
+      "additionalProperties": true
+    },
+    "TrustRow": {
+      "type": "object",
+      "description": "One server-side trust allowlist row (UMRS ``TrustRow.to_dict``).",
+      "properties": {
+        "user_id": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "tool_name": {
+          "type": "string"
+        },
+        "expires_at": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "created_by": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_id",
+        "scope",
+        "tool_name",
+        "expires_at"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

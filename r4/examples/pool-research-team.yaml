@@ -1,0 +1,25 @@
+# Sample MM-4-MA pool roster.
+#
+# Bring up with:
+#   r4 pool up r4/examples/pool-research-team.yaml
+#
+# Once endpoints are ready, route per-request via:
+#   r4 chat --task code "write a fn"        # → coder
+#   r4 chat --task plan "design a study"    # → reasoner
+#   r4 chat "hi"                            # → chat (default)
+
+pool: research-team
+
+defaults:
+  tier: project
+  timeout: 900
+
+endpoints:
+  - name: chat
+    model: chat-3b
+
+  - name: coder
+    model: Qwen/Qwen3-Coder-7B
+
+  - name: reasoner
+    model: deepseek-r1-distill-13b

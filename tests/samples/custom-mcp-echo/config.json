@@ -1,0 +1,51 @@
+{
+  "name": "custom-mcp-echo-e2e",
+  "version": "1.0.0",
+  "entry_point": "python worker.py",
+  "capabilities": {
+    "tools": ["echo_text", "fetch_json", "chain_payload", "sleep_forever", "write_mount"],
+    "tool_capabilities": {
+      "echo_text": ["STANDARD_USER"],
+      "fetch_json": ["WRITE_REMOTE"],
+      "chain_payload": ["STANDARD_USER"],
+      "sleep_forever": ["STANDARD_USER"],
+      "write_mount": ["STANDARD_USER"]
+    },
+    "egress": {
+      "domains": ["api.example.com"],
+      "protocols": ["https"]
+    }
+  },
+  "tool_descriptions": {
+    "echo_text": "Echo text and report sandbox environment flags",
+    "fetch_json": "Remote fetch placeholder requiring WRITE_REMOTE",
+    "chain_payload": "Emit output that should be blocked by ChainScanner",
+    "sleep_forever": "Sleep longer than the sandbox runtime limit",
+    "write_mount": "Attempt to write to the mounted MCP directory"
+  },
+  "tool_schemas": {
+    "echo_text": {
+      "properties": {
+        "text": {"type": "string", "description": "Text to echo"}
+      },
+      "required": ["text"]
+    },
+    "fetch_json": {
+      "properties": {
+        "url": {"type": "string", "description": "URL that would be fetched through EgressGuard"}
+      },
+      "required": ["url"]
+    },
+    "write_mount": {
+      "properties": {
+        "path": {"type": "string", "description": "Relative path to write"}
+      }
+    }
+  },
+  "sandbox": {
+    "network": "egress_guard",
+    "filesystem": "read_only",
+    "max_memory_mb": 512,
+    "max_runtime_sec": 2
+  }
+}

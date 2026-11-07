@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/sweep.preview.schema.json",
+  "title": "sweep.preview",
+  "description": "sweep.preview: one template rendered in memory (never written).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SweepPreviewResult",
+  "$defs": {
+    "SweepPreviewResult": {
+      "type": "object",
+      "description": "sweep.preview: one template rendered in memory (never written).",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "required_params": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "job_name": {
+          "type": "string"
+        },
+        "script": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "required_params",
+        "job_name",
+        "script"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

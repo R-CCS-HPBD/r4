@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/source.list_remote.schema.json",
+  "title": "source.list_remote",
+  "description": "source.list_remote: badge rows; journal reachability alongside.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SourceListRemoteResult",
+  "$defs": {
+    "SourceListRemoteResult": {
+      "type": "object",
+      "description": "source.list_remote: badge rows; journal reachability alongside.",
+      "properties": {
+        "rows": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SourceRow"
+          }
+        },
+        "remote_available": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "rows",
+        "remote_available"
+      ],
+      "additionalProperties": true
+    },
+    "SourceRow": {
+      "type": "object",
+      "description": "One local source with its sealed-remote badge.",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "provider": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "has_api_key": {
+          "type": "boolean"
+        },
+        "remote": {
+          "type": "string"
+        },
+        "pushed": {
+          "type": "boolean"
+        },
+        "eligible": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "url",
+        "provider",
+        "has_api_key",
+        "remote",
+        "pushed",
+        "eligible"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

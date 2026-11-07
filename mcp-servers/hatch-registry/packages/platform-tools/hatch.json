@@ -1,0 +1,49 @@
+{
+  "name": "platform-tools",
+  "version": "1.0.0",
+  "description": "Query R4 Platform resources: models, endpoints, jobs (read-only)",
+  "author": "AI4S Platform",
+  "license": "MIT",
+  "tools": [
+    "list_models",
+    "list_endpoints",
+    "list_jobs",
+    "endpoint_health"
+  ],
+  "dependencies": [],
+  "tags": [
+    "platform",
+    "models",
+    "endpoints",
+    "jobs",
+    "default"
+  ],
+  "capabilities": {
+    "tools": [
+      "list_models",
+      "list_endpoints",
+      "list_jobs",
+      "endpoint_health"
+    ],
+    "tool_capabilities": {
+      "list_models": [
+        "STANDARD_USER"
+      ],
+      "list_endpoints": [
+        "STANDARD_USER"
+      ],
+      "list_jobs": [
+        "STANDARD_USER"
+      ],
+      "endpoint_health": [
+        "STANDARD_USER"
+      ]
+    }
+  },
+  "contract": {
+    "lane": "v1",
+    "version": "1.0.0",
+    "pinned_at": "2026-08-17",
+    "note": "S8 schema pinning: tools/capabilities are the published contract; changes require a version bump + snapshot update (S12 rule)."
+  }
+}

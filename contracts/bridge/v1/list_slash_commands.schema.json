@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/list_slash_commands.schema.json",
+  "title": "list_slash_commands",
+  "description": "list_slash_commands: shared ops only (surface-local chrome excluded).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ListSlashCommandsResult",
+  "$defs": {
+    "ListSlashCommandsResult": {
+      "type": "object",
+      "description": "list_slash_commands: shared ops only (surface-local chrome excluded).",
+      "properties": {
+        "commands": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SlashCommandRow"
+          }
+        }
+      },
+      "required": [
+        "commands"
+      ],
+      "additionalProperties": true
+    },
+    "SlashCommandRow": {
+      "type": "object",
+      "description": "One companion slash catalog entry (``_catalog_entry``); subcommands",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "help": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "takesArgs": {
+          "type": "boolean"
+        },
+        "subcommands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "name",
+        "help",
+        "category",
+        "takesArgs"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

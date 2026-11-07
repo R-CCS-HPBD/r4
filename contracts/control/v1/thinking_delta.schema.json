@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/control/v1/thinking_delta.schema.json",
+  "title": "thinking_delta",
+  "description": "A live chunk of model reasoning (from <think> markup inside streams).",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "type",
+    "payload"
+  ],
+  "properties": {
+    "type": {
+      "const": "thinking_delta"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "version": {
+          "type": "integer",
+          "default": 1
+        },
+        "session_id": {
+          "type": "string",
+          "default": ""
+        },
+        "seq": {
+          "type": "integer",
+          "default": 0
+        },
+        "text": {
+          "type": "string",
+          "default": ""
+        },
+        "partial": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    }
+  }
+}

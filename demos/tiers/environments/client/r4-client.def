@@ -1,0 +1,63 @@
+# =============================================================================
+# R4 Platform - Singularity Definition
+# =============================================================================
+# Client environment for HPC clusters using Singularity/Apptainer.
+# =============================================================================
+
+Bootstrap: docker
+From: python:3.11-slim-bookworm
+
+%labels
+    Maintainer R4 Platform Team
+    Description Client environment for R4 Platform on HPC
+    Version 1.0.0
+
+%post
+    # System dependencies
+    apt-get update && apt-get install -y --no-install-recommends \
+        curl \
+        jq \
+        git \
+        vim-tiny \
+        less \
+    && rm -rf /var/lib/apt/lists/*
+
+    # Python dependencies
+    pip install --no-cache-dir \
+        httpx \
+        click \
+        rich \
+        pydantic \
+        python-dotenv \
+        tabulate
+
+%environment
+    export GATEWAY_URL=http://localhost:8080
+    export LC_ALL=C
+    export PYTHONUNBUFFERED=1
+
+%runscript
+    echo "R4 Platform Client Environment"
+    echo "Gateway: ${GATEWAY_URL}"
+    echo ""
+    exec /bin/bash "$@"
+
+%test
+    python --version
+    curl --version
+
+%help
+    R4 Platform client environment for HPC clusters.
+
+    Usage:
+        # Interactive shell
+        singularity shell r4-client.sif
+
+        # Run command
+        singularity exec r4-client.sif curl $GATEWAY_URL/health
+
+        # With custom gateway
+        SINGULARITYENV_GATEWAY_URL=http://node:8080 singularity shell r4-client.sif
+
+    Environment Variables:
+        GATEWAY_URL - Platform Gateway URL (default: http://localhost:8080)

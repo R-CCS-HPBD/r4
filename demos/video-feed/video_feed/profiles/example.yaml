@@ -1,0 +1,30 @@
+# Neutral example profile (2026-11-03). Application profiles for real
+# collaborator projects live outside this repository; point
+# VIDEO_FEED_PROFILE_DIR at their directory, or pass --profile-file.
+name: example
+site: local
+pattern: "*.mkv"
+metadata_suffix: _metadata.json
+meta_keys:
+  - cameraName
+  - recordingStart
+  - recordingStop
+  - sourceFile
+bucket_purpose: video-feed-example
+workflow:
+  name: video-example
+  params:
+    runtime:
+      mode: mock
+    bucket: r4-data
+dedupe_fields: [cameraName, recordingStart, nsz]
+assets:
+  plan_mode: per-clip
+  model_key: video-feed-example/weights/model.pt
+embed_kinds: []
+kg:
+  node_type: VideoRun
+  edges:
+    recorded_by: Camera
+    on_site: Site
+    on_day: Day

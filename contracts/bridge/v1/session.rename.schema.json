@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/session.rename.schema.json",
+  "title": "session.rename",
+  "description": "session.rename: the stored name.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SessionRenameResult",
+  "$defs": {
+    "SessionRenameResult": {
+      "type": "object",
+      "description": "session.rename: the stored name.",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "name"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

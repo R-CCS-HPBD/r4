@@ -1,0 +1,426 @@
+{
+  "name": "Scheduled Summarization Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "id": "schedule_trigger",
+      "name": "Daily Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "inputSource": "define",
+        "definitions": [
+          {
+            "id": "collection",
+            "name": "collection",
+            "type": "string",
+            "value": "research-papers"
+          },
+          {
+            "id": "query",
+            "name": "query",
+            "type": "string",
+            "value": "What are the main research findings and conclusions from the recent documents?"
+          },
+          {
+            "id": "top_k",
+            "name": "top_k",
+            "type": "number",
+            "value": 10
+          },
+          {
+            "id": "date_filter",
+            "name": "date_filter",
+            "type": "string",
+            "value": "={{ $now.minus({days: 1}).toISO() }}"
+          }
+        ]
+      },
+      "id": "set_params",
+      "name": "Set Parameters",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.GATEWAY_URL }}/gw/rag/v1/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\": \"{{ $json.query }}\",\n  \"collection\": \"{{ $json.collection }}\",\n  \"top_k\": {{ $json.top_k }},\n  \"include_metadata\": true,\n  \"filters\": {\n    \"created_after\": \"{{ $json.date_filter }}\"\n  }\n}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "rag_search",
+      "name": "RAG Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "gateway-credential",
+          "name": "AI-for-Science Platform Gateway"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has_results",
+              "leftValue": "={{ $json.results?.length || 0 }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check_results",
+      "name": "Has Results?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "inputSource": "define",
+        "definitions": [
+          {
+            "id": "context",
+            "name": "context",
+            "type": "string",
+            "value": "={{ $json.results.map((r, i) => `[Document ${i+1}]\\nSource: ${r.metadata?.source || 'Unknown'}\\nDate: ${r.metadata?.created_at || 'Unknown'}\\n\\n${r.content}`).join('\\n\\n---\\n\\n') }}"
+          },
+          {
+            "id": "doc_count",
+            "name": "doc_count",
+            "type": "number",
+            "value": "={{ $json.results.length }}"
+          },
+          {
+            "id": "sources",
+            "name": "sources",
+            "type": "string",
+            "value": "={{ $json.results.map(r => r.metadata?.source || 'Unknown').join(', ') }}"
+          }
+        ]
+      },
+      "id": "prepare_context",
+      "name": "Prepare Context",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.GATEWAY_URL }}/gw/llm/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"rivault-gpt-oss-static\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a research assistant that creates concise daily summaries of research findings. Your summaries should:\\n1. Highlight key findings and conclusions\\n2. Note any important trends or patterns\\n3. Identify potential areas for further investigation\\n4. Be well-structured with clear sections\\n5. Be suitable for a busy researcher to quickly scan\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Please create a daily summary of the following {{ $json.doc_count }} research documents:\\n\\n{{ $json.context }}\\n\\nProvide a comprehensive but concise summary that captures the main findings and their significance.\"\n    }\n  ],\n  \"max_tokens\": 2048,\n  \"temperature\": 0.3\n}",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "generate_summary",
+      "name": "Generate Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "gateway-credential",
+          "name": "AI-for-Science Platform Gateway"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputSource": "define",
+        "definitions": [
+          {
+            "id": "summary",
+            "name": "summary",
+            "type": "string",
+            "value": "={{ $json.choices[0].message.content }}"
+          },
+          {
+            "id": "generated_at",
+            "name": "generated_at",
+            "type": "string",
+            "value": "={{ $now.toISO() }}"
+          },
+          {
+            "id": "documents_analyzed",
+            "name": "documents_analyzed",
+            "type": "number",
+            "value": "={{ $('Prepare Context').item.json.doc_count }}"
+          },
+          {
+            "id": "sources",
+            "name": "sources",
+            "type": "string",
+            "value": "={{ $('Prepare Context').item.json.sources }}"
+          },
+          {
+            "id": "tokens_used",
+            "name": "tokens_used",
+            "type": "number",
+            "value": "={{ $json.usage?.total_tokens || 0 }}"
+          }
+        ]
+      },
+      "id": "format_summary",
+      "name": "Format Summary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [1450, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.GATEWAY_URL }}/gw/rag/v1/store",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"collection\": \"daily-summaries\",\n  \"content\": \"{{ $json.summary.replace(/\"/g, '\\\\\"').replace(/\\n/g, '\\\\n') }}\",\n  \"metadata\": {\n    \"type\": \"daily_summary\",\n    \"generated_at\": \"{{ $json.generated_at }}\",\n    \"documents_analyzed\": {{ $json.documents_analyzed }},\n    \"sources\": \"{{ $json.sources }}\"\n  }\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "store_summary",
+      "name": "Store Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1650, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "gateway-credential",
+          "name": "AI-for-Science Platform Gateway"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputSource": "define",
+        "definitions": [
+          {
+            "id": "status",
+            "name": "status",
+            "type": "string",
+            "value": "no_documents"
+          },
+          {
+            "id": "message",
+            "name": "message",
+            "type": "string",
+            "value": "No new documents found for summarization"
+          }
+        ]
+      },
+      "id": "no_results",
+      "name": "No Results",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [1050, 400]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "end",
+      "name": "End",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1850, 300]
+    }
+  ],
+  "connections": {
+    "Daily Schedule": {
+      "main": [
+        [
+          {
+            "node": "Set Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Parameters": {
+      "main": [
+        [
+          {
+            "node": "RAG Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RAG Search": {
+      "main": [
+        [
+          {
+            "node": "Has Results?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Results?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Context": {
+      "main": [
+        [
+          {
+            "node": "Generate Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Summary": {
+      "main": [
+        [
+          {
+            "node": "Format Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Summary": {
+      "main": [
+        [
+          {
+            "node": "Store Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Summary": {
+      "main": [
+        [
+          {
+            "node": "End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Results": {
+      "main": [
+        [
+          {
+            "node": "End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "saveExecutionProgress": true
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "rag"
+    },
+    {
+      "name": "llm"
+    },
+    {
+      "name": "scheduled"
+    },
+    {
+      "name": "ai-platform"
+    }
+  ],
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

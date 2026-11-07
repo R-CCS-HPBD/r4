@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/source.push.schema.json",
+  "title": "source.push",
+  "description": "source.push: the accepted push (fields the journal answers).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SourcePushResult",
+  "$defs": {
+    "SourcePushResult": {
+      "type": "object",
+      "description": "source.push: the accepted push (fields the journal answers).",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "allow_host": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "key_fingerprint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "replaced": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "ok",
+        "name",
+        "allow_host",
+        "key_fingerprint",
+        "replaced"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

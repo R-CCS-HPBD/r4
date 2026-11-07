@@ -1,0 +1,18 @@
+# NOTE: no ROOT `preload` here. The compiled binary applies the cwd's
+# bunfig.toml at boot, so a root preload makes `r4-tui --version` crash when
+# the user has this package checked out ("preload not found"). Dev/test
+# entries pass --preload explicitly instead (package.json scripts,
+# r4/_cli/console.py dev-source launcher).
+
+# Cross-compile support: install @opentui native cores for every platform we
+# ship, not only the host. Keeps `bun install` host-only behaviour overridden
+# for this package (scripts/build-bin.mjs needs the linux cores on macOS).
+[install]
+supportedArchitectures.os = ["darwin", "linux", "win32"]
+supportedArchitectures.cpu = ["x64", "arm64"]
+supportedArchitectures.libc = ["glibc", "musl"]
+
+[test]
+# The second preload gives every test run a scratch R4_CONFIG_HOME (r2 #34/#46).
+preload = ["@opentui/solid/preload", "./tests/preload-config-home.ts"]
+timeout = 30000

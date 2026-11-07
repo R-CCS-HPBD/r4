@@ -1,0 +1,23 @@
+{
+  "extends": "../r4-tui-v3/tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "moduleDetection": "force",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["vite/client"],
+    "resolveJsonModule": true,
+    "verbatimModuleSyntax": false,
+    "noEmit": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true
+  },
+  "include": ["src"]
+}

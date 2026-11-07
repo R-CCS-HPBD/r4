@@ -1,0 +1,41 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "rivault.fullname" . }}-gateway
+  labels:
+    {{- include "rivault.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gateway
+spec:
+  {{- if .Values.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  {{- end }}
+  {{- if .Values.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .Values.podDisruptionBudget.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "rivault.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: gateway
+{{- end }}
+---
+{{- if and .Values.podDisruptionBudget.enabled .Values.umrs.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "rivault.fullname" . }}-umrs
+  labels:
+    {{- include "rivault.labels" . | nindent 4 }}
+    app.kubernetes.io/component: umrs
+spec:
+  {{- if .Values.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  {{- end }}
+  {{- if .Values.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .Values.podDisruptionBudget.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "rivault.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: umrs
+{{- end }}

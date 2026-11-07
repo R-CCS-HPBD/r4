@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/list_tasks.schema.json",
+  "title": "list_tasks",
+  "description": "list_tasks: every task-graph row.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ListTasksResult",
+  "$defs": {
+    "ListTasksResult": {
+      "type": "object",
+      "description": "list_tasks: every task-graph row.",
+      "properties": {
+        "tasks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TaskRow"
+          }
+        }
+      },
+      "required": [
+        "tasks"
+      ],
+      "additionalProperties": true
+    },
+    "TaskRow": {
+      "type": "object",
+      "description": "One task-graph row (``Task.to_dict``).",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "parent_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "progress": {
+          "type": "integer"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "updated_at": {
+          "type": "string"
+        },
+        "completed_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "notes": {
+          "type": "string"
+        },
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "child_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "parent_id",
+        "title",
+        "status",
+        "progress",
+        "created_at",
+        "updated_at",
+        "completed_at",
+        "notes",
+        "depends_on",
+        "child_ids"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/get_usage.schema.json",
+  "title": "get_usage",
+  "description": "get_usage: the session's usage report.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/GetUsageResult",
+  "$defs": {
+    "EndpointBudget": {
+      "type": "object",
+      "description": "Endpoint node-hour budget (``summarize_endpoint_usage``).",
+      "properties": {
+        "node_hours_estimated": {
+          "type": "number"
+        },
+        "active_endpoint_count": {
+          "type": "integer"
+        },
+        "nearest_expiry_seconds": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "warning_threshold_seconds": {
+          "type": "integer"
+        },
+        "block_threshold_seconds": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "node_hours_estimated",
+        "active_endpoint_count",
+        "nearest_expiry_seconds",
+        "warning_threshold_seconds",
+        "block_threshold_seconds"
+      ],
+      "additionalProperties": true
+    },
+    "GetUsageResult": {
+      "type": "object",
+      "description": "get_usage: the session's usage report.",
+      "properties": {
+        "usage": {
+          "$ref": "#/$defs/UsageReport"
+        }
+      },
+      "required": [
+        "usage"
+      ],
+      "additionalProperties": true
+    },
+    "UsageReport": {
+      "type": "object",
+      "description": "Session usage report (``CompanionSession.usage_report``).",
+      "properties": {
+        "summary": {
+          "$ref": "#/$defs/UsageSummary"
+        },
+        "active_endpoints": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "budget": {
+          "$ref": "#/$defs/EndpointBudget"
+        }
+      },
+      "required": [
+        "summary",
+        "active_endpoints",
+        "budget"
+      ],
+      "additionalProperties": true
+    },
+    "UsageSummary": {
+      "type": "object",
+      "description": "Aggregate LLM usage totals of the session (``UsageSummary.to_dict``).",
+      "properties": {
+        "llm_calls": {
+          "type": "integer"
+        },
+        "compaction_calls": {
+          "type": "integer"
+        },
+        "subagent_calls": {
+          "type": "integer"
+        },
+        "prompt_tokens": {
+          "type": "integer"
+        },
+        "completion_tokens": {
+          "type": "integer"
+        },
+        "total_tokens": {
+          "type": "integer"
+        },
+        "estimated_calls": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "llm_calls",
+        "compaction_calls",
+        "subagent_calls",
+        "prompt_tokens",
+        "completion_tokens",
+        "total_tokens",
+        "estimated_calls"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

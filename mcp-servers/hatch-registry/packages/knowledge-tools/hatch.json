@@ -1,0 +1,48 @@
+{
+  "name": "knowledge-tools",
+  "version": "1.0.0",
+  "description": "Project knowledge: status, readiness, search, and claim verification",
+  "author": "AI4S Platform",
+  "license": "MIT",
+  "tools": [
+    "knowledge_status",
+    "knowledge_readiness",
+    "knowledge_search",
+    "knowledge_verify"
+  ],
+  "dependencies": [],
+  "tags": [
+    "knowledge",
+    "research",
+    "verify",
+    "default"
+  ],
+  "capabilities": {
+    "tools": [
+      "knowledge_status",
+      "knowledge_readiness",
+      "knowledge_search",
+      "knowledge_verify"
+    ],
+    "tool_capabilities": {
+      "knowledge_status": [
+        "STANDARD_USER"
+      ],
+      "knowledge_readiness": [
+        "STANDARD_USER"
+      ],
+      "knowledge_search": [
+        "STANDARD_USER"
+      ],
+      "knowledge_verify": [
+        "STANDARD_USER"
+      ]
+    }
+  },
+  "contract": {
+    "lane": "v1beta",
+    "version": "1.0.0",
+    "pinned_at": "2026-08-17",
+    "note": "S8 schema pinning: tools/capabilities are the published contract; changes require a version bump + snapshot update (S12 rule)."
+  }
+}

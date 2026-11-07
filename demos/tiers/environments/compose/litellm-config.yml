@@ -1,0 +1,22 @@
+# LiteLLM Configuration for Demo Stack
+
+model_list:
+  - model_name: "rivault-model"
+    litellm_params:
+      model: "openai/rivault-model"
+      api_base: "http://vllm:8000/v1"
+      api_key: "not-needed"
+
+  # Alias for generic requests
+  - model_name: "default"
+    litellm_params:
+      model: "openai/rivault-model"
+      api_base: "http://vllm:8000/v1"
+      api_key: "not-needed"
+
+general_settings:
+  master_key: "sk-demo-key"
+
+litellm_settings:
+  drop_params: true
+  set_verbose: false

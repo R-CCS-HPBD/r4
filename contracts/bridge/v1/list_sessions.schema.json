@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/list_sessions.schema.json",
+  "title": "list_sessions",
+  "description": "list_sessions: local rows with journal merge badges.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ListSessionsResult",
+  "$defs": {
+    "ListSessionsResult": {
+      "type": "object",
+      "description": "list_sessions: local rows with journal merge badges.",
+      "properties": {
+        "sessions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SessionListRow"
+          }
+        },
+        "remote_available": {
+          "type": "boolean"
+        },
+        "remote_reason": {
+          "type": "string"
+        },
+        "sync_mode": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "sessions",
+        "remote_available",
+        "remote_reason",
+        "sync_mode"
+      ],
+      "additionalProperties": true
+    },
+    "SessionListRow": {
+      "type": "object",
+      "description": "One row of the unified listing (local store or journal-merged).",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "updated_at": {
+          "type": "string"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "message_count": {
+          "type": "integer"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "endpoints": {
+          "type": "array"
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "archived_at": {
+          "type": "string"
+        },
+        "pinned": {
+          "type": "boolean"
+        },
+        "pinned_at": {
+          "type": "string"
+        },
+        "venue": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "turn_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sync": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "created_at",
+        "updated_at",
+        "model",
+        "message_count",
+        "project_id",
+        "endpoints",
+        "endpoint",
+        "archived_at",
+        "pinned",
+        "pinned_at",
+        "venue",
+        "state",
+        "turn_count",
+        "sync"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

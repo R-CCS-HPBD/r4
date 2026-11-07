@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/project_current.schema.json",
+  "title": "project_current",
+  "description": "project_current: the active id and its config (null when unset).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ProjectCurrentResult",
+  "$defs": {
+    "ProjectCurrentResult": {
+      "type": "object",
+      "description": "project_current: the active id and its config (null when unset).",
+      "properties": {
+        "current": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "project": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ProjectInfoRow"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "current",
+        "project"
+      ],
+      "additionalProperties": true
+    },
+    "ProjectInfoRow": {
+      "type": "object",
+      "description": "The current project's own config row.",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "gateway_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "project_id",
+        "name",
+        "gateway_url",
+        "model"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

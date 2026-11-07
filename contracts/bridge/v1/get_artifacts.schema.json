@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/get_artifacts.schema.json",
+  "title": "get_artifacts",
+  "description": "get_artifacts: key paths / job ids noted by the progress tracker.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/GetArtifactsResult",
+  "$defs": {
+    "GetArtifactsResult": {
+      "type": "object",
+      "description": "get_artifacts: key paths / job ids noted by the progress tracker.",
+      "properties": {
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "artifacts"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

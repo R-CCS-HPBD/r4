@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/files.download.schema.json",
+  "title": "files.download",
+  "description": "files.download: the written destination and the client's own result.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/FilesDownloadResult",
+  "$defs": {
+    "FilesDownloadResult": {
+      "type": "object",
+      "description": "files.download: the written destination and the client's own result.",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "key": {
+          "type": "string"
+        },
+        "dest": {
+          "type": "string"
+        },
+        "result": {}
+      },
+      "required": [
+        "ok",
+        "key",
+        "dest",
+        "result"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

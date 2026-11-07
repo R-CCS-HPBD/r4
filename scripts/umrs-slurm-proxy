@@ -1,0 +1,53 @@
+#!/bin/bash
+# umrs-slurm-proxy — SSH forced-command wrapper for per-user Slurm delegation.
+#
+# This script is referenced in ~/.ssh/authorized_keys with:
+#   command="/path/to/umrs-slurm-proxy",restrict ssh-ed25519 AAAA... umrs-service@umrs-front
+#
+# It validates that SSH_ORIGINAL_COMMAND is a permitted Slurm CLI invocation,
+# then exec's it. Any non-matching command is denied with exit code 1.
+#
+# Security properties:
+#   - Only sbatch, squeue, sacct, scancel, scontrol are allowed
+#   - Path traversal and shell metacharacters are blocked
+#   - Combined with "restrict" in authorized_keys: no PTY, no forwarding,
+#     no agent, no X11
+#
+# Deployment: place on shared filesystem accessible from login nodes.
+# Ownership: root or service account, mode 0755.
+
+set -euo pipefail
+
+# Log attempts for audit (syslog if available, stderr otherwise)
+log_deny() {
+    local msg="umrs-slurm-proxy DENIED: user=$(whoami) cmd='${SSH_ORIGINAL_COMMAND:-}'"
+    logger -t umrs-slurm-proxy "$msg" 2>/dev/null || echo "$msg" >&2
+}
+
+# SSH_ORIGINAL_COMMAND must be set (forced-command mode)
+if [[ -z "${SSH_ORIGINAL_COMMAND:-}" ]]; then
+    log_deny
+    echo "ERROR: interactive access not permitted" >&2
+    exit 1
+fi
+
+# Block shell metacharacters that could allow command injection
+# Allow: alphanumeric, spaces, hyphens, underscores, equals, slashes, dots,
+#        colons, commas, percent signs (used in Slurm format strings)
+if [[ "$SSH_ORIGINAL_COMMAND" =~ [^a-zA-Z0-9\ _./:=,%-] ]]; then
+    log_deny
+    echo "ERROR: invalid characters in command" >&2
+    exit 1
+fi
+
+# Whitelist of allowed Slurm commands
+ALLOWED_PATTERN="^(sbatch|squeue|sacct|scancel|scontrol show job)( |$)"
+
+if [[ ! "$SSH_ORIGINAL_COMMAND" =~ $ALLOWED_PATTERN ]]; then
+    log_deny
+    echo "ERROR: command not permitted" >&2
+    exit 1
+fi
+
+# Execute the validated Slurm command
+exec $SSH_ORIGINAL_COMMAND

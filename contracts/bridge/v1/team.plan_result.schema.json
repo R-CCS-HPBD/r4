@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/team.plan_result.schema.json",
+  "title": "team.plan_result",
+  "description": "team.plan_run / team.plan_result / team.plan_cancel: one plan-run view.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/TeamPlanReply",
+  "$defs": {
+    "TeamPlanProgress": {
+      "type": "object",
+      "description": "Live progress of a run still going in this process (``_running_view``).",
+      "properties": {
+        "stage": {
+          "type": "string"
+        },
+        "attempt": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "agents_ok": {
+          "type": "integer"
+        },
+        "agents_null": {
+          "type": "integer"
+        },
+        "tokens": {
+          "type": "integer"
+        },
+        "budget_warning": {
+          "type": "boolean"
+        },
+        "elapsed_sec": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "stage",
+        "attempt",
+        "phase",
+        "agents_ok",
+        "agents_null",
+        "tokens",
+        "budget_warning",
+        "elapsed_sec"
+      ],
+      "additionalProperties": true
+    },
+    "TeamPlanReply": {
+      "type": "object",
+      "description": "team.plan_run / team.plan_result / team.plan_cancel: one plan-run view.",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "plan": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "problems": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "note": {
+          "type": "string"
+        },
+        "next": {
+          "type": "string"
+        },
+        "attempt": {},
+        "progress": {
+          "$ref": "#/$defs/TeamPlanProgress"
+        },
+        "result_path": {
+          "type": "string"
+        },
+        "output": {},
+        "steps": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
+        },
+        "budget": {},
+        "journal": {},
+        "durable": {},
+        "taint_segments": {
+          "type": "integer"
+        },
+        "taint_truncated": {
+          "type": "boolean"
+        },
+        "output_truncated": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string"
+        },
+        "value": {},
+        "venue": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "worker": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cancel_requested": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ok"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

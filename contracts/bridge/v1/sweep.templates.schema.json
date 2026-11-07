@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/sweep.templates.schema.json",
+  "title": "sweep.templates",
+  "description": "sweep.templates: the template pack inventory.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SweepTemplatesResult",
+  "$defs": {
+    "SweepTemplateRow": {
+      "type": "object",
+      "description": "One sweep template of the shipped pack.",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "required_params": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "params": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "required_params",
+        "params"
+      ],
+      "additionalProperties": true
+    },
+    "SweepTemplatesResult": {
+      "type": "object",
+      "description": "sweep.templates: the template pack inventory.",
+      "properties": {
+        "templates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SweepTemplateRow"
+          }
+        },
+        "count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "templates",
+        "count"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

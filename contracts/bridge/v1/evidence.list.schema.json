@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/evidence.list.schema.json",
+  "title": "evidence.list",
+  "description": "evidence.list: caller-scoped evidence rows.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/EvidenceListResult",
+  "$defs": {
+    "EvidenceListResult": {
+      "type": "object",
+      "description": "evidence.list: caller-scoped evidence rows.",
+      "properties": {
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EvidenceRow"
+          }
+        },
+        "count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "evidence",
+        "count"
+      ],
+      "additionalProperties": true
+    },
+    "EvidenceRow": {
+      "type": "object",
+      "description": "One evidence entry (``api/evidence.py`` ``_to_response``).",
+      "properties": {
+        "evidence_id": {
+          "type": "string"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "claim_id": {
+          "type": "string"
+        },
+        "source_type": {
+          "type": "string"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "content_uri": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "relevance_score": {
+          "type": "number"
+        },
+        "citation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "updated_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "project_id",
+        "claim_id",
+        "source_type",
+        "source_id",
+        "content",
+        "content_uri",
+        "relevance_score",
+        "citation",
+        "status",
+        "created_at",
+        "updated_at"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "rikyu-docs",
+  "version": "1.0.0",
+  "description": "RIKYU documentation search (guide sections, keyword/embedding search) via the Rikyu-Agent docs stdio MCP server",
+  "author": "RIKEN R-CCS (Rikyu-Agent, adapted by AI4S Platform)",
+  "license": "MIT",
+  "tools": ["search_docs", "list_doc_sections", "read_doc_section"],
+  "dependencies": ["mcp", "hpc-agent-core"],
+  "tags": ["hpc", "rikyu", "docs", "search", "default"],
+  "capabilities": {
+    "category": "hpc",
+    "risk": "low",
+    "transport": "stdio",
+    "network": {"outbound": []},
+    "filesystem": {"readonly": []},
+    "requires": [],
+    "approval": {"dangerous_tools": []}
+  }
+}

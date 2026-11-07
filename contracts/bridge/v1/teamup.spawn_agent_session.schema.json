@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/teamup.spawn_agent_session.schema.json",
+  "title": "teamup.spawn_agent_session",
+  "description": "teamup.spawn_agent_session: the role's new chat session.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/TeamupSpawnAgentSessionResult",
+  "$defs": {
+    "TeamupSpawnAgentSessionResult": {
+      "type": "object",
+      "description": "teamup.spawn_agent_session: the role's new chat session.",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "title",
+        "role"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

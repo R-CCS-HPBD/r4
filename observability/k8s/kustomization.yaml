@@ -1,0 +1,33 @@
+# Kubernetes Kustomization for Observability Stack
+# kubectl apply -k k8s/
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: observability
+
+resources:
+  - namespace.yaml
+  - prometheus/
+  - grafana/
+  - loki/
+  - jaeger/
+
+configMapGenerator:
+  - name: prometheus-config
+    files:
+      - ../prometheus/prometheus.yaml
+      - ../prometheus/alerts.yaml
+  - name: loki-config
+    files:
+      - ../loki/loki-config.yaml
+  - name: promtail-config
+    files:
+      - ../loki/promtail-config.yaml
+  - name: grafana-datasources
+    files:
+      - ../grafana/provisioning/datasources/datasources.yaml
+
+commonLabels:
+  app.kubernetes.io/part-of: rivault
+  app.kubernetes.io/component: observability

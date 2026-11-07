@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/project_delete.schema.json",
+  "title": "project_delete",
+  "description": "project_delete: shared-inventory delete; selection dropped only here.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ProjectDeleteResult",
+  "$defs": {
+    "ProjectDeleteResult": {
+      "type": "object",
+      "description": "project_delete: shared-inventory delete; selection dropped only here.",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "deleted": {
+          "type": "boolean"
+        },
+        "was_selected": {
+          "type": "boolean"
+        },
+        "config_changed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "ok",
+        "project_id",
+        "deleted",
+        "was_selected",
+        "config_changed"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

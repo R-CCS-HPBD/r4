@@ -1,0 +1,87 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "r4-mcp"
+version = "0.2.0rc1"
+description = "MCP servers for R4 Platform"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+authors = [
+    { name = "RCCS AI Platform Team" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "httpx>=0.25.0",
+    "pydantic>=2.0.0",
+    "anyio>=4.0.0",
+    "structlog>=23.1.0",
+    "r4-contracts>=0.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+test = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+]
+database = [
+    "asyncpg>=0.29.0",
+    "sqlparse>=0.5.0",
+]
+sse = [
+    "aiohttp>=3.14.4",  # CVE-2026-111064 / GHSA-2g87-pp6c-29x5 (HIGH) fixed in 3.14.4
+]
+# `all` is what the container image installs. It must stay buildable from the
+# repository checkout alone: only published packages plus the unpublished
+# `r4-contracts` sibling (installed first by mcp-servers/Dockerfile). The
+# former `project-research` extra pulled the `r4` SDK for tools WP-07 retired;
+# PyPI's `r4` 0.0.x is an unrelated package, so that extra broke every image
+# build (ADR-045 D3, 2026-09-07).
+all = [
+    "r4-mcp[database,sse]",
+]
+
+[project.scripts]
+r4-mcp = "r4_mcp.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/R-CCS-HPBD/r4"
+Documentation = "https://github.com/R-CCS-HPBD/r4/tree/main/mcp-servers"
+Repository = "https://github.com/R-CCS-HPBD/r4"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/r4_mcp"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_ignores = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

@@ -1,0 +1,490 @@
+# E2E Test Environment for R4
+#
+# This Docker Compose provides a complete local environment to run E2E tests
+# without requiring actual HPC/Slurm or production Kubernetes clusters.
+#
+# Components:
+#   - Mock Slurm controller (simulates sbatch, squeue, scancel)
+#   - Mini-RiVault (vLLM + LiteLLM) in mock mode
+#   - UMRS with all backends
+#   - PostgreSQL + pgvector
+#   - MinIO (S3)
+#   - Gateway (NGINX + Auth Sidecar)
+#
+# Usage:
+#   # Start the full test environment
+#   docker compose -f docker-compose.e2e.yaml up -d
+#
+#   # Run E2E tests
+#   python tests/run_e2e_tests.py
+#
+#   # Teardown
+#   docker compose -f docker-compose.e2e.yaml down -v
+
+name: e2e-test
+
+services:
+  # =============================================================================
+  # Mock Slurm Controller
+  # Simulates Slurm commands (sbatch, squeue, scancel) for testing
+  # =============================================================================
+  slurm-mock:
+    build:
+      context: tests/docker
+      dockerfile: Dockerfile.slurm-mock
+    container_name: slurm-mock
+    hostname: slurm-controller
+    networks:
+      e2e-net:
+        aliases:
+          - slurm
+    ports:
+      - "6817:6817"  # Slurm control daemon port
+    volumes:
+      - slurm_spool:/var/spool/slurm
+      - job_info:/var/run/rivault
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    environment:
+      - MOCK_SLURM_DELAY=2  # Simulated job startup delay in seconds
+      - MOCK_SLURM_COMPUTE_NODE=compute-mock
+    healthcheck:
+      test: ["CMD", "mock_sinfo", "2>&1"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  # =============================================================================
+  # Mock Compute Node (runs Mini-RiVault when "job" is submitted)
+  # =============================================================================
+  compute-mock:
+    build:
+      context: tests/docker
+      dockerfile: Dockerfile.compute-mock
+    container_name: compute-mock
+    hostname: compute-mock
+    networks:
+      e2e-net:
+        aliases:
+          - compute
+    depends_on:
+      slurm-mock:
+        condition: service_healthy
+    ports:
+      - "11434:11434"  # LiteLLM
+      - "8000:8000"    # vLLM (internal)
+    volumes:
+      - job_info:/var/run/rivault
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    environment:
+      - VLLM_MODEL_PATH=/models
+      - LITELLM_PORT=11434
+      - LITELLM_MASTER_KEY=sk-test-e2e
+      - MOCK_MODE=true
+      - HTTP_PROXY=http://gateway:8080
+      - HTTPS_PROXY=http://gateway:8080
+      - NO_PROXY=localhost,127.0.0.1,::1,umrs,seaweedfs,gateway,compute-mock,slurm-mock,postgres
+      - http_proxy=http://gateway:8080
+      - https_proxy=http://gateway:8080
+      - no_proxy=localhost,127.0.0.1,::1,umrs,seaweedfs,gateway,compute-mock,slurm-mock,postgres
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:11434/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # =============================================================================
+  # PostgreSQL with pgvector
+  # =============================================================================
+  postgres:
+    image: ankane/pgvector:latest
+    container_name: e2e-postgres
+    networks:
+      e2e-net:
+        aliases:
+          - postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: e2e_test
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./umrs/docker/init_pgvector.sql:/docker-entrypoint-initdb.d/init_pgvector.sql:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d e2e_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # =============================================================================
+  # SeaweedFS (S3 API; ADR-055 — the `s3` alias and credential VALUES stay the
+  # same so every consumer env line below keeps meaning exactly what it meant).
+  # =============================================================================
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.47
+    container_name: e2e-seaweedfs
+    networks:
+      e2e-net:
+        aliases:
+          - seaweedfs
+          - s3
+    ports:
+      - "9000:9000"
+    environment:
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+    command: >
+      server -dir=/data -ip=127.0.0.1 -ip.bind=0.0.0.0
+      -volume.max=0 -volume.index=leveldb
+      -s3 -s3.port=9000 -metricsPort=9327
+    volumes:
+      - s3_data:/data
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:9000/status"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # =============================================================================
+  # UMRS Server
+  # =============================================================================
+  umrs:
+    build:
+      context: umrs
+      dockerfile: docker/Dockerfile
+    container_name: e2e-umrs
+    networks:
+      e2e-net:
+        aliases:
+          - umrs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      seaweedfs:
+        condition: service_healthy
+      slurm-mock:
+        condition: service_healthy
+    ports:
+      - "8001:8000"
+      - "8082:8082"  # HTTP sidecar (Gateway-facing API)
+      - "5555:5555"  # ZeroMQ control plane
+    environment:
+      PYTHONUNBUFFERED: "1"
+      DB_HOST: postgres
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: e2e_test
+      DB_SUPERUSER_PASSWORD: postgres
+      POSTGRES_PASSWORD: postgres
+      S3_BACKEND: seaweedfs
+      S3_ENDPOINT: http://seaweedfs:9000
+      S3_ENDPOINT_URL: http://seaweedfs:9000
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      # Force mock Slurm backend
+      UMRS_BACKEND: slurm
+      SLURM_MOCK_MODE: "true"
+      SLURM_MOCK_HOST: slurm-mock
+      JOB_INFO_DIR: /var/run/rivault
+      # Use pre-staged models - no downloads
+      HF_HOME: /models
+      TRANSFORMERS_OFFLINE: "1"
+      HF_HUB_OFFLINE: "1"
+      # Skip embedding initialization for E2E tests
+      UMRS_SKIP_EMBEDDING_INIT: "true"
+      # Strict identity isolation for workflow verify-rollout E2E
+      UMRS_AUTH_MODE: strict
+      UMRS_HTTP_HOST: "0.0.0.0"
+      PYTHONPATH: /opt/r4-contracts/src:/app/src
+    volumes:
+      - job_info:/var/run/rivault
+      - ./models:/models:ro
+      - ./tests/fixtures/umrs-user-files:/root/user_files:ro
+      - ./r4-contracts/src:/opt/r4-contracts/src:ro
+      - ./umrs/src:/app/src:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 512M
+    # Check UMRS HTTP health endpoint — validates actual service readiness,
+    # not just that PID 1 exists.
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8082/health\", timeout=5).close()'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+
+  # =============================================================================
+  # Platform Gateway (NGINX + Auth Sidecar)
+  # =============================================================================
+  gateway-nginx:
+    build:
+      context: gateway/nginx
+      dockerfile: Dockerfile
+    container_name: e2e-gateway-nginx
+    networks:
+      e2e-net:
+        aliases:
+          - gateway
+    depends_on:
+      gateway-sidecar:
+        condition: service_healthy
+      umrs:
+        condition: service_healthy
+      a2l:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      LITELLM_HOST: compute-mock
+      LITELLM_PORT: "11434"
+      UMRS_HOST: umrs
+      UMRS_PORT: "8082"
+      A2L_HOST: a2l
+      A2L_PORT: "8002"
+      SIDECAR_HOST: gateway-sidecar
+      SIDECAR_PORT: "8081"
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 128M
+    # Validate the health endpoint returns a 200 status code.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8080/health | grep -q ok || exit 1"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+  gateway-sidecar:
+    build:
+      context: gateway/sidecar
+      dockerfile: Dockerfile
+    container_name: e2e-gateway-sidecar
+    networks:
+      e2e-net:
+        aliases:
+          - gateway-sidecar
+    environment:
+      JWT_SECRET: test-secret-for-e2e
+      JWT_ALGORITHM: HS256
+      GATEWAY_ENVIRONMENT: test
+      S3_BACKEND: seaweedfs
+      S3_ENDPOINT: http://seaweedfs:9000
+      S3_ENDPOINT_URL: http://seaweedfs:9000
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_BUCKET: r4-data
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/e2e_test
+      PRESIGNED_TTL_SECONDS: "3600"
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # =============================================================================
+  # A2L — Artifact & Agent Layer (scientific memory system)
+  # =============================================================================
+  a2l:
+    build:
+      context: a2l
+      dockerfile: Dockerfile
+    container_name: e2e-a2l
+    networks:
+      e2e-net:
+        aliases:
+          - a2l
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8002:8002"
+    environment:
+      A2L_PORT: "8002"
+      DB_HOST: postgres
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: e2e_test
+      UMRS_BASE_URL: http://umrs:8000
+      POLLER_INTERVAL_SEC: "10"
+      LOG_LEVEL: DEBUG
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8002/health', timeout=5).raise_for_status()"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+
+  # =============================================================================
+  # MCP Apps (Interactive UI Applications)
+  # =============================================================================
+  mcp-apps:
+    build:
+      context: mcp-apps
+      dockerfile: Dockerfile
+    container_name: e2e-mcp-apps
+    networks:
+      e2e-net:
+        aliases:
+          - mcp-apps
+    depends_on:
+      umrs:
+        condition: service_healthy
+    ports:
+      - "5173:5173"
+    environment:
+      UMRS_BASE_URL: http://umrs:8000
+      NODE_ENV: production
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # =============================================================================
+  # Custom MCP Runner (user-mounted manifest sample)
+  # =============================================================================
+  custom-mcp:
+    build:
+      context: mcp-servers
+      dockerfile: Dockerfile
+    container_name: e2e-custom-mcp
+    networks:
+      e2e-net:
+        aliases:
+          - custom-mcp
+    ports:
+      - "8085:8080"
+    volumes:
+      - ./tests/samples/custom-mcp-echo:/mcp-servers:ro
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 512m
+    environment:
+      SERVER_TYPE: custom
+      MCP_CONFIG_DIR: /mcp-servers
+      MCP_TRANSPORT: sse
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: "8080"
+      PYTHONDONTWRITEBYTECODE: "1"
+      HOME: /tmp
+      XDG_CACHE_HOME: /tmp/.cache
+      RIVAULT_OWNER_ID: test-user
+      RIVAULT_INSTANCE_ID: e2e-custom-mcp-session
+      RIVAULT_MCP_GRANTED_CAPABILITIES: STANDARD_USER
+      RIVAULT_HTTP_PROXY: http://gateway:8080
+      RIVAULT_HTTPS_PROXY: http://gateway:8080
+      RIVAULT_NO_PROXY: localhost,127.0.0.1,::1,custom-mcp,gateway,umrs,seaweedfs,postgres
+      HTTP_PROXY: http://gateway:8080
+      HTTPS_PROXY: http://gateway:8080
+      NO_PROXY: localhost,127.0.0.1,::1,custom-mcp,gateway,umrs,seaweedfs,postgres
+    healthcheck:
+      test: ["CMD", "r4-mcp", "custom", "--config-dir", "/mcp-servers", "--validate-only"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # =============================================================================
+  # Test Runner (optional - for CI)
+  # =============================================================================
+  test-runner:
+    build:
+      context: .
+      dockerfile: tests/docker/Dockerfile.test-runner
+    container_name: e2e-test-runner
+    profiles:
+      - test
+    networks:
+      e2e-net: {}
+    depends_on:
+      gateway-nginx:
+        condition: service_healthy
+      compute-mock:
+        condition: service_healthy
+    environment:
+      GATEWAY_URL: http://gateway:8080
+      UMRS_URL: http://umrs:8000
+      LITELLM_URL: http://compute-mock:11434
+      SLURM_MOCK_URL: http://slurm-mock:6817
+      E2E_TEST_MODE: "true"
+    volumes:
+      - ./tests:/app/tests:ro
+      - ./r4:/app/r4:ro
+    command: ["pytest", "tests/", "-v", "--tb=short", "-m", "e2e"]
+
+networks:
+  e2e-net:
+    driver: bridge
+
+volumes:
+  pg_data:
+  s3_data:
+  slurm_spool:
+  job_info:

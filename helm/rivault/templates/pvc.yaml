@@ -1,0 +1,35 @@
+{{- if and .Values.storage.models.enabled (not .Values.storage.models.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "rivault.fullname" . }}-models
+  labels:
+    {{- include "rivault.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.storage.models.accessMode }}
+  {{- if .Values.storage.models.storageClass }}
+  storageClassName: {{ .Values.storage.models.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.models.size }}
+{{- end }}
+---
+{{- if .Values.storage.cache.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "rivault.fullname" . }}-cache
+  labels:
+    {{- include "rivault.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.storage.cache.accessMode }}
+  {{- if .Values.storage.cache.storageClass }}
+  storageClassName: {{ .Values.storage.cache.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.cache.size }}
+{{- end }}

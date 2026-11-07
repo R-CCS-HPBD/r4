@@ -1,0 +1,175 @@
+{
+  "plan_version": 1,
+  "name": "code",
+  "description": "The code crew (ADR-092 slice 4): the architect splits the coding goal into small verifiable increments, then implement, test and review rounds run until a review finds no new defect. The implementer lands the increments (then the reviewer's fixes) with their tests, the tester runs the project's real tests and quotes failures verbatim, and the reviewer approves or names each defect with its smallest fix. The implementer and the tester write files and run commands one at a time, every such call under your approval ladder.",
+  "params": {
+    "goal": {"type": "string", "required": true, "description": "the coding goal"},
+    "context": {"type": "string", "default": "", "description": "constraints, and the files or tests in scope"},
+    "max_increments": {"type": "integer", "default": 4, "min": 1, "max": 5},
+    "rounds": {"type": "integer", "default": 2, "min": 1, "max": 3, "description": "implement, test and review rounds; they stop early when a review finds no new defect"},
+    "reviewer_model": {"type": "string", "default": null, "description": "a different model for the reviewer; the plan warns when it reviews on the implementer's model"}
+  },
+  "agents": {
+    "architect": {
+      "instructions": {"ref": "crew_role:code/architect"},
+      "tools": ["file_read", "grep_search", "glob_search", "list_dir"],
+      "max_tool_rounds": 6
+    },
+    "implementer": {
+      "instructions": {"ref": "crew_role:code/implementer"},
+      "tools": ["file_read", "grep_search", "glob_search", "list_dir", "file_write", "file_edit", "apply_patch"],
+      "max_tool_rounds": 12
+    },
+    "tester": {
+      "instructions": {"ref": "crew_role:code/tester"},
+      "tools": ["file_read", "grep_search", "glob_search", "list_dir", "shell_exec"],
+      "max_tool_rounds": 8
+    },
+    "reviewer": {
+      "instructions": {"ref": "crew_role:code/reviewer"},
+      "tools": ["file_read", "grep_search", "glob_search", "list_dir"],
+      "model": "{{params.reviewer_model}}",
+      "max_tool_rounds": 6,
+      "reviews": ["implementer"]
+    }
+  },
+  "concurrency": 1,
+  "budget": {"max_tokens": 1500000, "max_agents": 16, "max_wallclock_sec": 5400},
+  "phases": [
+    {
+      "id": "decompose",
+      "title": "Decompose into increments",
+      "steps": [
+        {
+          "id": "increments",
+          "kind": "agent",
+          "use": "architect",
+          "label": "architect",
+          "prompt": "Coding goal: {{params.goal}}\nContext: {{params.context}}\nRead the codebase before you plan. Split the goal into at most {{params.max_increments}} small increments in landing order. For each give its name, the files it touches and its acceptance check (a test, or a measurable check).",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "increments": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 5,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {"type": "string", "maxLength": 120},
+                    "files": {"type": "array", "maxItems": 20, "items": {"type": "string", "maxLength": 300}},
+                    "acceptance": {"type": "string", "maxLength": 600}
+                  },
+                  "required": ["name", "files", "acceptance"]
+                }
+              }
+            },
+            "required": ["increments"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "build",
+      "title": "Implement, test and review",
+      "steps": [
+        {
+          "id": "build",
+          "kind": "repeat",
+          "max_iterations": "{{params.rounds}}",
+          "collect": "steps.review.output.defects",
+          "key": "defect",
+          "steps": [
+            {
+              "id": "implement",
+              "kind": "agent",
+              "use": "implementer",
+              "label": "implementer",
+              "prompt": "Coding goal: {{params.goal}}\nThe increments, in landing order:\n{{steps.increments.output.increments|json}}\nThis is round {{iteration}}. The defects the reviewer has named so far, each with its smallest fix:\n{{seen|json}}\nLand every increment that is not landed yet, one at a time and each with its tests, then fix every named defect that still applies. Report what you changed for each increment and each fix.",
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "changes": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "increment": {"type": "string", "maxLength": 120},
+                        "files": {"type": "array", "maxItems": 20, "items": {"type": "string", "maxLength": 300}},
+                        "summary": {"type": "string", "maxLength": 1200}
+                      },
+                      "required": ["increment", "files", "summary"]
+                    }
+                  }
+                },
+                "required": ["changes"]
+              }
+            },
+            {
+              "id": "test",
+              "kind": "agent",
+              "use": "tester",
+              "label": "tester",
+              "prompt": "Run the project's real test suite, or the tests of the increments below, and report the result. Quote every failure verbatim with file:line and classify it.\nThe implementer's changes:\n{{steps.implement.output|json}}",
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "command": {"type": "string", "maxLength": 400},
+                  "passed": {"type": "boolean"},
+                  "failures": {
+                    "type": "array",
+                    "maxItems": 30,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "location": {"type": "string", "maxLength": 300},
+                        "message": {"type": "string", "maxLength": 1200},
+                        "class": {"type": "string", "enum": ["code_bug", "wrong_expectation", "environment"]}
+                      },
+                      "required": ["location", "message", "class"]
+                    }
+                  }
+                },
+                "required": ["command", "passed", "failures"]
+              }
+            },
+            {
+              "id": "review",
+              "kind": "agent",
+              "use": "reviewer",
+              "label": "reviewer",
+              "prompt": "Coding goal: {{params.goal}}\nReview the landed changes as a strict code review: read the files they touch. Approve, or name each defect with the smallest fix.\nThe implementer's changes:\n{{steps.implement.output|json}}\nThe tester's report:\n{{steps.test.output|json}}",
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "verdict": {"type": "string", "enum": ["approve", "defects"]},
+                  "defects": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "defect": {"type": "string", "maxLength": 600},
+                        "location": {"type": "string", "maxLength": 300},
+                        "smallest_fix": {"type": "string", "maxLength": 800}
+                      },
+                      "required": ["defect", "location", "smallest_fix"]
+                    }
+                  }
+                },
+                "required": ["verdict", "defects"]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "output": {
+    "increments": "steps.increments.output.increments",
+    "defects": "steps.build.output.items",
+    "rounds": "steps.build.output.iterations",
+    "converged": "steps.build.output.dry"
+  }
+}

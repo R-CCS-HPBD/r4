@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/worktree.enter.schema.json",
+  "title": "worktree.enter",
+  "description": "worktree.enter: the session now works in ``worktree``; ``ok`` false",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/WorktreeEnterResult",
+  "$defs": {
+    "WorktreeEnterResult": {
+      "type": "object",
+      "description": "worktree.enter: the session now works in ``worktree``; ``ok`` false",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        },
+        "workspace_root": {
+          "type": "string"
+        },
+        "created": {
+          "type": "boolean"
+        },
+        "warning": {
+          "type": "string"
+        },
+        "worktree": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WorktreeRow"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "ok",
+        "message",
+        "workspace_root",
+        "created",
+        "warning",
+        "worktree"
+      ],
+      "additionalProperties": true
+    },
+    "WorktreeRow": {
+      "type": "object",
+      "description": "One registered worktree (``r4.worktrees.Worktree``) and its state.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "base": {
+          "type": "string"
+        },
+        "parent": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "level": {
+          "type": "string"
+        },
+        "snapshot_ref": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "number"
+        },
+        "changed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "path",
+        "branch",
+        "base",
+        "parent",
+        "owner",
+        "level",
+        "snapshot_ref",
+        "created_at",
+        "changed"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

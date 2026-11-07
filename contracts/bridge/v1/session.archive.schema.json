@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/session.archive.schema.json",
+  "title": "session.archive",
+  "description": "session.archive: the row is hidden from default listings.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SessionArchiveResult",
+  "$defs": {
+    "SessionArchiveResult": {
+      "type": "object",
+      "description": "session.archive: the row is hidden from default listings.",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "archived": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "session_id",
+        "archived"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

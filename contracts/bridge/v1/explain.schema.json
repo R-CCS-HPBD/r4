@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/explain.schema.json",
+  "title": "explain",
+  "description": "explain: registry cause+remediation for an error id (or a miss hint).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ExplainResult",
+  "$defs": {
+    "ExplainResult": {
+      "type": "object",
+      "description": "explain: registry cause+remediation for an error id (or a miss hint).",
+      "properties": {
+        "found": {
+          "type": "boolean"
+        },
+        "error_id": {
+          "type": "string"
+        },
+        "cause": {
+          "type": "string"
+        },
+        "remediation": {
+          "type": "string"
+        },
+        "exit_code": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "hint": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "found",
+        "error_id"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

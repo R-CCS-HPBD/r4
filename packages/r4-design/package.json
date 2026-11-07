@@ -1,0 +1,18 @@
+{
+  "name": "@r4/design-tokens",
+  "version": "0.1.0",
+  "private": true,
+  "description": "R4 Platform design tokens (Aurora theme) — shared across webview, TUI, web, CLI",
+  "main": "tokens.ts",
+  "files": [
+    "tokens.json",
+    "tokens.css",
+    "tokens.ts",
+    "theme.cli.json"
+  ],
+  "scripts": {
+    "build": "node scripts/generate.mjs"
+  },
+  "keywords": ["design-tokens", "theme", "r4-platform"],
+  "license": "Apache-2.0"
+}

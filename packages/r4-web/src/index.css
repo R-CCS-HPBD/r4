@@ -1,0 +1,33 @@
+/* Global styles for R4 Web Console */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--r4-font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--r4-surface-base);
+  color: var(--r4-text-primary);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Aurora brand layer (packages/r4-design tokens) */
+a:hover {
+  color: var(--r4-accent-secondary);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--r4-accent) 35%, transparent);
+}
+
+button {
+  font-family: inherit;
+}

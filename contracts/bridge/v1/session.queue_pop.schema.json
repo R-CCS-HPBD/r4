@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/session.queue_pop.schema.json",
+  "title": "session.queue_pop",
+  "description": "session.queue_pop: the popped head (null on an empty queue).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SessionQueuePopResult",
+  "$defs": {
+    "SessionQueuePopResult": {
+      "type": "object",
+      "description": "session.queue_pop: the popped head (null on an empty queue).",
+      "properties": {
+        "content": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "remaining": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "content",
+        "remaining"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

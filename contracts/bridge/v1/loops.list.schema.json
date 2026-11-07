@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/loops.list.schema.json",
+  "title": "loops.list",
+  "description": "loops.list: the caller's UMRS loops.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/LoopsListResult",
+  "$defs": {
+    "LoopsListResult": {
+      "type": "object",
+      "description": "loops.list: the caller's UMRS loops.",
+      "properties": {
+        "loops": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/UmrsLoopRow"
+          }
+        },
+        "count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "loops",
+        "count"
+      ],
+      "additionalProperties": true
+    },
+    "UmrsLoopRow": {
+      "type": "object",
+      "description": "One UMRS loop listing row (``api/loop.py`` list).",
+      "properties": {
+        "loop_id": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "companion_session_id": {
+          "type": "string"
+        },
+        "project_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "loop_id",
+        "status",
+        "phase",
+        "companion_session_id",
+        "project_id"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

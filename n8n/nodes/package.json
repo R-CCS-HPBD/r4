@@ -1,0 +1,43 @@
+{
+  "name": "n8n-nodes-rivault",
+  "version": "0.1.0",
+  "description": "Custom n8n nodes for RiVault AI-for-Science Platform",
+  "main": "index.js",
+  "license": "Apache-2.0",
+  "keywords": [
+    "n8n-community-node-package",
+    "n8n",
+    "rivault",
+    "genai",
+    "llm"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/RiVaultApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/RiVaultLlm/RiVaultLlm.node.js",
+      "dist/nodes/RiVaultRag/RiVaultRag.node.js",
+      "dist/nodes/RiVaultModel/RiVaultModel.node.js",
+      "dist/nodes/RiVaultModelList/RiVaultModelList.node.js",
+      "dist/nodes/RiVaultUpload/RiVaultUpload.node.js"
+    ]
+  },
+  "scripts": {
+    "build": "tsc && gulp build:icons",
+    "dev": "tsc --watch",
+    "lint": "eslint nodes credentials --ext .ts",
+    "lintfix": "eslint nodes credentials --ext .ts --fix",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "gulp": "^4.0.2",
+    "n8n-workflow": "*",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
+}

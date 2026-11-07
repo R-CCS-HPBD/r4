@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/explain.match.schema.json",
+  "title": "explain.match",
+  "description": "explain.match: the first registry id found in free text (or none).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ExplainMatchResult",
+  "$defs": {
+    "ExplainMatchResult": {
+      "type": "object",
+      "description": "explain.match: the first registry id found in free text (or none).",
+      "properties": {
+        "found": {
+          "type": "boolean"
+        },
+        "error_id": {
+          "type": "string"
+        },
+        "cause": {
+          "type": "string"
+        },
+        "remediation": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "found"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

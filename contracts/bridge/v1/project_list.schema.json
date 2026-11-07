@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/project_list.schema.json",
+  "title": "project_list",
+  "description": "project_list: inventory rows and the CLI-default current id.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ProjectListResult",
+  "$defs": {
+    "ProjectListResult": {
+      "type": "object",
+      "description": "project_list: inventory rows and the CLI-default current id.",
+      "properties": {
+        "projects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ProjectRow"
+          }
+        },
+        "current": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "projects",
+        "current"
+      ],
+      "additionalProperties": true
+    },
+    "ProjectRow": {
+      "type": "object",
+      "description": "One project in the shared inventory listing.",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "gateway_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "project_id",
+        "name",
+        "active",
+        "gateway_url",
+        "model"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

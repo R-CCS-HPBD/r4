@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/project_init.schema.json",
+  "title": "project_init",
+  "description": "project_import/init/verify/readiness/plan/run: the async CLI job;",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ProjectJobStart",
+  "$defs": {
+    "ProjectJobStart": {
+      "type": "object",
+      "description": "project_import/init/verify/readiness/plan/run: the async CLI job;",
+      "properties": {
+        "jobId": {
+          "type": "string"
+        },
+        "operation": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "jobId",
+        "operation"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

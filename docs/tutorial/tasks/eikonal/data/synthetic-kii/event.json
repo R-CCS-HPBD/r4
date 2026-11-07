@@ -1,0 +1,9 @@
+{
+  "event_id": "SYNTH-KII-01",
+  "origin_time": "2026-01-15T03:12:40.00Z",
+  "latitude": 33.8,
+  "longitude": 135.15,
+  "depth_km": 12.0,
+  "region": "Kii Channel (SYNTHETIC event, invented for the tutorial)",
+  "source": "synthetic \u2014 make_synthetic_picks.py; no real catalogue data"
+}

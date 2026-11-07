@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/worktree.mode.schema.json",
+  "title": "worktree.mode",
+  "description": "worktree.mode: the session's worktree mode (``off|auto``), after an",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/WorktreeModeResult",
+  "$defs": {
+    "WorktreeModeResult": {
+      "type": "object",
+      "description": "worktree.mode: the session's worktree mode (``off|auto``), after an",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "mode_source": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ok",
+        "message",
+        "mode",
+        "mode_source"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

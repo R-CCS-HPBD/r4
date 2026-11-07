@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/session.fork.schema.json",
+  "title": "session.fork",
+  "description": "session.fork: the new row (``CompanionSessionStore.fork`` summary).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SessionForkResult",
+  "$defs": {
+    "SessionForkResult": {
+      "type": "object",
+      "description": "session.fork: the new row (``CompanionSessionStore.fork`` summary).",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "forked_from": {
+          "type": "string"
+        },
+        "messages": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "name",
+        "forked_from",
+        "messages"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

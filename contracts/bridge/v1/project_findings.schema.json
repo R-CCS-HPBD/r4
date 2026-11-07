@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/project_findings.schema.json",
+  "title": "project_findings",
+  "description": "project_findings: the verification findings summary payload.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ProjectFindingsResult",
+  "$defs": {
+    "ProjectFindingsResult": {
+      "type": "object",
+      "description": "project_findings: the verification findings summary payload.",
+      "properties": {
+        "result": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "result"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

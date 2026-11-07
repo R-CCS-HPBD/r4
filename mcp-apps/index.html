@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RiVault MCP Apps</title>
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <style>
+      :root {
+        --bg-primary: #0d1117;
+        --bg-secondary: #161b22;
+        --text-primary: #c9d1d9;
+        --text-secondary: #8b949e;
+        --accent: #58a6ff;
+        --border: #30363d;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        min-height: 100vh;
+        padding: 2rem;
+      }
+      h1 {
+        color: var(--accent);
+        margin-bottom: 0.5rem;
+      }
+      .subtitle {
+        color: var(--text-secondary);
+        margin-bottom: 2rem;
+      }
+      .apps-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+        max-width: 1200px;
+      }
+      .app-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1.5rem;
+        transition: border-color 0.2s;
+      }
+      .app-card:hover {
+        border-color: var(--accent);
+      }
+      .app-card h2 {
+        font-size: 1.25rem;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+      }
+      .app-card p {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        margin-bottom: 1rem;
+      }
+      .app-card a {
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 500;
+      }
+      .app-card a:hover {
+        text-decoration: underline;
+      }
+      .status {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 500;
+      }
+      .status.ready { background: #238636; color: white; }
+      .status.dev { background: #9e6a03; color: white; }
+    </style>
+  </head>
+  <body>
+    <h1>RiVault MCP Apps</h1>
+    <p class="subtitle">Interactive UI Applications for Model Context Protocol</p>
+
+    <div class="apps-grid">
+      <div class="app-card">
+        <h2>RAG Document Explorer</h2>
+        <span class="status dev">In Development</span>
+        <p>Search and explore documents in your RAG index. View chunks, relevance scores, and source documents.</p>
+        <a href="/apps/rag-explorer/">Open App →</a>
+      </div>
+
+      <div class="app-card">
+        <h2>Job Monitor Dashboard</h2>
+        <span class="status dev">In Development</span>
+        <p>Monitor active inference jobs, GPU utilization, and streaming logs. Control job lifecycle.</p>
+        <a href="/apps/job-monitor/">Open App →</a>
+      </div>
+
+      <div class="app-card">
+        <h2>Model Configuration Wizard</h2>
+        <span class="status dev">In Development</span>
+        <p>Configure model parameters, estimate GPU requirements, and provision endpoints.</p>
+        <a href="/apps/model-wizard/">Open App →</a>
+      </div>
+
+      <div class="app-card">
+        <h2>Embedding Visualization</h2>
+        <span class="status dev">In Development</span>
+        <p>Visualize document embeddings in 2D/3D space. Explore clusters and similarity.</p>
+        <a href="/apps/embedding-viz/">Open App →</a>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

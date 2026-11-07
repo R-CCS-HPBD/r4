@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/session.queue_append.schema.json",
+  "title": "session.queue_append",
+  "description": "session.queue_append: the local queue after the append (ok=false on empty text).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SessionQueueAppendResult",
+  "$defs": {
+    "SessionQueueAppendResult": {
+      "type": "object",
+      "description": "session.queue_append: the local queue after the append (ok=false on empty text).",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "queue": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "ok",
+        "queue"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

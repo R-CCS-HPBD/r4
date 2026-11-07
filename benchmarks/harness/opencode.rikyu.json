@@ -1,0 +1,23 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "rikyu": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Rikyu (RCCS AI gateway)",
+      "options": {
+        "baseURL": "https://api.rikyu.r-ccs.riken.jp/v1",
+        "apiKey": "{env:R4_GATEWAY_KEY}"
+      },
+      "models": {
+        "kimi-k3": {
+          "name": "Kimi K3 (via rikyu)",
+          "limit": {
+            "context": 928000,
+            "output": 32768
+          }
+        }
+      }
+    }
+  },
+  "share": "disabled"
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/session.queue_clear.schema.json",
+  "title": "session.queue_clear",
+  "description": "session.queue_clear: how many rows were dropped.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SessionQueueClearResult",
+  "$defs": {
+    "SessionQueueClearResult": {
+      "type": "object",
+      "description": "session.queue_clear: how many rows were dropped.",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "cleared": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "ok",
+        "cleared"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,166 @@
+# Observability Stack for RiVault
+# O-001: Prometheus, O-002: Grafana, O-003: Loki, O-004: Jaeger
+
+services:
+  # ==========================================================================
+  # O-001: Prometheus - Metrics Collection
+  # ==========================================================================
+  prometheus:
+    image: docker.io/prom/prometheus:v2.51.0
+    container_name: rivault-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yaml:/etc/prometheus/alerts.yml:ro
+      - prometheus_targets:/etc/prometheus/targets
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=${PROMETHEUS_RETENTION_TIME:-15d}'
+      - '--web.enable-lifecycle'
+      - '--web.enable-remote-write-receiver'
+    networks:
+      - observability
+
+  # ==========================================================================
+  # vLLM target generator (auto-discovers UMRS endpoints for Prometheus)
+  # ==========================================================================
+  vllm-targets-generator:
+    image: docker.io/library/python:3.12-slim
+    container_name: rivault-vllm-targets-generator
+    restart: unless-stopped
+    environment:
+      - VLLM_TARGETS_UMRS_URLS=${VLLM_TARGETS_UMRS_URLS:-http://host.containers.internal:8000,http://host.containers.internal:8002,http://host.containers.internal:8004,http://host.containers.internal:8006}
+      - VLLM_TARGETS_OUTPUT=/etc/prometheus/targets/vllm-targets.json
+      - VLLM_TARGETS_TIMEOUT=10
+    volumes:
+      - ./prometheus/vllm-targets-generator.py:/app/vllm-targets-generator.py:ro
+      - prometheus_targets:/etc/prometheus/targets
+    command:
+      - /bin/sh
+      - -c
+      - 'pip install --no-cache-dir urllib3 && while true; do python3 /app/vllm-targets-generator.py; sleep 15; done'
+    networks:
+      - observability
+    depends_on:
+      - prometheus
+
+  # ==========================================================================
+  # O-002: Grafana - Dashboards & Visualization
+  # ==========================================================================
+  grafana:
+    image: docker.io/grafana/grafana:10.4.0
+    container_name: rivault-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_DOMAIN=${GRAFANA_DOMAIN:-localhost}
+      # No phone-home (ops-watch #638, 2026-10-30): same as the umrs-front stack.
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      - GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES=false
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - observability
+    depends_on:
+      - prometheus
+      - loki
+
+  # ==========================================================================
+  # O-003: Loki - Centralized Logging
+  # ==========================================================================
+  loki:
+    image: docker.io/grafana/loki:2.9.5
+    container_name: rivault-loki
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki/loki-config.yaml:/etc/loki/config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/config.yaml
+    networks:
+      - observability
+
+  # Promtail - Log collector (sidecar for Docker logs)
+  promtail:
+    image: docker.io/grafana/promtail:2.9.5
+    container_name: rivault-promtail
+    restart: unless-stopped
+    volumes:
+      - ./loki/promtail-config.yaml:/etc/promtail/config.yaml:ro
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yaml
+    networks:
+      - observability
+    depends_on:
+      - loki
+
+  # ==========================================================================
+  # O-004: Jaeger - Distributed Tracing
+  # ==========================================================================
+  jaeger:
+    image: docker.io/jaegertracing/all-in-one:1.55
+    container_name: rivault-jaeger
+    restart: unless-stopped
+    ports:
+      - "16686:16686"  # UI
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP
+      - "14268:14268"  # Jaeger HTTP
+      - "6831:6831/udp" # Jaeger compact thrift
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - SPAN_STORAGE_TYPE=badger
+      - BADGER_EPHEMERAL=false
+      - BADGER_DIRECTORY_VALUE=/badger/data
+      - BADGER_DIRECTORY_KEY=/badger/key
+      - QUERY_MAX_CLOCK_SKEW_ADJUSTMENT=0s
+    volumes:
+      - jaeger_data:/badger
+    networks:
+      - observability
+
+  # ==========================================================================
+  # OpenTelemetry Collector - Unified telemetry collection
+  # ==========================================================================
+  otel-collector:
+    image: docker.io/otel/opentelemetry-collector-contrib:0.96.0
+    container_name: rivault-otel-collector
+    restart: unless-stopped
+    ports:
+      - "4319:4317"    # OTLP gRPC (external, offset to avoid jaeger conflict)
+      - "4320:4318"    # OTLP HTTP (external)
+      - "8888:8888"    # Prometheus metrics
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector/config.yaml:ro
+    command: --config=/etc/otel-collector/config.yaml
+    networks:
+      - observability
+    depends_on:
+      - prometheus
+      - loki
+      - jaeger
+
+networks:
+  observability:
+    name: rivault-observability
+    driver: bridge
+
+volumes:
+  prometheus_data:
+  prometheus_targets:
+  grafana_data:
+  loki_data:
+  jaeger_data:

@@ -1,0 +1,502 @@
+{
+ "annotations": {
+  "list": [
+   {
+    "builtIn": 1,
+    "datasource": {
+     "type": "grafana",
+     "uid": "-- Grafana --"
+    },
+    "enable": true,
+    "hide": true,
+    "iconColor": "rgba(0, 211, 255, 1)",
+    "name": "Annotations & Alerts",
+    "type": "dashboard"
+   }
+  ]
+ },
+ "editable": true,
+ "fiscalYearStartMonth": 0,
+ "graphTooltip": 1,
+ "id": null,
+ "links": [],
+ "liveNow": false,
+ "panels": [
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "Durable job runtime bridge liveness: seconds since last activity through the gen1_gen2_runtime bridge. >60s = DurableThreadDead alert.",
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 0
+   },
+   "id": 1,
+   "options": {
+    "legend": {
+     "calcs": [],
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "timezone": [],
+    "tooltip": {
+     "mode": "single",
+     "sort": "none"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "time() - umrs_bridge_last_activity_timestamp{bridge=\"gen1_gen2_runtime\"}",
+     "legendFormat": "seconds-silent",
+     "refId": "A"
+    }
+   ],
+   "title": "Durable Thread Liveness (seconds-silent)",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "Rate of attempt-monitor timeout outcomes per second. >0.1/s = MonitorTimeoutSpike alert.",
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ops"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 0
+   },
+   "id": 2,
+   "options": {
+    "legend": {
+     "calcs": [],
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "single",
+     "sort": "none"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "rate(umrs_monitor_checks_total{outcome=\"timeout\"}[10m])",
+     "legendFormat": "timeout/s",
+     "refId": "A"
+    }
+   ],
+   "title": "Monitor Timeout Rate (per second)",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "Per-subsystem operational degradation (0 = healthy, 1 = degraded, 2 = unhealthy). max >= 2 = DegradationLevelHigh alert.",
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 8
+   },
+   "id": 3,
+   "options": {
+    "legend": {
+     "calcs": [],
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "umrs_degradation_level",
+     "legendFormat": "{{subsystem}}",
+     "refId": "A"
+    }
+   ],
+   "title": "Degradation Level by Subsystem",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "Pending reconciliation tasks gauge. >50 = SchedulerBacklogGrowing alert.",
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 8
+   },
+   "id": 4,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "single",
+     "sort": "none"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "umrs_reconciler_queue_depth",
+     "legendFormat": "pending tasks",
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "umrs_queue_depth",
+     "legendFormat": "{{queue_type}} queue",
+     "refId": "B"
+    }
+   ],
+   "title": "Scheduler/Queue Depth",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "ZMQ transport reconnect rate (durable job spooling health). >1/s = TransportReconnectStorm alert.",
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ops"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 24,
+    "x": 0,
+    "y": 16
+   },
+   "id": 5,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "single",
+     "sort": "none"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "rate(umrs_transport_reconnects_total[5m])",
+     "legendFormat": "reconnect/s",
+     "refId": "A"
+    }
+   ],
+   "title": "ZMQ Transport Reconnect Rate",
+   "type": "timeseries"
+  },
+  {
+   "id": 6,
+   "type": "timeseries",
+   "title": "LLM TTFT + TTFC (P11 SLO 30s) \u2014 p50/p95 by model",
+   "description": "Time-to-first-streamed-chunk measured at the UMRS LLM route (rivault_llm_first_token_seconds, chunk anchor, source labels umrs). Ratified P11 headline SLO: p95 \u2264 30s over 10m. Panels map to the LLMFirstTokenSlow alert in observability/prometheus/alerts.yaml (same window + quantile). (C: rivault_llm_first_content_seconds \u2014 P11 decode leg, first non-empty content delta.)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 24,
+    "x": 0,
+    "y": 24
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 30
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "calcs": [],
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "timezone": [],
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.95, sum(rate(rivault_llm_first_token_seconds_bucket[10m])) by (le, model))",
+     "legendFormat": "p95 {{model}}"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.50, sum(rate(rivault_llm_first_token_seconds_bucket[10m])) by (le, model))",
+     "legendFormat": "p50 {{model}}"
+    },
+    {
+     "refId": "C",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.95, sum(rate(rivault_llm_first_content_seconds_bucket[10m])) by (le, model))",
+     "legendFormat": "p95 content {{model}}"
+    },
+    {
+     "refId": "D",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.95, sum(rate(rivault_llm_decode_content_rate_deltas_per_second_bucket[10m])) by (le, model))",
+     "legendFormat": "p95 decode-rate {{model}} (deltas/s)"
+    }
+   ]
+  },
+  {
+   "id": 7,
+   "type": "stat",
+   "title": "P11 SLO aggregate (TTFT + TTFC + traffic)",
+   "description": "SLO-frame rollup: p95 TTFT and p95 TTFC single-number views (ratified bound 30s), plus the streaming/non-streaming request rate through the UMRS LLM route. Threshold color flips at the bound.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 24,
+    "x": 0,
+    "y": 32
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 30
+       }
+      ]
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "LLM stream-request rate"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "reqps"
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "colorMode": "value",
+    "graphMode": "area",
+    "justifyMode": "auto",
+    "orientation": "auto",
+    "percentChangeColorMode": "standard",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "showPercentChange": false,
+    "textMode": "auto",
+    "wideLayout": true
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.95, sum(rate(rivault_llm_first_token_seconds_bucket[10m])) by (le))",
+     "legendFormat": "p95 TTFT"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.95, sum(rate(rivault_llm_first_content_seconds_bucket[10m])) by (le))",
+     "legendFormat": "p95 TTFC (decode leg)"
+    }
+   ]
+  },
+  {
+   "id": 8,
+   "type": "timeseries",
+   "title": "LLM request rate (umrs proxy: stream on-stream)",
+   "description": "Traffic through the UMRS LLM route: umrs_llm_requests_total by streaming + model (10m rate). Pair with TTFT/TTFC to see load vs SLO adherence directly.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 24,
+    "x": 0,
+    "y": 38
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "reqps"
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "calcs": [],
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "timezone": [],
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(rate(umrs_llm_requests_total[10m])) by (model, streaming)",
+     "legendFormat": "{{model}} {{streaming}}"
+    }
+   ]
+  }
+ ],
+ "refresh": "30s",
+ "schemaVersion": 38,
+ "tags": [
+  "umrs",
+  "slo"
+ ],
+ "templating": {
+  "list": []
+ },
+ "time": {
+  "from": "now-6h",
+  "to": "now"
+ },
+ "timepicker": {},
+ "timezone": "browser",
+ "title": "UMRS SLO Overview",
+ "uid": "umrs-slo",
+ "version": 1,
+ "weekStart": ""
+}

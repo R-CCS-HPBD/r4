@@ -1,0 +1,4 @@
+Synthetic project ALPHA - widget calibration log (FAKE DATA FOR PLUMBING TESTS)
+2025-06-02  Re-measurement run C-19 with new clamp: resonance frequency of widget W7 = 418.2 Hz (bench temperature 21.3 C).
+2025-06-02  C-19 supersedes C-11 (old clamp introduced a 1.4% downward bias).
+2025-06-10  Calibration run C-20: damping ratio of widget W7 = 0.029.

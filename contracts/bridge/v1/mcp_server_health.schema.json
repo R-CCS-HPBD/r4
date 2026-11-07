@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/mcp_server_health.schema.json",
+  "title": "mcp_server_health",
+  "description": "mcp_server_health: registry row refreshed by a live client probe",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/McpServerHealthResult",
+  "$defs": {
+    "McpServerHealthResult": {
+      "type": "object",
+      "description": "mcp_server_health: registry row refreshed by a live client probe",
+      "properties": {
+        "server": {
+          "type": "string"
+        },
+        "server_id": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "healthy": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string"
+        },
+        "registry_status": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "checked_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "server",
+        "server_id",
+        "url",
+        "healthy",
+        "status",
+        "registry_status",
+        "source",
+        "checked_at"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

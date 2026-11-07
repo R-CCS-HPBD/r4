@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/list_stoppable_endpoints.schema.json",
+  "title": "list_stoppable_endpoints",
+  "description": "list_stoppable_endpoints: the stop candidates.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ListStoppableEndpointsResult",
+  "$defs": {
+    "ListStoppableEndpointsResult": {
+      "type": "object",
+      "description": "list_stoppable_endpoints: the stop candidates.",
+      "properties": {
+        "endpoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/StoppableEndpointRow"
+          }
+        }
+      },
+      "required": [
+        "endpoints"
+      ],
+      "additionalProperties": true
+    },
+    "StoppableEndpointRow": {
+      "type": "object",
+      "description": "One running endpoint that may be stopped.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "status"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

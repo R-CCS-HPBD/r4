@@ -1,0 +1,597 @@
+# Stand-alone R4 + UMRS — the whole platform on one host (ADR-090).
+#
+# Status: ADDITIVE. docker-compose.e2e.yaml is NOT yet retired; this file must be
+# proven to boot first (plan WS-01). Consumers are repointed in WS-10.
+#
+# Engine support (ADR-090 D-8): Docker Compose v2 (`docker compose`) and the
+# podman v2-compatible shim (`podman compose`, podman >= 4.7). The Python
+# `podman-compose` is NOT supported — its healthcheck + `depends_on:
+# condition: service_healthy` + `profiles` handling is uneven and the whole
+# bring-up ordering depends on all three.
+#
+# Profiles:
+#   core          always on (no `profiles:` key) — the platform itself
+#   models-local  backend (a): ollama on an internal, egress-less network
+#   agent         MCP surfaces the agent calls
+#   ci            the former mock leg (slurm-mock, compute-mock) — dev/CI only
+#
+# Usage:  ./standalone.sh up          (wraps the right engine + profiles)
+# Never:  secrets in this file. Every credential is a required env var (`:?`),
+#         rendered into env/.env.secrets by `./standalone.sh bootstrap`.
+
+name: ai4s-standalone
+
+x-restart: &restart
+  restart: unless-stopped
+
+services:
+  # ───────────────────────────────────────────────────────────── core ─────
+  postgres:
+    <<: *restart
+    # pgvector/pgvector is the maintained image; ankane/pgvector:latest is
+    # documented broken on fresh init in umrs/docker/docker-compose.yml:54-56.
+    image: docker.io/pgvector/pgvector:pg15
+    # An init as PID 1, not the postmaster (live 2026-10-10). Under load the
+    # healthcheck's `sh` hit its timeout and was killed; the orphaned
+    # pg_isready was re-parented to PID 1, the postmaster, and died of SIGPIPE.
+    # The postmaster reaps any child that dies on a signal as a crashed
+    # backend: it restarted every session into crash recovery about once a
+    # minute while a 1000-document ingest was embedding. The same is true of
+    # any `standalone.sh exec postgres psql` whose client goes away.
+    init: true
+    networks: [standalone-net]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set in env/.env.secrets}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in env/.env.secrets}
+      POSTGRES_DB: ${POSTGRES_DB:-umrs}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      # pgvector only — see init/00-pgvector.sql for why not umrs/docker/init_pgvector.sql.
+      - ./init/00-pgvector.sql:/docker-entrypoint-initdb.d/00-pgvector.sql:ro,z
+    mem_limit: 2g
+    cpus: 2
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+  seaweedfs:
+    <<: *restart
+    image: docker.io/chrislusf/seaweedfs:4.47
+    networks:
+      standalone-net:
+        aliases: [s3]
+    environment:
+      # SeaweedFS derives its admin principal from these (ADR-055).
+      AWS_ACCESS_KEY_ID: ${S3_ROOT_USER:?set in env/.env.secrets}
+      AWS_SECRET_ACCESS_KEY: ${S3_ROOT_PASSWORD:?set in env/.env.secrets}
+    command: >
+      server -dir=/data -ip=127.0.0.1 -ip.bind=0.0.0.0
+      -volume.max=0 -volume.index=leveldb
+      -s3 -s3.port=9000 -s3.iam -s3.iam.config=/etc/seaweedfs/iam.json
+      -iam -iam.port=8111
+      -metricsPort=9327
+    volumes:
+      - s3_data:/data
+      - ./seaweedfs:/etc/seaweedfs:ro,z
+    mem_limit: 2g
+    cpus: 2
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:9000/status"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  umrs:
+    <<: *restart
+    # The published CPU image (linux/amd64 + linux/arm64), pinned by digest:
+    # .github/workflows/standalone-image.yaml builds umrs/docker/Dockerfile.server
+    # once instead of on every laptop (~16 GB of transient layers a macOS
+    # podman VM never returns; repo-rename plan P4). standalone.sh pulls it
+    # before compose runs. STANDALONE_BUILD=1 builds it from this checkout
+    # instead (compose.build.yaml); UMRS_IMAGE overrides both.
+    image: ${UMRS_IMAGE:-ghcr.io/r-ccs-hpbd/r4-standalone-umrs@sha256:70332826aa110b284d44f795e520cd5ef79dfe2689563b1e4b650a41ffe0d04d}
+    networks: [standalone-net, standalone-models]
+    depends_on:
+      postgres: {condition: service_healthy}
+      seaweedfs: {condition: service_healthy}
+    ports:
+      # Loopback only — this is a single-user host, never a LAN service.
+      # 8082 (the HTTP sidecar) is deliberately NOT published here: /umrs/llm
+      # and other routers trust the X-Verified-* headers without an HMAC check
+      # (api/llm.py:683 -> verified_identity(verify_hmac=False)), because in a
+      # real deployment only the edge can reach them. Publishing 8082 would let
+      # any local process skip the edge and act as any project. Reach it through
+      # the gateway, or `compose exec -T umrs`. The dev overlay publishes it.
+      - "127.0.0.1:5555:5555"   # ZeroMQ control plane
+      - "127.0.0.1:5556-5563:5556-5563"  # ZeroMQ data range (source.py:223-224)
+    environment:
+      PYTHONUNBUFFERED: "1"
+      UMRS_SITE_CONFIG: /etc/umrs/site.yaml
+      DB_HOST: postgres
+      DB_USER: ${POSTGRES_USER:?}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?}
+      DB_NAME: ${POSTGRES_DB:-umrs}
+      # server_umrs.py -> create_umrs_server_db_user() -> get_db_config()
+      # (umrs/shared/pg_config.py:48) requires a superuser password and reads
+      # only these two names; DB_PASSWORD alone makes the server exit 1 at boot.
+      DB_SUPERUSER_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      # pg_config.py:70-71 resolves the superuser NAME from DB_SUPERUSER, then
+      # POSTGRES_USER, then the literal "postgres". Postgres here is initialised
+      # as ${POSTGRES_USER}, so without this the server connects as "postgres"
+      # and fails authentication against a role that does not exist.
+      DB_SUPERUSER: ${POSTGRES_USER:?}
+      S3_BACKEND: seaweedfs
+      S3_ENDPOINT: http://seaweedfs:9000
+      S3_ENDPOINT_URL: http://seaweedfs:9000
+      # The identity SeaweedFS bootstraps from S3_ROOT_* is the only one it
+      # knows (iam.json defines none) — same mapping as umrs-front's compose.
+      S3_ACCESS_KEY: ${S3_ROOT_USER:?}
+      S3_SECRET_KEY: ${S3_ROOT_PASSWORD:?}
+      S3_BUCKET: ${S3_BUCKET:-r4-data}
+      # SeaweedFS IAM API. Boot provisions a per-user S3 identity through it
+      # (shared/storage/backends/seaweedfs.py); without `-iam -iam.port=8111` on
+      # the seaweedfs service umrs exits at "Could not connect to
+      # http://seaweedfs:8111/". Same pair umrs-front runs (ADR-055).
+      S3_IAM_ENDPOINT_URL: http://seaweedfs:8111
+      # Identity. strict is the only supported value for the hardened profile;
+      # without the HMAC secret, verify_claims fails for every module on
+      # jobs.get_caller_identity while request_identity(verify_hmac=False)
+      # still passes — a half-dead surface, not a secure one.
+      UMRS_AUTH_MODE: ${UMRS_AUTH_MODE:-strict}
+      UMRS_HANDSHAKE_HMAC_SECRET: ${UMRS_HANDSHAKE_HMAC_SECRET:?}
+      # umrs validates JWTs itself (endpoint-registry writes, ZMQ session
+      # registration). Without this, shared/auth.py resolve_jwt_secret() falls
+      # back to an insecure default and every JWT the sidecar accepted is
+      # rejected here.
+      JWT_SECRET: ${JWT_SECRET:?}
+      # Signs knowledge bundles (INV-13). Empty until `standalone.sh bootstrap`
+      # adds it (installations from before 2026-10-12): exports then refuse
+      # unless the caller passes allow_unsigned, never sign with a default.
+      UMRS_SECRET_KEY: ${UMRS_SECRET_KEY:-}
+      # The endpoint registry defaults to an in-memory backend
+      # (orchestrator/registry_backend.py), so an adopted model row would vanish
+      # on every restart. The shared backend reads UMRS_JOBS_DB, falling back
+      # to POSTGRES_DB and then the literal "umrs_db", which does not exist here.
+      UMRS_ENDPOINT_REGISTRY_SHARED: "1"
+      UMRS_JOBS_DB: ${POSTGRES_DB:-umrs}
+      UMRS_ZMQ_AUTH_TYPE: ${UMRS_ZMQ_AUTH_TYPE:-session}
+      # ZeroMQ advertises its own container IP (MessageQueue.py:879-881) unless
+      # told otherwise; on a bridge network that address is unreachable from the
+      # host where r4 runs.
+      UMRS_ADVERTISE_HOST: 127.0.0.1
+      UMRS_HTTP_HOST: "0.0.0.0"
+      # ADR-062 amendment D-4 (2026-10-15): a stand-alone deployment's NEW
+      # projects default to non_sensitive (a single user's machine; the
+      # site default stays sensitive). Narrow with:
+      #   r4 project data-class set <project> sensitive
+      # Existing rows are never rewritten by this (INSERT-time only).
+      UMRS_PROJECT_DEFAULT_DATA_CLASS: ${UMRS_PROJECT_DEFAULT_DATA_CLASS:-non_sensitive}
+      # No MCP_URL_ALLOWLIST: Hatch runtimes register as
+      # http://host.containers.internal:<port> (R4_HATCH_ADVERTISE_HOST), a
+      # hostname, so the SSRF guard (api/mcp.py) stays at full strength. An
+      # allowlisted 127.0.0.1 would have pointed UMRS at its own container.
+      # Step settings come from the profile (env/profile.<name>.env). An env
+      # file only interpolates ${...}; unmapped, a profile value never arrives.
+      UMRS_STEP_EXECUTOR: ${UMRS_STEP_EXECUTOR:-podman}
+      # Knowledge text embedder. Empty = the e5-base-v2 the image bundles
+      # (knowledge/text_embedder.py); a model staged with `embedder pull`
+      # is /models/<dir>.
+      UMRS_KNOWLEDGE_EMBED_MODEL: ${UMRS_KNOWLEDGE_EMBED_MODEL:-}
+      # The RAG plane (corpus upload / stats / query) is a separate process.
+      # api/rag.py has this seam for exactly this case ("direct RAG service URL
+      # for standalone deployments"); without it every `r4 knowledge
+      # upload|stats|query` answered 503 "RAG service unavailable".
+      UMRS_RAG_DIRECT_URL: http://rag:8081
+      # Semantic KG extraction resolves its chat model through the endpoint
+      # registry. Laptop decode rates need more than the 60 s site default.
+      UMRS_KNOWLEDGE_EXTRACT_TIMEOUT: ${UMRS_KNOWLEDGE_EXTRACT_TIMEOUT:-180}
+      # 0 skips the per-document LLM extraction (chunks and vectors are still
+      # written). For bulk corpora such as the ADR-093 retrieval eval, where
+      # one 3B extraction per document would take hours; the default keeps it.
+      UMRS_KNOWLEDGE_LLM_EXTRACT: ${UMRS_KNOWLEDGE_LLM_EXTRACT:-1}
+      # Chunk scheme for new ingests (ADR-093 D-11). sent-v1 waits for the S7
+      # gate; switching it on is a reindex decision (MD-7), not a tweak.
+      UMRS_KNOWLEDGE_CHUNK_SCHEME: ${UMRS_KNOWLEDGE_CHUNK_SCHEME:-fixed-v0}
+      # Retrieval core (ADR-093, GET /umrs/rag/retrieve). Every constant is
+      # tuned on the SciFact tune split only; the defaults below are the
+      # documented ones. An env file only interpolates, so a knob that is not
+      # mapped here never reaches the container, and a change needs
+      # `standalone.sh up` (restart does not re-read env).
+      UMRS_RAG_FINAL_K_MAX: ${UMRS_RAG_FINAL_K_MAX:-4}
+      UMRS_RAG_POOL: ${UMRS_RAG_POOL:-50}
+      UMRS_RAG_PER_ARTIFACT: ${UMRS_RAG_PER_ARTIFACT:-2}
+      UMRS_RAG_LEXICAL: ${UMRS_RAG_LEXICAL:-auto}
+      UMRS_RAG_MERGE: ${UMRS_RAG_MERGE:-off}
+      # The neighbour merge's tail floor in characters (~48 tokens, C9's rule).
+      UMRS_RAG_TAIL_CHARS: ${UMRS_RAG_TAIL_CHARS:-200}
+      # The cut and sufficiency (D-3): dense-mode deltas, the null z gates and
+      # the null p-value.
+      UMRS_RAG_DELTA: ${UMRS_RAG_DELTA:-0.03}
+      UMRS_RAG_GAMMA: ${UMRS_RAG_GAMMA:-0.015}
+      UMRS_RAG_Z_SUFFICIENT: ${UMRS_RAG_Z_SUFFICIENT:-3.0}
+      UMRS_RAG_Z_PARTIAL: ${UMRS_RAG_Z_PARTIAL:-2.0}
+      UMRS_RAG_NULL_P: ${UMRS_RAG_NULL_P:-0.05}
+      # The fused cut and the lexical sufficiency rule (D-3/D-6, S3): kept
+      # lexical score as a share of the best, query-term coverage of rank 1,
+      # the IDF of one matched rare term, and the fewest query terms that
+      # coverage must match.
+      UMRS_RAG_LEX_RATIO: ${UMRS_RAG_LEX_RATIO:-0.5}
+      UMRS_RAG_LEX_COVERAGE: ${UMRS_RAG_LEX_COVERAGE:-0.5}
+      UMRS_RAG_LEX_HIT_IDF: ${UMRS_RAG_LEX_HIT_IDF:-3.0}
+      UMRS_RAG_LEX_MIN_TERMS: ${UMRS_RAG_LEX_MIN_TERMS:-2}
+      # Weighted RRF over the dense, lexical and identifier lanes (D-6); `rrf`
+      # or `convex` (min-max convex combination, C6's measured alternative).
+      UMRS_RAG_FUSION: ${UMRS_RAG_FUSION:-rrf}
+      UMRS_RAG_W_DENSE: ${UMRS_RAG_W_DENSE:-1.0}
+      UMRS_RAG_W_LEX: ${UMRS_RAG_W_LEX:-1.0}
+      UMRS_RAG_W_IDENT: ${UMRS_RAG_W_IDENT:-0.5}
+      # The cross-encoder lane (D-7). `auto` reranks only when this is `on`,
+      # which is set only if the S4 gate passes, and only when the rag service
+      # has a staged model (UMRS_RAG_RERANKER_MODEL below). The mode is
+      # `replace` (by logit) or `interpolate` (CE rank blended with fused rank).
+      UMRS_RAG_RERANK_DEFAULT: ${UMRS_RAG_RERANK_DEFAULT:-off}
+      UMRS_RAG_RERANK_MODE: ${UMRS_RAG_RERANK_MODE:-replace}
+      UMRS_RAG_RERANKER_URL: ${UMRS_RAG_RERANKER_URL:-http://rag:8081}
+      UMRS_RAG_RERANKER_TIMEOUT: ${UMRS_RAG_RERANKER_TIMEOUT:-10}
+      # The reranker-mode cut and sufficiency (S4): keep while p >= P_MIN and
+      # logit >= logit_1 - WINDOW, then cut at the largest logit gap >= GAP;
+      # sufficient (not partial) when p_1 >= P_SUFFICIENT.
+      UMRS_RAG_RERANK_P_MIN: ${UMRS_RAG_RERANK_P_MIN:-0.10}
+      UMRS_RAG_RERANK_WINDOW: ${UMRS_RAG_RERANK_WINDOW:-4.0}
+      UMRS_RAG_RERANK_GAP: ${UMRS_RAG_RERANK_GAP:-2.0}
+      UMRS_RAG_RERANK_P_SUFFICIENT: ${UMRS_RAG_RERANK_P_SUFFICIENT:-0.5}
+      # compose_answer on the pack (D-4): output limit, passage order, and the
+      # abstention instruction (soft|strict).
+      UMRS_RAG_ANSWER_MAX_TOKENS: ${UMRS_RAG_ANSWER_MAX_TOKENS:-400}
+      UMRS_RAG_PACK_ORDER: ${UMRS_RAG_PACK_ORDER:-rank}
+      UMRS_RAG_PACK_INSTRUCTION: ${UMRS_RAG_PACK_INSTRUCTION:-soft}
+      # The retrieval profile (D-14), sized by the model that reads the
+      # passages: `auto` picks it from the model's name (this stack's
+      # llama3.2:3b reads with `small`, which keeps every value above; the
+      # rikyu readers kimi-k3 and glm-5.3 read with `large`: k_max 10, pool
+      # 100, merge on, no explicit answer limit). small|medium|large pins one.
+      UMRS_RAG_PROFILE: ${UMRS_RAG_PROFILE:-auto}
+      # The graph bridge lane (D-14): at most two passages from documents
+      # that mention the query's linked entities. `auto` turns it on only
+      # where the site's extraction model is large AND the lane has passed
+      # its multi-hop probe (UMRS_RAG_GRAPH_LANE_MEASURED=1, set by the
+      # maintainer after that probe), so it is off on this 3B stack and on
+      # an unmeasured large site; off|on override, any other value is off.
+      UMRS_RAG_GRAPH_LANE: ${UMRS_RAG_GRAPH_LANE:-auto}
+      UMRS_RAG_GRAPH_LANE_MEASURED: ${UMRS_RAG_GRAPH_LANE_MEASURED:-0}
+      # Models are bundled in the image or staged into /models beforehand;
+      # nothing may download at runtime. With these set, a model named by a hub
+      # id instead of a staged path fails loudly rather than silently fetching
+      # (judge finding, standalone-model-spec §2).
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      # Keeps diskcache's CWD-relative tmp/ stores (500 MB each) on a volume.
+      UMRS_WORKFLOW_STATE_DIR: /var/lib/umrs/workflow
+      # BLAS/OpenMP threads = this container's CPU quota (cpus: 4). torch sees
+      # every host core, and a cgroup quota throttles the extra threads: the
+      # document embedder stalls in bursts (live 2026-10-10, see rag below).
+      OMP_NUM_THREADS: "4"
+      MKL_NUM_THREADS: "4"
+    volumes:
+      - umrs_state:/var/lib/umrs
+      - umrs_models:/models:ro
+      - ./site.yaml:/etc/umrs/site.yaml:ro,z
+      # server_umrs.py requires this and exits without it. Deliberately carries
+      # NO `admin_s3_configuration_file`: that is the legacy per-user s3cfg lane
+      # (gap D-16, being wound down) and ADR-090 §7.3 says stand-alone must not
+      # extend it. `users` is empty — projects are self-service (ADR-051).
+      - ./conf_umrs.json:/etc/umrs/conf_umrs.json:ro,z
+      - ./s3cfg:/etc/umrs/s3cfg:ro,z
+      - ./user_files:/etc/umrs/user_files:ro,z
+    mem_limit: 6g
+    cpus: 4
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request;urllib.request.urlopen(\"http://localhost:8082/health\",timeout=5).close()'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 180s
+
+  rag:
+    # The RAG service (umrs.api.rag_service): corpus upload, search, QA. Same
+    # image, config and stores as umrs; reads the endpoint registry, never
+    # writes it (rag_service.main sets UMRS_REGISTRY_READ_ONLY).
+    <<: *restart
+    image: ${UMRS_IMAGE:-ghcr.io/r-ccs-hpbd/r4-standalone-umrs@sha256:70332826aa110b284d44f795e520cd5ef79dfe2689563b1e4b650a41ffe0d04d}
+    pull_policy: missing
+    command: ["python", "-m", "umrs.api.rag_service"]
+    networks: [standalone-net]
+    depends_on:
+      umrs: {condition: service_healthy}
+    environment:
+      PYTHONUNBUFFERED: "1"
+      UMRS_CONFIG: /etc/umrs
+      UMRS_SITE_CONFIG: /etc/umrs/site.yaml
+      UMRS_RAG_BIND_HOST: 0.0.0.0
+      UMRS_RAG_PORT: "8081"
+      # The query encoder must be the model knowledge ingest embeds with: the
+      # RAG service follows UMRS_KNOWLEDGE_EMBED_MODEL (empty = the bundle).
+      UMRS_KNOWLEDGE_EMBED_MODEL: ${UMRS_KNOWLEDGE_EMBED_MODEL:-}
+      # EVAL ONLY (ADR-093, 2026-10-10). `fixed`: each query reaches e5 as
+      # `query: <q>`. `b0`: as baseline B0 encoded it, `passage: query: <q>`
+      # (the old double prefix), so the fix is measured as its own factor and
+      # legacy-mode parity with B0 can be checked live. /rag/stats reports it.
+      UMRS_RAG_QUERY_PREFIX: ${UMRS_RAG_QUERY_PREFIX:-fixed}
+      DB_HOST: postgres
+      DB_USER: ${POSTGRES_USER:?}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?}
+      DB_NAME: ${POSTGRES_DB:-umrs}
+      DB_SUPERUSER: ${POSTGRES_USER:?}
+      DB_SUPERUSER_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      UMRS_ENDPOINT_REGISTRY_SHARED: "1"
+      UMRS_JOBS_DB: ${POSTGRES_DB:-umrs}
+      S3_BACKEND: seaweedfs
+      S3_ENDPOINT: http://seaweedfs:9000
+      S3_ENDPOINT_URL: http://seaweedfs:9000
+      S3_ACCESS_KEY: ${S3_ROOT_USER:?}
+      S3_SECRET_KEY: ${S3_ROOT_PASSWORD:?}
+      S3_BUCKET: ${S3_BUCKET:-r4-data}
+      # The cross-encoder behind POST /rag/rerank (ADR-093 D-7). Empty = no
+      # reranker: the route answers 503 and the rerank lane reports
+      # `unavailable`. Only a STAGED directory loads; a hub id is refused by
+      # name (nothing downloads at runtime). Stage it once, then point at it
+      # in env/local.env and run `standalone.sh up`:
+      #   ./standalone.sh reranker pull     -> /models/ms-marco-MiniLM-L6-v2
+      UMRS_RAG_RERANKER_MODEL: ${UMRS_RAG_RERANKER_MODEL:-}
+      # torch threads for scoring; this container has 2 CPUs and also runs
+      # the query encoder.
+      UMRS_RAG_RERANKER_THREADS: ${UMRS_RAG_RERANKER_THREADS:-2}
+      # BLAS/OpenMP threads = this container's CPU quota (cpus: 2). Unpinned,
+      # torch ran 6 threads in 2 CPUs; under concurrent queries one short
+      # query took 1.7-31 s, the 5 s encoder timeout fired, and /rag/query
+      # answered "query encoder unavailable" for 125 of 188 eval claims
+      # (live 2026-10-10). Pinned: 0.04 s per query.
+      OMP_NUM_THREADS: "2"
+      MKL_NUM_THREADS: "2"
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+    volumes:
+      - umrs_state:/var/lib/umrs
+      - umrs_models:/models:ro
+      - ./site.yaml:/etc/umrs/site.yaml:ro,z
+      - ./conf_umrs.json:/etc/umrs/conf_umrs.json:ro,z
+      - ./s3cfg:/etc/umrs/s3cfg:ro,z
+      - ./user_files:/etc/umrs/user_files:ro,z
+    mem_limit: 3g
+    cpus: 2
+    healthcheck:
+      # No /health route on the RAG service; a TCP connect proves it listens.
+      test: ["CMD-SHELL", "python -c 'import socket;socket.create_connection((\"127.0.0.1\",8081),3).close()'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 120s
+
+  gateway-sidecar:
+    <<: *restart
+    build:
+      context: ../../gateway/sidecar
+      dockerfile: Dockerfile
+    networks: [standalone-net]
+    depends_on:
+      postgres: {condition: service_healthy}
+    environment:
+      JWT_SECRET: ${JWT_SECRET:?set in env/.env.secrets}
+      JWT_ALGORITHM: HS256
+      # The sidecar signs X-Verified-HMAC only when it holds this secret
+      # (gateway/sidecar/main.py:600-605). It must equal the one umrs verifies
+      # against, or the HMAC-verified job surface answers 401.
+      UMRS_HANDSHAKE_HMAC_SECRET: ${UMRS_HANDSHAKE_HMAC_SECRET:?}
+      GATEWAY_ENVIRONMENT: ${GATEWAY_ENVIRONMENT:-production}
+      S3_BACKEND: seaweedfs
+      S3_ENDPOINT: http://seaweedfs:9000
+      S3_ENDPOINT_URL: http://seaweedfs:9000
+      # The identity SeaweedFS bootstraps from S3_ROOT_* is the only one it
+      # knows (iam.json defines none) — same mapping as umrs-front's compose.
+      S3_ACCESS_KEY: ${S3_ROOT_USER:?}
+      S3_SECRET_KEY: ${S3_ROOT_PASSWORD:?}
+      S3_BUCKET: ${S3_BUCKET:-r4-data}
+      DATABASE_URL: postgresql://${POSTGRES_USER:?}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:-umrs}
+      # Where the sidecar reaches umrs (readiness aggregate, proxied calls).
+      # gateway/sidecar/main.py defines UMRS_BASE_URL twice with different
+      # defaults (:59 http://umrs:8000, :677 http://127.0.0.1:8082); the later
+      # one wins at call time and is the sidecar's own loopback — correct only
+      # under umrs-front's host networking. Unset here, /ready reports
+      # "umrs": "unreachable" and the r4 client refuses to chat.
+      UMRS_BASE_URL: http://umrs:8082
+      PRESIGNED_TTL_SECONDS: "3600"
+    mem_limit: 512m
+    cpus: 2
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  gateway-nginx:
+    <<: *restart
+    build:
+      context: ../../gateway/nginx
+      dockerfile: Dockerfile
+    networks:
+      standalone-net:
+        aliases: [gateway]
+    depends_on:
+      gateway-sidecar: {condition: service_healthy}
+      umrs: {condition: service_healthy}
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      # a2l/Dockerfile was deleted 2026-09-11 (cb861661); the /umrs/a2l/* routes
+      # are served by the umrs sidecar, so nginx's static `upstream a2l` is
+      # repointed there rather than at a service that no longer exists.
+      A2L_HOST: umrs
+      A2L_PORT: "8082"
+      UMRS_HOST: umrs
+      UMRS_PORT: "8082"
+      # nginx resolves `upstream litellm` (nginx.conf:105-108) at STARTUP, so
+      # this name must exist in every profile combination — `models` does not
+      # exist under core-only and nginx would die with "host not found in
+      # upstream". Pointing it at umrs is also semantically right here:
+      # /gw/llm/ proxy_passes to the umrs upstream anyway (server.conf:167-169),
+      # because endpoint discovery and proxying both happen inside UMRS
+      # (ADR-068). The model is reached through its registry row, not this name.
+      LITELLM_HOST: ${LITELLM_HOST:-umrs}
+      LITELLM_PORT: ${LITELLM_PORT:-8082}
+      SIDECAR_HOST: gateway-sidecar
+      SIDECAR_PORT: "8081"
+    mem_limit: 512m
+    cpus: 2
+    healthcheck:
+      # 127.0.0.1, not localhost: localhost resolves to ::1 here and nginx
+      # listens on IPv4 only. And the body is {"status": "healthy", ...} — the
+      # `grep -q ok` this was copied from docker-compose.e2e.yaml with can never
+      # match it, so that check could not pass even when nginx was fine.
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8080/health | grep -q healthy || exit 1"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 10s
+
+  # ─────────────────────────────────────────────────── models-local (a) ─────
+  # ollama (maintainer decision 2026-10-08). Replaces the llama.cpp image the
+  # plan §3d.1 recorded as unpullable (ghcr.io 403). Serves an OpenAI-compatible
+  # API at /v1, so UMRS proxies it exactly as it proxies any other endpoint.
+  #
+  # It is adopted as an EndpointRegistry row on the PLATFORM lane (ADR-090 D-3),
+  # never as `r4 source add-ollama`, which creates a kind=public source that
+  # only the client can see — the UMRS-side consumers (RAG, OCR, perception,
+  # vision) resolve registry rows and would not use it.
+  models:
+    <<: *restart
+    profiles: [models-local]
+    image: ${OLLAMA_IMAGE:-docker.io/ollama/ollama:latest}
+    # `internal: true` — NO route off the host. ollama therefore CANNOT pull a
+    # model at runtime; weights are staged beforehand by
+    # `./standalone.sh model pull <name>`, which runs a throwaway container on
+    # the default (egress-capable) network and writes into this same volume.
+    networks: [standalone-models]
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_MODELS: /models/ollama
+      # Keep the model resident between turns; a cold reload per request makes
+      # a multi-step agent loop unusable on a small box.
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-30m}
+      # ollama serves a 4096-token window unless told otherwise, whatever the
+      # model supports. The companion's real tool set alone is ~10.5k prompt
+      # tokens, so at 4096 the tool list is truncated. Must match the
+      # max_model_len the registry row advertises (api/llm.py:879-881), or the
+      # harness budgets against a window ollama silently truncates.
+      OLLAMA_CONTEXT_LENGTH: ${OLLAMA_CONTEXT_LENGTH:-32768}
+      # KV cache scales with context x parallel: llama3.2:3b at 32k is ~6.0 GiB
+      # with 1 slot and ~9.6 GiB with 2 — over the default 8g limit.
+      OLLAMA_NUM_PARALLEL: ${OLLAMA_NUM_PARALLEL:-1}
+    volumes:
+      - umrs_models:/models
+    mem_limit: ${STANDALONE_CHAT_MEM:-8g}
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  # ─────────────────────────────────────────────────────────── agent ─────
+  custom-mcp:
+    <<: *restart
+    profiles: [agent]
+    build:
+      # mcp-servers/Dockerfile COPYs r4-contracts/ — repo-root context since e5aa6e7e.
+      context: ../..
+      dockerfile: mcp-servers/Dockerfile
+    networks: [standalone-net]
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 128
+    mem_limit: 512m
+    environment:
+      SERVER_TYPE: custom
+      MCP_CONFIG_DIR: /mcp-servers
+      MCP_TRANSPORT: sse
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: "8080"
+      PYTHONDONTWRITEBYTECODE: "1"
+      HOME: /tmp
+      XDG_CACHE_HOME: /tmp/.cache
+    volumes:
+      - ${STANDALONE_MCP_DIR:-./mcp}:/mcp-servers:ro,z
+    healthcheck:
+      test: ["CMD", "r4-mcp", "custom", "--config-dir", "/mcp-servers", "--validate-only"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ──────────────────────────────────────────────────── ci / dev only ─────
+  slurm-mock:
+    profiles: [ci]
+    build:
+      context: ../../tests/docker
+      dockerfile: Dockerfile.slurm-mock
+    networks:
+      standalone-net:
+        aliases: [slurm]
+    volumes:
+      - slurm_spool:/var/spool/slurm
+      - job_info:/var/run/rivault
+    mem_limit: 512m
+    environment:
+      MOCK_SLURM_DELAY: "2"
+      MOCK_SLURM_COMPUTE_NODE: compute-mock
+    healthcheck:
+      test: ["CMD", "mock_sinfo"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  compute-mock:
+    profiles: [ci]
+    build:
+      context: ../../tests/docker
+      dockerfile: Dockerfile.compute-mock
+    networks:
+      standalone-net:
+        aliases: [compute]
+    depends_on:
+      slurm-mock: {condition: service_healthy}
+    volumes:
+      - job_info:/var/run/rivault
+    mem_limit: 4g
+    environment:
+      MOCK_MODE: "true"
+      LITELLM_PORT: "11434"
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?}
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:11434/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+networks:
+  standalone-net:
+    driver: bridge
+  standalone-models:
+    driver: bridge
+    # No route off the host: this is what makes backend (a) genuinely offline.
+    internal: true
+
+volumes:
+  pg_data:
+  s3_data:
+  umrs_state:
+  umrs_models:
+  slurm_spool:
+  job_info:

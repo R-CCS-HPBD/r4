@@ -1,0 +1,46 @@
+#!/bin/bash
+# Mock scancel - Cancel a job
+#
+# Updates job state to CANCELLED
+
+set -e
+
+STATE_FILE="/var/spool/slurm/jobs.json"
+JOB_INFO_DIR="/var/run/rivault"
+
+# Parse arguments
+JOB_ID=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -*)
+            shift
+            ;;
+        *)
+            JOB_ID="$1"
+            shift
+            ;;
+    esac
+done
+
+if [ -z "$JOB_ID" ]; then
+    echo "scancel: error: No job id specified" >&2
+    exit 1
+fi
+
+# Check if job exists
+if ! jq -e --arg id "$JOB_ID" '.jobs[$id]' "$STATE_FILE" > /dev/null 2>&1; then
+    echo "scancel: error: Invalid job id specified: $JOB_ID" >&2
+    exit 1
+fi
+
+# Update state
+jq --arg id "$JOB_ID" \
+   '.jobs[$id].state = "CANCELLED"' \
+   "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${STATE_FILE}.tmp" "$STATE_FILE"
+
+# Remove job info files
+rm -f "${JOB_INFO_DIR}/rivault-job-${JOB_ID}.info"
+rm -f "${JOB_INFO_DIR}/rivault-job-${JOB_ID}.json"
+
+exit 0

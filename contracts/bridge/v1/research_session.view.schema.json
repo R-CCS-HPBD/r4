@@ -1,0 +1,225 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/research_session.view.schema.json",
+  "title": "research_session.view",
+  "description": "research_session.view: loops + sessions + knowledge digest + note.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ResearchSessionViewResult",
+  "$defs": {
+    "DurableSessionItem": {
+      "type": "object",
+      "description": "One ADR-025 durable session row.",
+      "properties": {
+        "session_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "loop_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "title",
+        "status",
+        "loop_count"
+      ],
+      "additionalProperties": true
+    },
+    "ResearchSessionViewResult": {
+      "type": "object",
+      "description": "research_session.view: loops + sessions + knowledge digest + note.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "research_session_view"
+          ]
+        },
+        "project_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "authoritative_runtime": {
+          "type": "string"
+        },
+        "runtime": {
+          "type": "string"
+        },
+        "durable": {
+          "type": "boolean"
+        },
+        "distributed": {
+          "type": "boolean"
+        },
+        "backends": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "loops": {
+          "$ref": "#/$defs/SessionLoopsBlock"
+        },
+        "sessions": {
+          "$ref": "#/$defs/SessionSessionsBlock"
+        },
+        "knowledge": {
+          "$ref": "#/$defs/SessionKnowledgeBlock"
+        },
+        "authority_note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "project_id",
+        "authoritative_runtime",
+        "runtime",
+        "durable",
+        "distributed",
+        "backends",
+        "loops",
+        "sessions",
+        "knowledge",
+        "authority_note"
+      ],
+      "additionalProperties": true
+    },
+    "SessionKnowledgeBlock": {
+      "type": "object",
+      "description": "``knowledge`` block (``nodes``/``edges`` only when available).",
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "nodes": {
+          "type": "integer"
+        },
+        "edges": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "available"
+      ],
+      "additionalProperties": true
+    },
+    "SessionLoopItem": {
+      "type": "object",
+      "description": "One loop row inside the aggregate session view.",
+      "properties": {
+        "loop_id": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "iterations": {
+          "type": "string"
+        },
+        "venue": {
+          "type": "string"
+        },
+        "research_goal": {
+          "type": "string"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "loop_id",
+        "status",
+        "phase",
+        "iterations",
+        "venue",
+        "research_goal",
+        "session_id"
+      ],
+      "additionalProperties": true
+    },
+    "SessionLoopsBlock": {
+      "type": "object",
+      "description": "``loops`` block of the aggregate view.",
+      "properties": {
+        "count": {
+          "type": "integer"
+        },
+        "active_count": {
+          "type": "integer"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SessionLoopItem"
+          }
+        }
+      },
+      "required": [
+        "count",
+        "active_count",
+        "items"
+      ],
+      "additionalProperties": true
+    },
+    "SessionSessionsBlock": {
+      "type": "object",
+      "description": "``sessions`` block (``reason`` only when unavailable).",
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "count": {
+          "type": "integer"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/DurableSessionItem"
+          }
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "available",
+        "count",
+        "items"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/control/v1/approval_decision.schema.json",
+  "title": "approval_decision",
+  "description": "The user's answer to an ApprovalRequest.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "type",
+    "payload"
+  ],
+  "properties": {
+    "type": {
+      "const": "approval_decision"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "version": {
+          "type": "integer",
+          "default": 1
+        },
+        "request_id": {
+          "type": "integer",
+          "default": 0
+        },
+        "decision": {
+          "type": "string",
+          "enum": [
+            "once",
+            "always",
+            "no"
+          ],
+          "default": "once"
+        }
+      }
+    }
+  }
+}

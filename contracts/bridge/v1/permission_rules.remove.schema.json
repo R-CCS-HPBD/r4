@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/permission_rules.remove.schema.json",
+  "title": "permission_rules.remove",
+  "description": "permission_rules.list / permission_rules.remove.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/PermissionRulesResult",
+  "$defs": {
+    "PermissionRuleRow": {
+      "type": "object",
+      "description": "One G14 rule the session runs with (ADR-104 D-3).",
+      "properties": {
+        "index": {
+          "type": "integer"
+        },
+        "behavior": {
+          "type": "string",
+          "enum": [
+            "allow",
+            "ask",
+            "deny"
+          ]
+        },
+        "rule": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "user",
+            "user_project",
+            "project"
+          ]
+        },
+        "removable": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "index",
+        "behavior",
+        "rule",
+        "source",
+        "removable"
+      ],
+      "additionalProperties": true
+    },
+    "PermissionRulesResult": {
+      "type": "object",
+      "description": "permission_rules.list / permission_rules.remove.",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PermissionRuleRow"
+          }
+        }
+      },
+      "required": [
+        "project_id",
+        "rules"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

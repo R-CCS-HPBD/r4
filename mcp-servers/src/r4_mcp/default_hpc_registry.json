@@ -1,0 +1,12 @@
+{
+  "capabilities": [
+    {"name": "ps"},
+    {"name": "hpstat"},
+    {"name": "submit"},
+    {"name": "status"},
+    {"name": "cancel"},
+    {"name": "scancel"},
+    {"name": "sinfo"},
+    {"name": "squeue"}
+  ]
+}

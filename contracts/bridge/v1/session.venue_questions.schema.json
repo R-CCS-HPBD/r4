@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/session.venue_questions.schema.json",
+  "title": "session.venue_questions",
+  "description": "session.venue_questions: pending ask_user questions of the remote worker, relayed.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SessionVenueQuestionsResult",
+  "$defs": {
+    "SessionVenueQuestionsResult": {
+      "type": "object",
+      "description": "session.venue_questions: pending ask_user questions of the remote worker, relayed.",
+      "properties": {
+        "questions": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      },
+      "required": [
+        "questions"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

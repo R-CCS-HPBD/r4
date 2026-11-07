@@ -1,0 +1,15 @@
+{
+  "version": "1",
+  "defaults": {
+    "list": true,
+    "describe": true,
+    "status": true,
+    "results": true,
+    "wait": true,
+    "run": true,
+    "cancel": true,
+    "upload": true
+  },
+  "projects": {},
+  "agents": {}
+}

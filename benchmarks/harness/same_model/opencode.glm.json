@@ -1,0 +1,43 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "rikyu": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Rikyu via local bench passthrough (127.0.0.1:8332)",
+      "options": {
+        "baseURL": "http://127.0.0.1:8332/v1",
+        "apiKey": "local-proxy",
+        "includeUsage": true
+      },
+      "models": {
+        "glm-5.3": {
+          "name": "GLM-5.3 (rikyu)",
+          "tool_call": true,
+          "limit": {
+            "context": 1000000,
+            "output": 32768
+          },
+          "modalities": {
+            "input": [
+              "text"
+            ],
+            "output": [
+              "text"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "model": "rikyu/glm-5.3",
+  "small_model": "rikyu/glm-5.3",
+  "enabled_providers": [
+    "rikyu"
+  ],
+  "autoupdate": false,
+  "share": "disabled",
+  "permission": {
+    "webfetch": "deny",
+    "websearch": "deny"
+  }
+}

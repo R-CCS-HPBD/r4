@@ -1,0 +1,40 @@
+╭─Chat with R4─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│                                                                                                                                          │
+│ R4 12:57:36                                                                                                                              │
+│ Hi — I'm R4. Ask anything, or type /help. Ctrl+P lists keyboard shortcuts.                                                               │
+│                                                                                                                                          │
+│ • 12:57:38  ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮             │
+│ ⌂ workspace │                                                                                                              │             │
+│ ↵ expand det│ help — F12 opens it · Esc closes · /help chat alias                                                          │             │
+│             │ Main chords:                                                                                                 │             │
+│ You 12:57:38│   Ctrl+P                   command palette                                                                   │             │
+│ /work       │   Ctrl+/ Ctrl+.            slash picker (compose with slash-args)                                            │             │
+│             │   Ctrl+Q                   quit (confirm on second press)                                                    │             │
+│             │   Esc                      close topmost layer (pane → overlay → menu)                                       │             │
+│             │   Enter                    send chat / activate menu idx / approve yes                                       │             │
+│             │   a·y·n                    approve-always / approve-once / refuse (when gate open)                           │             │
+│             │   Tab·Shift+Tab            research: move focus between graph/verify/chat                                    │             │
+│             │   F12                      open this overlay (this one)                                                      │             │
+│             │ Slash catalog (34 verbs — live table, same rows as /tour map):                                               │             │
+│             │   companion /acquisition · /catalog · /changes · /code · /codeview · /mode · /sessions · /skills             │             │
+│             │   ui        /clear · /help · /infra · /knowledge · /logs · /loop · /overview · /palette · /quit ·            │             │
+│             │   endpoint  /connect · /endpoint · /governance · /health · /job · /login · /mcp · /models · /sourc           │             │
+│             │   project   /project                                                                                         │             │
+│             │ Live keyboard map (live keymap registry):                                                                    │             │
+│             │   ◇ activity                                                                                                 │             │
+│             │     1 → activity.tab.agent-logs                                                                              │             │
+│             │     2 → activity.tab.tool-calls                                                                              │             │
+│             │     3 → activity.tab.events                                                                                  │             │
+│             │     4 → activity.tab.terminal                                                                                │             │
+│             │     … +6 more                                                                                                │             │
+│             │   ◇ app                                                                                                      │             │
+│             │     ctrl+q → app.quit                                                                                        │             │
+│             │   ◇ approval                                                                                                 │             │
+│ Alt+Enter ne│     a → approval.always                                                                                      │             │
+│             │     enter → approval.yes                                                                                     │             │
+│ ┌───────────│     n → approval.no                                                                                          │───────────┐ │
+│ │ ›Message R│     return → approval.yes                                                                                    │           │ │
+│ └───────────│     … +1 more                                                                                                │───────────┘ │
+│             │   … +56 more keys                                                                                            │             │
+╰─────────────│ Esc closes; errors here NEVER stand in for input — they only describe.                                       │─────────────╯
+ default/tj-04│                                                                                                              │pc:connected

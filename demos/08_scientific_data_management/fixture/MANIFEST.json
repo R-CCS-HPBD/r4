@@ -1,0 +1,13 @@
+{
+  "description": "Blank Project catalog demo fixture (RC1 acceptance mix)",
+  "paper_count": 15,
+  "paper_name_pattern": "gcmc-mof-paper-{n:02d}.pdf",
+  "expected_modalities": ["document", "notebook", "code", "structured", "text"],
+  "search_queries": {
+    "csv": "batch-3",
+    "notebook": "analysis",
+    "code": "torch",
+    "readme": "blank project",
+    "paper": "gcmc-mof"
+  }
+}

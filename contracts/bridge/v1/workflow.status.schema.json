@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/workflow.status.schema.json",
+  "title": "workflow.status",
+  "description": "workflow.status (``_serialize_workflow_status``).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/WorkflowStatusResult",
+  "$defs": {
+    "WorkflowStatusResult": {
+      "type": "object",
+      "description": "workflow.status (``_serialize_workflow_status``).",
+      "properties": {
+        "execution_id": {
+          "type": "string"
+        },
+        "workflow_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "type": "string"
+        },
+        "progress": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "execution_id",
+        "workflow_name",
+        "status",
+        "progress",
+        "error"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

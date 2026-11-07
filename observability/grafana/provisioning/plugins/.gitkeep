@@ -1,0 +1,2 @@
+# Kept so Grafana finds the standard provisioning folder and logs no
+# "failed to read" error at start (2026-10-16, ops-watch). Add *.yaml here.

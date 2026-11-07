@@ -1,0 +1,1 @@
+{"case": "roundtrip-full", "expect": "ok", "envelope": {"type": "session_state", "payload": {"version": 1, "session_id": "sess-1", "project_id": "proj-mermaids", "mode": "ask_always", "graphs": ["primary"], "skills": ["seismic"], "actor": "human"}}}

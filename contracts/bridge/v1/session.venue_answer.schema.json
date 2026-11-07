@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/session.venue_answer.schema.json",
+  "title": "session.venue_answer",
+  "description": "session.venue_answer: the answered question as the server answered it.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SessionVenueAnswerResult",
+  "$defs": {
+    "SessionVenueAnswerResult": {
+      "type": "object",
+      "description": "session.venue_answer: the answered question as the server answered it.",
+      "properties": {
+        "question": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

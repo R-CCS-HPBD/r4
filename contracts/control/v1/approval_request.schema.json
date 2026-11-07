@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/control/v1/approval_request.schema.json",
+  "title": "approval_request",
+  "description": "A tool call awaiting explicit human approval (GAP-COMP-4 unify).",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "type",
+    "payload"
+  ],
+  "properties": {
+    "type": {
+      "const": "approval_request"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "version": {
+          "type": "integer",
+          "default": 1
+        },
+        "request_id": {
+          "type": "integer",
+          "default": 0
+        },
+        "tool": {
+          "type": "string",
+          "default": ""
+        },
+        "description": {
+          "type": "string",
+          "default": ""
+        },
+        "arguments": {
+          "type": "object"
+        },
+        "risk_tier": {
+          "type": "string",
+          "enum": [
+            "risky",
+            "never_auto"
+          ],
+          "default": "risky"
+        },
+        "session_id": {
+          "type": "string",
+          "default": ""
+        },
+        "agent": {
+          "type": "string",
+          "default": ""
+        },
+        "fenced": {
+          "type": "boolean",
+          "default": false
+        },
+        "fence_reason": {
+          "type": "string",
+          "default": ""
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,251 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/traces.get.schema.json",
+  "title": "traces.get",
+  "description": "One execution trace (``TraceRecord.to_dict``).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/TraceRow",
+  "$defs": {
+    "TraceRow": {
+      "type": "object",
+      "description": "One execution trace (``TraceRecord.to_dict``).",
+      "properties": {
+        "trace_id": {
+          "type": "string"
+        },
+        "job_id": {
+          "type": "string"
+        },
+        "step_name": {
+          "type": "string"
+        },
+        "step_type": {
+          "type": "string"
+        },
+        "attempt_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "execution_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parent_trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "type": "string"
+        },
+        "progress": {
+          "type": "number"
+        },
+        "inputs_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "outputs_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "inputs_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "outputs_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "model_ref": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "artifact_refs": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "tool_calls": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "retrieval_refs": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "routing_decision": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "error_detail": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "inputs_snapshot": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "outputs_snapshot": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "created_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ttl_expires_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "trace_id",
+        "job_id",
+        "step_name",
+        "step_type",
+        "attempt_id",
+        "execution_id",
+        "parent_trace_id",
+        "status",
+        "progress",
+        "inputs_hash",
+        "outputs_hash",
+        "inputs_ref",
+        "outputs_ref",
+        "model_ref",
+        "artifact_refs",
+        "tool_calls",
+        "retrieval_refs",
+        "routing_decision",
+        "error",
+        "error_detail",
+        "inputs_snapshot",
+        "outputs_snapshot",
+        "started_at",
+        "finished_at",
+        "created_at",
+        "ttl_expires_at"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

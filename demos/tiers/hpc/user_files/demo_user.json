@@ -1,0 +1,6 @@
+{
+    "name": "demo_user",
+    "s3_configuration_file": "/root/user_files/demo_user_s3cfg",
+    "accessible_files": [],
+    "indexname": "demo_user_index"
+}

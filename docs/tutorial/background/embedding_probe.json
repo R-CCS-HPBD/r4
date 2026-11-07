@@ -1,0 +1,1052 @@
+{
+  "e5-base-v2:en": {
+    "model": "intfloat/e5-base-v2",
+    "dimension": 768,
+    "question": "Which reference model, Moho depth and mantle velocity do we use for a Kii Channel event, and when is a pick rejected?",
+    "ranked": [
+      {
+        "score": 0.8709,
+        "file": "01-reference-model-krso-1d-v2.md",
+        "section": "History"
+      },
+      {
+        "score": 0.8577,
+        "file": "03-event-review-notes.md",
+        "section": "What we found"
+      },
+      {
+        "score": 0.856,
+        "file": "05-domain-primer-seismic-travel-times.md",
+        "section": "Reference models"
+      },
+      {
+        "score": 0.8548,
+        "file": "02-pick-quality-protocol.md",
+        "section": "Acceptance rules"
+      },
+      {
+        "score": 0.8539,
+        "file": "03-event-review-notes.md",
+        "section": "What we checked"
+      },
+      {
+        "score": 0.8483,
+        "file": "01-reference-model-krso-1d-v2.md",
+        "section": "The model"
+      },
+      {
+        "score": 0.843,
+        "file": "01-reference-model-krso-1d-v2.md",
+        "section": "When to use which model (rule RM-1)"
+      },
+      {
+        "score": 0.8329,
+        "file": "01-reference-model-krso-1d-v2.md",
+        "section": "01-reference-model-krso-1d-v2"
+      },
+      {
+        "score": 0.827,
+        "file": "03-event-review-notes.md",
+        "section": "03-event-review-notes"
+      },
+      {
+        "score": 0.8268,
+        "file": "05-domain-primer-seismic-travel-times.md",
+        "section": "Crustal phases"
+      },
+      {
+        "score": 0.824,
+        "file": "04-residual-report-format.md",
+        "section": "04-residual-report-format"
+      },
+      {
+        "score": 0.8132,
+        "file": "05-domain-primer-seismic-travel-times.md",
+        "section": "P waves and the eikonal equation"
+      },
+      {
+        "score": 0.8099,
+        "file": "05-domain-primer-seismic-travel-times.md",
+        "section": "05-domain-primer-seismic-travel-times"
+      },
+      {
+        "score": 0.8051,
+        "file": "02-pick-quality-protocol.md",
+        "section": "Pick classes"
+      },
+      {
+        "score": 0.7922,
+        "file": "05-domain-primer-seismic-travel-times.md",
+        "section": "Residuals"
+      },
+      {
+        "score": 0.7908,
+        "file": "03-event-review-notes.md",
+        "section": "Decision"
+      },
+      {
+        "score": 0.7659,
+        "file": "02-pick-quality-protocol.md",
+        "section": "02-pick-quality-protocol"
+      }
+    ],
+    "xy": {
+      "question": [
+        -0.0723,
+        -0.0016
+      ],
+      "chunks": [
+        {
+          "file": "01-reference-model-krso-1d-v2.md",
+          "section": "01-reference-model-krso-1d-v2",
+          "xy": [
+            0.0235,
+            0.1497
+          ]
+        },
+        {
+          "file": "01-reference-model-krso-1d-v2.md",
+          "section": "The model",
+          "xy": [
+            -0.2473,
+            0.0082
+          ]
+        },
+        {
+          "file": "01-reference-model-krso-1d-v2.md",
+          "section": "When to use which model (rule RM-1)",
+          "xy": [
+            0.0143,
+            -0.0392
+          ]
+        },
+        {
+          "file": "01-reference-model-krso-1d-v2.md",
+          "section": "History",
+          "xy": [
+            -0.2704,
+            0.0597
+          ]
+        },
+        {
+          "file": "02-pick-quality-protocol.md",
+          "section": "02-pick-quality-protocol",
+          "xy": [
+            0.3074,
+            0.2014
+          ]
+        },
+        {
+          "file": "02-pick-quality-protocol.md",
+          "section": "Pick classes",
+          "xy": [
+            0.0923,
+            -0.1104
+          ]
+        },
+        {
+          "file": "02-pick-quality-protocol.md",
+          "section": "Acceptance rules",
+          "xy": [
+            0.1118,
+            -0.1236
+          ]
+        },
+        {
+          "file": "03-event-review-notes.md",
+          "section": "03-event-review-notes",
+          "xy": [
+            0.1364,
+            0.2698
+          ]
+        },
+        {
+          "file": "03-event-review-notes.md",
+          "section": "What we checked",
+          "xy": [
+            0.04,
+            -0.1614
+          ]
+        },
+        {
+          "file": "03-event-review-notes.md",
+          "section": "What we found",
+          "xy": [
+            -0.1784,
+            -0.0871
+          ]
+        },
+        {
+          "file": "03-event-review-notes.md",
+          "section": "Decision",
+          "xy": [
+            0.1351,
+            -0.0628
+          ]
+        },
+        {
+          "file": "04-residual-report-format.md",
+          "section": "04-residual-report-format",
+          "xy": [
+            0.1565,
+            -0.0768
+          ]
+        },
+        {
+          "file": "05-domain-primer-seismic-travel-times.md",
+          "section": "05-domain-primer-seismic-travel-times",
+          "xy": [
+            0.0781,
+            0.1474
+          ]
+        },
+        {
+          "file": "05-domain-primer-seismic-travel-times.md",
+          "section": "P waves and the eikonal equation",
+          "xy": [
+            -0.0876,
+            0.1017
+          ]
+        },
+        {
+          "file": "05-domain-primer-seismic-travel-times.md",
+          "section": "Crustal phases",
+          "xy": [
+            -0.2705,
+            0.0703
+          ]
+        },
+        {
+          "file": "05-domain-primer-seismic-travel-times.md",
+          "section": "Reference models",
+          "xy": [
+            -0.1152,
+            -0.0713
+          ]
+        },
+        {
+          "file": "05-domain-primer-seismic-travel-times.md",
+          "section": "Residuals",
+          "xy": [
+            0.146,
+            -0.274
+          ]
+        }
+      ]
+    }
+  },
+  "e5-base-v2:ja": {
+    "model": "intfloat/e5-base-v2",
+    "dimension": 768,
+    "question": "紀伊水道の地震にはどの参照モデル・モホ面の深さ・マントル速度を使い、どの場合に読み取り値を棄却しますか?",
+    "ranked": [
+      {
+        "score": 0.8849,
+        "file": "03-event-review-notes.md",
+        "section": "確認したこと"
+      },
+      {
+        "score": 0.8672,
+        "file": "03-event-review-notes.md",
+        "section": "03-event-review-notes"
+      },
+      {
+        "score": 0.8601,
+        "file": "05-domain-primer-seismic-travel-times.md",
+        "section": "05-domain-primer-seismic-travel-times"
+      },
+      {
+        "score": 0.8558,
+        "file": "05-domain-primer-seismic-travel-times.md",
+        "section": "残差"
+      },
+      {
+        "score": 0.845,
+        "file": "01-reference-model-krso-1d-v2.md",
+        "section": "どのモデルを使うか(規則 RM-1)"
+      },
+      {
+        "score": 0.8435,
+        "file": "01-reference-model-krso-1d-v2.md",
+        "section": "経緯"
+      },
+      {
+        "score": 0.8414,
+        "file": "05-domain-primer-seismic-travel-times.md",
+        "section": "参照モデル"
+      },
+      {
+        "score": 0.8367,
+        "file": "01-reference-model-krso-1d-v2.md",
+        "section": "モデル"
+      },
+      {
+        "score": 0.8282,
+        "file": "02-pick-quality-protocol.md",
+        "section": "02-pick-quality-protocol"
+      },
+      {
+        "score": 0.8226,
+        "file": "03-event-review-notes.md",
+        "section": "分かったこと"
+      },
+      {
+        "score": 0.8224,
+        "file": "05-domain-primer-seismic-travel-times.md",
+        "section": "P 波とアイコナール方程式"
+      },
+      {
+        "score": 0.8223,
+        "file": "04-residual-report-format.md",
+        "section": "04-residual-report-format"
+      },
+      {
+        "score": 0.818,
+        "file": "05-domain-primer-seismic-travel-times.md",
+        "section": "地殻の相"
+      },
+      {
+        "score": 0.8153,
+        "file": "02-pick-quality-protocol.md",
+        "section": "読み取りの等級"
+      },
+      {
+        "score": 0.7943,
+        "file": "02-pick-quality-protocol.md",
+        "section": "採用の規則"
+      },
+      {
+        "score": 0.7902,
+        "file": "01-reference-model-krso-1d-v2.md",
+        "section": "01-reference-model-krso-1d-v2"
+      },
+      {
+        "score": 0.7823,
+        "file": "03-event-review-notes.md",
+        "section": "決定"
+      }
+    ],
+    "xy": {
+      "question": [
+        -0.311,
+        -0.1132
+      ],
+      "chunks": [
+        {
+          "file": "01-reference-model-krso-1d-v2.md",
+          "section": "01-reference-model-krso-1d-v2",
+          "xy": [
+            0.1812,
+            -0.135
+          ]
+        },
+        {
+          "file": "01-reference-model-krso-1d-v2.md",
+          "section": "モデル",
+          "xy": [
+            0.0629,
+            0.1191
+          ]
+        },
+        {
+          "file": "01-reference-model-krso-1d-v2.md",
+          "section": "どのモデルを使うか(規則 RM-1)",
+          "xy": [
+            0.0935,
+            -0.2298
+          ]
+        },
+        {
+          "file": "01-reference-model-krso-1d-v2.md",
+          "section": "経緯",
+          "xy": [
+            0.0481,
+            0.0653
+          ]
+        },
+        {
+          "file": "02-pick-quality-protocol.md",
+          "section": "02-pick-quality-protocol",
+          "xy": [
+            -0.0534,
+            0.0967
+          ]
+        },
+        {
+          "file": "02-pick-quality-protocol.md",
+          "section": "読み取りの等級",
+          "xy": [
+            -0.0622,
+            0.129
+          ]
+        },
+        {
+          "file": "02-pick-quality-protocol.md",
+          "section": "採用の規則",
+          "xy": [
+            0.1933,
+            0.0757
+          ]
+        },
+        {
+          "file": "03-event-review-notes.md",
+          "section": "03-event-review-notes",
+          "xy": [
+            -0.1798,
+            -0.1048
+          ]
+        },
+        {
+          "file": "03-event-review-notes.md",
+          "section": "確認したこと",
+          "xy": [
+            -0.186,
+            -0.0869
+          ]
+        },
+        {
+          "file": "03-event-review-notes.md",
+          "section": "分かったこと",
+          "xy": [
+            0.1165,
+            -0.0727
+          ]
+        },
+        {
+          "file": "03-event-review-notes.md",
+          "section": "決定",
+          "xy": [
+            0.2005,
+            -0.1985
+          ]
+        },
+        {
+          "file": "04-residual-report-format.md",
+          "section": "04-residual-report-format",
+          "xy": [
+            0.0885,
+            0.1054
+          ]
+        },
+        {
+          "file": "05-domain-primer-seismic-travel-times.md",
+          "section": "05-domain-primer-seismic-travel-times",
+          "xy": [
+            -0.1132,
+            0.0241
+          ]
+        },
+        {
+          "file": "05-domain-primer-seismic-travel-times.md",
+          "section": "P 波とアイコナール方程式",
+          "xy": [
+            -0.0334,
+            0.1939
+          ]
+        },
+        {
+          "file": "05-domain-primer-seismic-travel-times.md",
+          "section": "地殻の相",
+          "xy": [
+            0.1096,
+            0.1667
+          ]
+        },
+        {
+          "file": "05-domain-primer-seismic-travel-times.md",
+          "section": "参照モデル",
+          "xy": [
+            0.0141,
+            -0.0677
+          ]
+        },
+        {
+          "file": "05-domain-primer-seismic-travel-times.md",
+          "section": "残差",
+          "xy": [
+            -0.1693,
+            0.0326
+          ]
+        }
+      ]
+    }
+  },
+  "multilingual-e5-base:en": {
+    "model": "intfloat/multilingual-e5-base",
+    "dimension": 768,
+    "question": "Which reference model, Moho depth and mantle velocity do we use for a Kii Channel event, and when is a pick rejected?",
+    "ranked": [
+      {
+        "score": 0.8594,
+        "file": "03-event-review-notes.md",
+        "section": "What we checked"
+      },
+      {
+        "score": 0.8503,
+        "file": "01-reference-model-krso-1d-v2.md",
+        "section": "History"
+      },
+      {
+        "score": 0.8401,
+        "file": "05-domain-primer-seismic-travel-times.md",
+        "section": "Reference models"
+      },
+      {
+        "score": 0.836,
+        "file": "02-pick-quality-protocol.md",
+        "section": "Acceptance rules"
+      },
+      {
+        "score": 0.8324,
+        "file": "01-reference-model-krso-1d-v2.md",
+        "section": "The model"
+      },
+      {
+        "score": 0.832,
+        "file": "01-reference-model-krso-1d-v2.md",
+        "section": "When to use which model (rule RM-1)"
+      },
+      {
+        "score": 0.831,
+        "file": "03-event-review-notes.md",
+        "section": "What we found"
+      },
+      {
+        "score": 0.8233,
+        "file": "04-residual-report-format.md",
+        "section": "04-residual-report-format"
+      },
+      {
+        "score": 0.8218,
+        "file": "05-domain-primer-seismic-travel-times.md",
+        "section": "Crustal phases"
+      },
+      {
+        "score": 0.8201,
+        "file": "01-reference-model-krso-1d-v2.md",
+        "section": "01-reference-model-krso-1d-v2"
+      },
+      {
+        "score": 0.8156,
+        "file": "03-event-review-notes.md",
+        "section": "03-event-review-notes"
+      },
+      {
+        "score": 0.8009,
+        "file": "05-domain-primer-seismic-travel-times.md",
+        "section": "P waves and the eikonal equation"
+      },
+      {
+        "score": 0.7857,
+        "file": "02-pick-quality-protocol.md",
+        "section": "02-pick-quality-protocol"
+      },
+      {
+        "score": 0.7845,
+        "file": "03-event-review-notes.md",
+        "section": "Decision"
+      },
+      {
+        "score": 0.78,
+        "file": "05-domain-primer-seismic-travel-times.md",
+        "section": "05-domain-primer-seismic-travel-times"
+      },
+      {
+        "score": 0.7662,
+        "file": "05-domain-primer-seismic-travel-times.md",
+        "section": "Residuals"
+      },
+      {
+        "score": 0.7577,
+        "file": "02-pick-quality-protocol.md",
+        "section": "Pick classes"
+      }
+    ],
+    "xy": {
+      "question": [
+        -0.1537,
+        -0.282
+      ],
+      "chunks": [
+        {
+          "file": "01-reference-model-krso-1d-v2.md",
+          "section": "01-reference-model-krso-1d-v2",
+          "xy": [
+            0.0269,
+            -0.012
+          ]
+        },
+        {
+          "file": "01-reference-model-krso-1d-v2.md",
+          "section": "The model",
+          "xy": [
+            -0.2099,
+            0.053
+          ]
+        },
+        {
+          "file": "01-reference-model-krso-1d-v2.md",
+          "section": "When to use which model (rule RM-1)",
+          "xy": [
+            0.0822,
+            -0.2083
+          ]
+        },
+        {
+          "file": "01-reference-model-krso-1d-v2.md",
+          "section": "History",
+          "xy": [
+            -0.1992,
+            -0.0214
+          ]
+        },
+        {
+          "file": "02-pick-quality-protocol.md",
+          "section": "02-pick-quality-protocol",
+          "xy": [
+            0.1915,
+            0.0317
+          ]
+        },
+        {
+          "file": "02-pick-quality-protocol.md",
+          "section": "Pick classes",
+          "xy": [
+            0.1557,
+            0.1463
+          ]
+        },
+        {
+          "file": "02-pick-quality-protocol.md",
+          "section": "Acceptance rules",
+          "xy": [
+            0.0774,
+            0.0133
+          ]
+        },
+        {
+          "file": "03-event-review-notes.md",
+          "section": "03-event-review-notes",
+          "xy": [
+            0.1727,
+            -0.1195
+          ]
+        },
+        {
+          "file": "03-event-review-notes.md",
+          "section": "What we checked",
+          "xy": [
+            -0.0053,
+            -0.1822
+          ]
+        },
+        {
+          "file": "03-event-review-notes.md",
+          "section": "What we found",
+          "xy": [
+            -0.1637,
+            -0.0002
+          ]
+        },
+        {
+          "file": "03-event-review-notes.md",
+          "section": "Decision",
+          "xy": [
+            0.1834,
+            -0.0802
+          ]
+        },
+        {
+          "file": "04-residual-report-format.md",
+          "section": "04-residual-report-format",
+          "xy": [
+            0.063,
+            0.0787
+          ]
+        },
+        {
+          "file": "05-domain-primer-seismic-travel-times.md",
+          "section": "05-domain-primer-seismic-travel-times",
+          "xy": [
+            0.124,
+            0.1491
+          ]
+        },
+        {
+          "file": "05-domain-primer-seismic-travel-times.md",
+          "section": "P waves and the eikonal equation",
+          "xy": [
+            -0.1021,
+            0.1973
+          ]
+        },
+        {
+          "file": "05-domain-primer-seismic-travel-times.md",
+          "section": "Crustal phases",
+          "xy": [
+            -0.2571,
+            0.1482
+          ]
+        },
+        {
+          "file": "05-domain-primer-seismic-travel-times.md",
+          "section": "Reference models",
+          "xy": [
+            -0.1228,
+            -0.0312
+          ]
+        },
+        {
+          "file": "05-domain-primer-seismic-travel-times.md",
+          "section": "Residuals",
+          "xy": [
+            0.1369,
+            0.1194
+          ]
+        }
+      ]
+    }
+  },
+  "multilingual-e5-base:ja": {
+    "model": "intfloat/multilingual-e5-base",
+    "dimension": 768,
+    "question": "紀伊水道の地震にはどの参照モデル・モホ面の深さ・マントル速度を使い、どの場合に読み取り値を棄却しますか?",
+    "ranked": [
+      {
+        "score": 0.886,
+        "file": "01-reference-model-krso-1d-v2.md",
+        "section": "経緯"
+      },
+      {
+        "score": 0.8701,
+        "file": "03-event-review-notes.md",
+        "section": "確認したこと"
+      },
+      {
+        "score": 0.8689,
+        "file": "02-pick-quality-protocol.md",
+        "section": "採用の規則"
+      },
+      {
+        "score": 0.8659,
+        "file": "05-domain-primer-seismic-travel-times.md",
+        "section": "参照モデル"
+      },
+      {
+        "score": 0.8619,
+        "file": "03-event-review-notes.md",
+        "section": "分かったこと"
+      },
+      {
+        "score": 0.8616,
+        "file": "04-residual-report-format.md",
+        "section": "04-residual-report-format"
+      },
+      {
+        "score": 0.8615,
+        "file": "01-reference-model-krso-1d-v2.md",
+        "section": "どのモデルを使うか(規則 RM-1)"
+      },
+      {
+        "score": 0.86,
+        "file": "01-reference-model-krso-1d-v2.md",
+        "section": "モデル"
+      },
+      {
+        "score": 0.8554,
+        "file": "05-domain-primer-seismic-travel-times.md",
+        "section": "地殻の相"
+      },
+      {
+        "score": 0.8453,
+        "file": "03-event-review-notes.md",
+        "section": "03-event-review-notes"
+      },
+      {
+        "score": 0.8406,
+        "file": "05-domain-primer-seismic-travel-times.md",
+        "section": "残差"
+      },
+      {
+        "score": 0.8389,
+        "file": "01-reference-model-krso-1d-v2.md",
+        "section": "01-reference-model-krso-1d-v2"
+      },
+      {
+        "score": 0.8369,
+        "file": "05-domain-primer-seismic-travel-times.md",
+        "section": "P 波とアイコナール方程式"
+      },
+      {
+        "score": 0.8346,
+        "file": "02-pick-quality-protocol.md",
+        "section": "読み取りの等級"
+      },
+      {
+        "score": 0.819,
+        "file": "05-domain-primer-seismic-travel-times.md",
+        "section": "05-domain-primer-seismic-travel-times"
+      },
+      {
+        "score": 0.8047,
+        "file": "02-pick-quality-protocol.md",
+        "section": "02-pick-quality-protocol"
+      },
+      {
+        "score": 0.7974,
+        "file": "03-event-review-notes.md",
+        "section": "決定"
+      }
+    ],
+    "xy": {
+      "question": [
+        -0.054,
+        -0.1057
+      ],
+      "chunks": [
+        {
+          "file": "01-reference-model-krso-1d-v2.md",
+          "section": "01-reference-model-krso-1d-v2",
+          "xy": [
+            0.1257,
+            -0.1282
+          ]
+        },
+        {
+          "file": "01-reference-model-krso-1d-v2.md",
+          "section": "モデル",
+          "xy": [
+            -0.2396,
+            0.0235
+          ]
+        },
+        {
+          "file": "01-reference-model-krso-1d-v2.md",
+          "section": "どのモデルを使うか(規則 RM-1)",
+          "xy": [
+            0.0785,
+            -0.2076
+          ]
+        },
+        {
+          "file": "01-reference-model-krso-1d-v2.md",
+          "section": "経緯",
+          "xy": [
+            -0.1495,
+            -0.0433
+          ]
+        },
+        {
+          "file": "02-pick-quality-protocol.md",
+          "section": "02-pick-quality-protocol",
+          "xy": [
+            0.26,
+            0.1712
+          ]
+        },
+        {
+          "file": "02-pick-quality-protocol.md",
+          "section": "読み取りの等級",
+          "xy": [
+            -0.0296,
+            0.2734
+          ]
+        },
+        {
+          "file": "02-pick-quality-protocol.md",
+          "section": "採用の規則",
+          "xy": [
+            -0.0369,
+            0.1009
+          ]
+        },
+        {
+          "file": "03-event-review-notes.md",
+          "section": "03-event-review-notes",
+          "xy": [
+            0.263,
+            -0.0732
+          ]
+        },
+        {
+          "file": "03-event-review-notes.md",
+          "section": "確認したこと",
+          "xy": [
+            0.1053,
+            -0.1451
+          ]
+        },
+        {
+          "file": "03-event-review-notes.md",
+          "section": "分かったこと",
+          "xy": [
+            -0.1978,
+            -0.0471
+          ]
+        },
+        {
+          "file": "03-event-review-notes.md",
+          "section": "決定",
+          "xy": [
+            0.1841,
+            0.0655
+          ]
+        },
+        {
+          "file": "04-residual-report-format.md",
+          "section": "04-residual-report-format",
+          "xy": [
+            0.032,
+            0.1104
+          ]
+        },
+        {
+          "file": "05-domain-primer-seismic-travel-times.md",
+          "section": "05-domain-primer-seismic-travel-times",
+          "xy": [
+            0.1793,
+            -0.0049
+          ]
+        },
+        {
+          "file": "05-domain-primer-seismic-travel-times.md",
+          "section": "P 波とアイコナール方程式",
+          "xy": [
+            -0.1293,
+            0.052
+          ]
+        },
+        {
+          "file": "05-domain-primer-seismic-travel-times.md",
+          "section": "地殻の相",
+          "xy": [
+            -0.2713,
+            0.0137
+          ]
+        },
+        {
+          "file": "05-domain-primer-seismic-travel-times.md",
+          "section": "参照モデル",
+          "xy": [
+            -0.109,
+            -0.1375
+          ]
+        },
+        {
+          "file": "05-domain-primer-seismic-travel-times.md",
+          "section": "残差",
+          "xy": [
+            -0.0108,
+            0.0818
+          ]
+        }
+      ]
+    }
+  },
+  "sentence_demo": {
+    "e5-base-v2:en": {
+      "model": "intfloat/e5-base-v2",
+      "question": "How deep is the Moho under the Kii Channel?",
+      "sentences": [
+        {
+          "role": "answer",
+          "text": "In our reference model the Moho lies at 28 km depth.",
+          "score": 0.8066
+        },
+        {
+          "role": "paraphrase",
+          "text": "The crust ends and the mantle begins about 28 km down.",
+          "score": 0.7634
+        },
+        {
+          "role": "same topic",
+          "text": "Pn picks closer than 140 km are rejected.",
+          "score": 0.6795
+        },
+        {
+          "role": "unrelated",
+          "text": "The lunch break starts at 12:30 in room 101.",
+          "score": 0.6375
+        }
+      ]
+    },
+    "e5-base-v2:ja": {
+      "model": "intfloat/e5-base-v2",
+      "question": "紀伊水道の下のモホ面の深さは?",
+      "sentences": [
+        {
+          "role": "answer",
+          "text": "私たちの参照モデルでは、モホ面の深さは 28 km です。",
+          "score": 0.8249
+        },
+        {
+          "role": "paraphrase",
+          "text": "地殻が終わりマントルが始まるのは、地下約 28 km です。",
+          "score": 0.7912
+        },
+        {
+          "role": "same topic",
+          "text": "震央距離 140 km より近い Pn の読み取りは棄却します。",
+          "score": 0.787
+        },
+        {
+          "role": "unrelated",
+          "text": "昼休みは 12:30 から 101 号室で始まります。",
+          "score": 0.8013
+        }
+      ]
+    },
+    "multilingual-e5-base:en": {
+      "model": "intfloat/multilingual-e5-base",
+      "question": "How deep is the Moho under the Kii Channel?",
+      "sentences": [
+        {
+          "role": "answer",
+          "text": "In our reference model the Moho lies at 28 km depth.",
+          "score": 0.821
+        },
+        {
+          "role": "paraphrase",
+          "text": "The crust ends and the mantle begins about 28 km down.",
+          "score": 0.7585
+        },
+        {
+          "role": "same topic",
+          "text": "Pn picks closer than 140 km are rejected.",
+          "score": 0.7153
+        },
+        {
+          "role": "unrelated",
+          "text": "The lunch break starts at 12:30 in room 101.",
+          "score": 0.6642
+        }
+      ]
+    },
+    "multilingual-e5-base:ja": {
+      "model": "intfloat/multilingual-e5-base",
+      "question": "紀伊水道の下のモホ面の深さは?",
+      "sentences": [
+        {
+          "role": "answer",
+          "text": "私たちの参照モデルでは、モホ面の深さは 28 km です。",
+          "score": 0.8574
+        },
+        {
+          "role": "paraphrase",
+          "text": "地殻が終わりマントルが始まるのは、地下約 28 km です。",
+          "score": 0.7572
+        },
+        {
+          "role": "same topic",
+          "text": "震央距離 140 km より近い Pn の読み取りは棄却します。",
+          "score": 0.7499
+        },
+        {
+          "role": "unrelated",
+          "text": "昼休みは 12:30 から 101 号室で始まります。",
+          "score": 0.7038
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/circles.list.schema.json",
+  "title": "circles.list",
+  "description": "circles.list: owned or member circles.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/CirclesListResult",
+  "$defs": {
+    "CircleRow": {
+      "type": "object",
+      "description": "One circle listing row (``api/circles.py`` ``_row_response``).",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "circle_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "owner_id": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "retired_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "created_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "updated_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "project_id",
+        "circle_id",
+        "name",
+        "owner_id",
+        "status",
+        "retired_at",
+        "created_at",
+        "updated_at"
+      ],
+      "additionalProperties": true
+    },
+    "CirclesListResult": {
+      "type": "object",
+      "description": "circles.list: owned or member circles.",
+      "properties": {
+        "circles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CircleRow"
+          }
+        },
+        "count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "circles",
+        "count"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

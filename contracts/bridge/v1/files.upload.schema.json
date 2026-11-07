@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/files.upload.schema.json",
+  "title": "files.upload",
+  "description": "files.upload: the stored object's identity (fields the bucket names).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/FilesUploadResult",
+  "$defs": {
+    "FilesUploadResult": {
+      "type": "object",
+      "description": "files.upload: the stored object's identity (fields the bucket names).",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "bucket": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "uri": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "size": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "ok",
+        "key",
+        "bucket",
+        "uri",
+        "size"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/source.unpush.schema.json",
+  "title": "source.unpush",
+  "description": "source.unpush: the removed push and revoked lease count.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SourceUnpushResult",
+  "$defs": {
+    "SourceUnpushResult": {
+      "type": "object",
+      "description": "source.unpush: the removed push and revoked lease count.",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "leases_revoked": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "ok",
+        "name",
+        "leases_revoked"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

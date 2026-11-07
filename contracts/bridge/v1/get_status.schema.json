@@ -1,0 +1,584 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/get_status.schema.json",
+  "title": "get_status",
+  "description": "get_status: server readiness beside the session snapshot.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/GetStatusResult",
+  "$defs": {
+    "EndpointBudget": {
+      "type": "object",
+      "description": "Endpoint node-hour budget (``summarize_endpoint_usage``).",
+      "properties": {
+        "node_hours_estimated": {
+          "type": "number"
+        },
+        "active_endpoint_count": {
+          "type": "integer"
+        },
+        "nearest_expiry_seconds": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "warning_threshold_seconds": {
+          "type": "integer"
+        },
+        "block_threshold_seconds": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "node_hours_estimated",
+        "active_endpoint_count",
+        "nearest_expiry_seconds",
+        "warning_threshold_seconds",
+        "block_threshold_seconds"
+      ],
+      "additionalProperties": true
+    },
+    "GetStatusResult": {
+      "type": "object",
+      "description": "get_status: server readiness beside the session snapshot.",
+      "properties": {
+        "readiness": {
+          "type": "object"
+        },
+        "state": {
+          "$ref": "#/$defs/StateSnapshot"
+        }
+      },
+      "required": [
+        "readiness",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "KnowledgeAcquisition": {
+      "type": "object",
+      "description": "Session knowledge-acquisition mode (``sanitize_acquisition``).",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "open",
+            "pinned",
+            "disabled"
+          ]
+        },
+        "graphs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "mode",
+        "graphs"
+      ],
+      "additionalProperties": true
+    },
+    "ProgressSnapshot": {
+      "type": "object",
+      "description": "Harness orientation text (null without a harness or prior progress).",
+      "properties": {
+        "orientation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "orientation"
+      ],
+      "additionalProperties": true
+    },
+    "SandboxState": {
+      "type": "object",
+      "description": "The session's local tool sandbox (ADR-101 D-12; ``sandbox_state``).",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "off",
+            "on",
+            "remote"
+          ]
+        },
+        "source": {
+          "type": "string"
+        },
+        "backend": {
+          "type": "string"
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "tmp_dir": {
+          "type": "string"
+        },
+        "write_roots": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "network": {
+          "type": "string"
+        },
+        "notice": {
+          "type": "string"
+        },
+        "mcp_error": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "mode",
+        "source",
+        "backend",
+        "available",
+        "reason",
+        "tmp_dir",
+        "write_roots",
+        "network",
+        "notice",
+        "mcp_error",
+        "detail"
+      ],
+      "additionalProperties": true
+    },
+    "SkillRow": {
+      "type": "object",
+      "description": "One registered skill and whether it is active (``_skills_snapshot``).",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "source",
+        "active",
+        "tools"
+      ],
+      "additionalProperties": true
+    },
+    "SnapshotConfig": {
+      "type": "object",
+      "description": "The ``config`` block: profile and display-only identity (never authoritative).",
+      "properties": {
+        "profile": {
+          "type": "string"
+        },
+        "gateway_url": {
+          "type": "string"
+        },
+        "project_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_name": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "credential": {
+          "type": "string",
+          "enum": [
+            "jwt",
+            "api-key",
+            "none"
+          ]
+        }
+      },
+      "required": [
+        "profile",
+        "gateway_url",
+        "project_id",
+        "source_name",
+        "username",
+        "credential"
+      ],
+      "additionalProperties": true
+    },
+    "SnapshotMessage": {
+      "type": "object",
+      "description": "One transcript row (``_message_to_dict``; content capped).",
+      "properties": {
+        "role": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "role",
+        "content",
+        "timestamp",
+        "metadata"
+      ],
+      "additionalProperties": true
+    },
+    "SnapshotSession": {
+      "type": "object",
+      "description": "The ``session`` block of a snapshot: identity, model, modes, venue.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "updated_at": {
+          "type": "string"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "profile_default": {
+          "type": "string"
+        },
+        "model_provisioned": {
+          "type": "boolean"
+        },
+        "needs_model_selection": {
+          "type": "boolean"
+        },
+        "permission_mode": {
+          "type": "string",
+          "enum": [
+            "ask_always",
+            "auto_safe",
+            "deny",
+            "trust"
+          ]
+        },
+        "trust_source": {
+          "type": "string"
+        },
+        "interaction_mode": {
+          "type": "string"
+        },
+        "plan_awaiting_confirmation": {
+          "type": "boolean"
+        },
+        "plan_pending_request": {
+          "type": "string"
+        },
+        "chat_queue": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "write_requires_plan": {
+          "type": "boolean"
+        },
+        "workflow_armed": {
+          "type": "boolean"
+        },
+        "knowledge_acquisition": {
+          "$ref": "#/$defs/KnowledgeAcquisition"
+        },
+        "venue": {
+          "type": "string"
+        },
+        "venue_runtime": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VenueRuntime"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "web_access": {
+          "$ref": "#/$defs/WebAccessChoice"
+        },
+        "sandbox": {
+          "$ref": "#/$defs/SandboxState"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "created_at",
+        "updated_at",
+        "model",
+        "profile_default",
+        "model_provisioned",
+        "needs_model_selection",
+        "permission_mode",
+        "trust_source",
+        "interaction_mode",
+        "plan_awaiting_confirmation",
+        "plan_pending_request",
+        "chat_queue",
+        "write_requires_plan",
+        "workflow_armed",
+        "knowledge_acquisition",
+        "venue",
+        "venue_runtime"
+      ],
+      "additionalProperties": true
+    },
+    "StateSnapshot": {
+      "type": "object",
+      "description": "Bounded UI snapshot of the active session (``get_state``).",
+      "properties": {
+        "session": {
+          "$ref": "#/$defs/SnapshotSession"
+        },
+        "config": {
+          "$ref": "#/$defs/SnapshotConfig"
+        },
+        "total_messages": {
+          "type": "integer"
+        },
+        "message_window": {
+          "type": "integer"
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SnapshotMessage"
+          }
+        },
+        "skills": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SkillRow"
+          }
+        },
+        "usage": {
+          "$ref": "#/$defs/UsageReport"
+        },
+        "active_endpoints": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "progress": {
+          "$ref": "#/$defs/ProgressSnapshot"
+        }
+      },
+      "required": [
+        "session",
+        "config",
+        "total_messages",
+        "message_window",
+        "messages",
+        "skills",
+        "usage",
+        "active_endpoints",
+        "progress"
+      ],
+      "additionalProperties": true
+    },
+    "UsageReport": {
+      "type": "object",
+      "description": "Session usage report (``CompanionSession.usage_report``).",
+      "properties": {
+        "summary": {
+          "$ref": "#/$defs/UsageSummary"
+        },
+        "active_endpoints": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "budget": {
+          "$ref": "#/$defs/EndpointBudget"
+        }
+      },
+      "required": [
+        "summary",
+        "active_endpoints",
+        "budget"
+      ],
+      "additionalProperties": true
+    },
+    "UsageSummary": {
+      "type": "object",
+      "description": "Aggregate LLM usage totals of the session (``UsageSummary.to_dict``).",
+      "properties": {
+        "llm_calls": {
+          "type": "integer"
+        },
+        "compaction_calls": {
+          "type": "integer"
+        },
+        "subagent_calls": {
+          "type": "integer"
+        },
+        "prompt_tokens": {
+          "type": "integer"
+        },
+        "completion_tokens": {
+          "type": "integer"
+        },
+        "total_tokens": {
+          "type": "integer"
+        },
+        "estimated_calls": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "llm_calls",
+        "compaction_calls",
+        "subagent_calls",
+        "prompt_tokens",
+        "completion_tokens",
+        "total_tokens",
+        "estimated_calls"
+      ],
+      "additionalProperties": true
+    },
+    "VenueRuntime": {
+      "type": "object",
+      "description": "References-only projection of the server venue row (``_venue_runtime_projection``).",
+      "properties": {
+        "state": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "lease_expires_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_names": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "default_source": {
+          "type": "string"
+        },
+        "web_policy": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "state",
+        "reason",
+        "lease_expires_at",
+        "source_names",
+        "default_source",
+        "web_policy",
+        "phase"
+      ],
+      "additionalProperties": true
+    },
+    "WebAccessChoice": {
+      "type": "object",
+      "description": "The session's web-access choice (ADR-099 D-2; ``WebAccess.to_metadata``).",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "",
+            "none",
+            "allowlist",
+            "public"
+          ]
+        },
+        "domains": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "chosen_at": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "mode",
+        "domains",
+        "chosen_at",
+        "source"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

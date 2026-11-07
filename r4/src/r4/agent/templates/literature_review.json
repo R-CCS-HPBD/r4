@@ -1,0 +1,61 @@
+{
+  "name": "literature_review",
+  "version": "0.1",
+  "description": "Search a research corpus, summarise the top-k relevant chunks, and produce a literature review skeleton.",
+  "tags": ["research", "rag", "summarisation"],
+  "parameters": [
+    {
+      "name": "topic",
+      "kind": "string",
+      "required": true,
+      "description": "The research topic or question to investigate."
+    },
+    {
+      "name": "rag_profile",
+      "kind": "string",
+      "required": false,
+      "default": "default",
+      "description": "RAG profile to query against."
+    },
+    {
+      "name": "top_k",
+      "kind": "int",
+      "required": false,
+      "default": 12,
+      "description": "Number of retrieved chunks to summarise."
+    }
+  ],
+  "steps": [
+    {
+      "id": "retrieve",
+      "tool": "rag.search",
+      "args": {
+        "query": "{{topic}}",
+        "profile": "{{rag_profile}}",
+        "top_k": "{{top_k}}"
+      }
+    },
+    {
+      "id": "summarise",
+      "tool": "llm.chat",
+      "depends_on": ["retrieve"],
+      "args": {
+        "system": "You are an expert science librarian. Produce a structured literature review skeleton from the provided chunks. Cite each fact using [chunk_id].",
+        "input": "{{retrieve.result}}"
+      }
+    },
+    {
+      "id": "outline",
+      "tool": "llm.chat",
+      "depends_on": ["summarise"],
+      "args": {
+        "system": "Convert the review into an outline with H2 sections, gaps, and proposed follow-up reading.",
+        "input": "{{summarise.result}}"
+      }
+    }
+  ],
+  "outputs": [
+    {"name": "review_outline", "from": "outline.result"},
+    {"name": "raw_summary", "from": "summarise.result"}
+  ]
+}

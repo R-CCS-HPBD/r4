@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/list_models.schema.json",
+  "title": "list_models",
+  "description": "list_models: provisionable options and the session's current model.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ListModelsResult",
+  "$defs": {
+    "ListModelsResult": {
+      "type": "object",
+      "description": "list_models: provisionable options and the session's current model.",
+      "properties": {
+        "models": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ModelRow"
+          }
+        },
+        "current": {
+          "type": "string"
+        },
+        "problems": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ProbeProblemRow"
+          }
+        }
+      },
+      "required": [
+        "models",
+        "current",
+        "problems"
+      ],
+      "additionalProperties": true
+    },
+    "ModelRow": {
+      "type": "object",
+      "description": "One model option (``collect_bridge_model_options``).",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "is_profile_default": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "source",
+        "status",
+        "label"
+      ],
+      "additionalProperties": true
+    },
+    "ProbeProblemRow": {
+      "type": "object",
+      "description": "One registered source whose ``/models`` probe failed, named for pickers.",
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "error"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

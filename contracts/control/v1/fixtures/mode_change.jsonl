@@ -1,0 +1,2 @@
+{"case": "roundtrip-trust-from-autopilot", "expect": "ok", "envelope": {"type": "mode_change", "payload": {"version": 1, "mode": "trust", "source": "autopilot", "session_id": "sess-9"}}}
+{"case": "negative-bad-mode", "expect": "error", "envelope": {"type": "mode_change", "payload": {"version": 1, "mode": "yolo", "source": "user"}}}

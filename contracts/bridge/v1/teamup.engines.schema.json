@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/teamup.engines.schema.json",
+  "title": "teamup.engines",
+  "description": "teamup.engines: the engine registry.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/TeamupEnginesResult",
+  "$defs": {
+    "TeamupEngineRow": {
+      "type": "object",
+      "description": "One installed team engine (ADR-020 engine SPI descriptor + capabilities).",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "trust_tier": {
+          "type": "string"
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": "string"
+        },
+        "workflow_styles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "supports_streaming": {
+          "type": "boolean"
+        },
+        "supports_checkpointing": {
+          "type": "boolean"
+        },
+        "supports_graph_execution": {
+          "type": "boolean"
+        },
+        "supports_parallel_agents": {
+          "type": "boolean"
+        },
+        "supports_hierarchical_agents": {
+          "type": "boolean"
+        },
+        "supports_distributed_execution": {
+          "type": "boolean"
+        },
+        "supports_multi_model": {
+          "type": "boolean"
+        },
+        "supports_gpu_workers": {
+          "type": "boolean"
+        },
+        "supports_human_in_loop": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "version",
+        "trust_tier",
+        "available",
+        "note",
+        "workflow_styles",
+        "supports_streaming",
+        "supports_checkpointing",
+        "supports_graph_execution",
+        "supports_parallel_agents",
+        "supports_hierarchical_agents",
+        "supports_distributed_execution",
+        "supports_multi_model",
+        "supports_gpu_workers",
+        "supports_human_in_loop"
+      ],
+      "additionalProperties": true
+    },
+    "TeamupEnginesResult": {
+      "type": "object",
+      "description": "teamup.engines: the engine registry.",
+      "properties": {
+        "engines": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TeamupEngineRow"
+          }
+        },
+        "count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "engines",
+        "count"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,50 @@
+# gitleaks configuration for the public export (export.py run_gitleaks).
+# Extends the default rules. The allowlist names reviewed FILES one by one
+# (no directory or glob rule), so a new file with a credential-shaped string
+# is still caught and reviewed. Reviewed 2026-11-06 (repo-rename plan P5b-1)
+# with every candidate value masked: each entry is a deliberately
+# secret-shaped fixture or a false positive, with its reason.
+title = "r4 public export"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "reviewed fixtures and false positives (P5b-1, 2026-11-06)"
+paths = [
+  # Tests of r4's own secret scrubbing / redaction / masking: the inputs are
+  # synthetic secret-shaped strings by design (several are literally
+  # "...FAKE...", "ghp_" + "a" * 36, "example").
+  '''(^|/)r4/tests/test_egress_security\.py$''',
+  '''(^|/)r4/tests/test_companion_tool_summaries\.py$''',
+  '''(^|/)r4/tests/test_companion/test_acp_session\.py$''',
+  '''(^|/)r4/tests/test_companion/test_journal_privacy\.py$''',
+  '''(^|/)r4/tests/test_login_setup_consistency\.py$''',
+  '''(^|/)r4/tests/test_secret_files_never_world_readable\.py$''',
+  '''(^|/)r4/tests/test_source_isolation\.py$''',
+  '''(^|/)tests/test_ops_watch\.py$''',
+  '''(^|/)tests/test_security_e2e\.py$''',
+  '''(^|/)tests/test_security_hardening_legacy\.py$''',
+  '''(^|/)tests/test_topology_tools\.py$''',
+  '''(^|/)tests/test_vision_security\.py$''',
+  '''(^|/)mcp-servers/tests/test_extensibility_security\.py$''',
+  '''(^|/)packages/r4-tui-v3/tests/composer-secrets\.test\.tsx$''',
+  '''(^|/)packages/r4-tui-v3/tests/prompt-history-secrets\.test\.ts$''',
+  '''(^|/)packages/r4-tui-v3/tests/shell-line-secrets\.test\.ts$''',
+  '''(^|/)packages/r4-tui-v3/tests/source-add-slash\.test\.ts$''',
+  # A hex token built in the test itself ("..." * 3, openssl rand -hex style).
+  '''(^|/)benchmarks/harness/terminal/test_terminal_plumbing\.py$''',
+  # False positives: prose naming the PEM header lines; a curl example whose
+  # bearer value is the placeholder "sk-demo-key".
+  '''(^|/)docs/admin/deployment/CI_DEPLOY_KEYS_SETUP\.md$''',
+  '''(^|/)TESTING\.md$''',
+]
+
+# A JWKS endpoint is where verifiers fetch PUBLIC keys; its URL is not a
+# secret. gitleaks 8.30.1 (the CI pin) matched "keys" in an example .env line
+# (docs/user-manual/25-umrs-front-deployment.md, JWT_JWKS_URL=http...).
+# Matched on the whole line so only that assignment form is allowed.
+[[allowlists]]
+description = "JWKS URLs are public key locations (P5c dry run, 2026-11-07)"
+regexTarget = "line"
+regexes = ['''\bJWT_JWKS_URL=https?://\S+''']

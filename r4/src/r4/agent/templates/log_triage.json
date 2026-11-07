@@ -1,0 +1,60 @@
+{
+  "name": "log_triage",
+  "version": "0.1",
+  "description": "Triage one or more log files: classify failures, extract stack traces, and propose next-step debug actions.",
+  "tags": ["ops", "diagnostics", "debugging"],
+  "parameters": [
+    {
+      "name": "log_files",
+      "kind": "list[string]",
+      "required": true,
+      "description": "Presigned URLs or S3 keys for the logs to inspect."
+    },
+    {
+      "name": "context",
+      "kind": "string",
+      "required": false,
+      "default": "",
+      "description": "Optional human context (last successful run, recent change, etc.)."
+    }
+  ],
+  "steps": [
+    {
+      "id": "fetch",
+      "tool": "files.fetch_many",
+      "args": {"urls": "{{log_files}}"}
+    },
+    {
+      "id": "classify",
+      "tool": "llm.chat",
+      "depends_on": ["fetch"],
+      "args": {
+        "system": "You are an SRE assistant. Classify each log into {OOM, GPU error, IO failure, Slurm step error, dependency error, unknown}. Return JSON keyed by file.",
+        "input": "{{fetch.result}}"
+      }
+    },
+    {
+      "id": "extract_traces",
+      "tool": "llm.chat",
+      "depends_on": ["fetch"],
+      "args": {
+        "system": "Extract the deepest meaningful Python/C++/CUDA stack trace from each log. Return one trace per file as JSON.",
+        "input": "{{fetch.result}}"
+      }
+    },
+    {
+      "id": "propose_actions",
+      "tool": "llm.chat",
+      "depends_on": ["classify", "extract_traces"],
+      "args": {
+        "system": "For each file, propose at most 3 concrete next-step actions. Cross-reference the classification and the extracted trace. Output as a markdown checklist.",
+        "input": "{{context}}\n\nclassification:{{classify.result}}\n\ntraces:{{extract_traces.result}}"
+      }
+    }
+  ],
+  "outputs": [
+    {"name": "classification", "from": "classify.result"},
+    {"name": "traces", "from": "extract_traces.result"},
+    {"name": "actions", "from": "propose_actions.result"}
+  ]
+}

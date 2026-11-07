@@ -1,0 +1,38 @@
+{
+  "name": "sample_research",
+  "description": "Smoke suite: two simple sequential research tasks across engines.",
+  "cases": [
+    {
+      "id": "triage_01",
+      "repeat": 1,
+      "graders": ["status_success", "metrics_sanity"],
+      "spec": {
+        "run_name": "bench-triage",
+        "project": "bench",
+        "task": {"objective": "Summarize the plumbing of the platform in one paragraph."},
+        "agents": [
+          {"name": "pm", "role": "pm", "instructions": "You coordinate. Produce the summary outline.", "max_iterations": 1},
+          {"name": "pg", "role": "pg", "instructions": "You write. Fill the outline into a paragraph."}
+        ],
+        "topology": {"style": "file_based"},
+        "budgets": {"max_tokens": 100000}
+      }
+    },
+    {
+      "id": "dag_chain_01",
+      "repeat": 1,
+      "graders": ["status_success", "metrics_sanity"],
+      "spec": {
+        "run_name": "bench-dag",
+        "project": "bench",
+        "task": {"objective": "Plan then draft a two-line abstract about kernel optimization."},
+        "agents": [
+          {"name": "a", "role": "planner", "instructions": "Plan the abstract structure."},
+          {"name": "b", "role": "writer", "instructions": "Write the abstract from the plan."}
+        ],
+        "topology": {"style": "dag"},
+        "budgets": {"max_tokens": 100000}
+      }
+    }
+  ]
+}

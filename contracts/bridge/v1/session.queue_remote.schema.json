@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/session.queue_remote.schema.json",
+  "title": "session.queue_remote",
+  "description": "session.queue_remote: the server queue (rows and ``front`` relayed as sent).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SessionQueueRemoteResult",
+  "$defs": {
+    "SessionQueueRemoteResult": {
+      "type": "object",
+      "description": "session.queue_remote: the server queue (rows and ``front`` relayed as sent).",
+      "properties": {
+        "applied": {
+          "type": "boolean"
+        },
+        "queue": {
+          "type": "array"
+        },
+        "front": {}
+      },
+      "required": [
+        "applied",
+        "queue",
+        "front"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

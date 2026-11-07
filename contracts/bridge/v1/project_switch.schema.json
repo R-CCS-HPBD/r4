@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/project_switch.schema.json",
+  "title": "project_switch",
+  "description": "project_switch: tab-scoped select; ``note`` only after a real change.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ProjectSwitchResult",
+  "$defs": {
+    "ProjectSwitchResult": {
+      "type": "object",
+      "description": "project_switch: tab-scoped select; ``note`` only after a real change.",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "selected": {
+          "type": "boolean"
+        },
+        "config_changed": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ok",
+        "project_id",
+        "selected",
+        "config_changed"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

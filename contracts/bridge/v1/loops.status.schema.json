@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/loops.status.schema.json",
+  "title": "loops.status",
+  "description": "loops.status (UMRS lane): the full LoopStatusResponse.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/UmrsLoopStatus",
+  "$defs": {
+    "UmrsLoopStatus": {
+      "type": "object",
+      "description": "loops.status (UMRS lane): the full LoopStatusResponse.",
+      "properties": {
+        "loop_id": {
+          "type": "string"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "research_goal": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "current_iteration": {
+          "type": "integer"
+        },
+        "max_iterations": {
+          "type": "integer"
+        },
+        "total_hypotheses_tested": {
+          "type": "integer"
+        },
+        "total_experiments_run": {
+          "type": "integer"
+        },
+        "total_findings": {
+          "type": "integer"
+        },
+        "success_rate": {
+          "type": "number"
+        },
+        "started_at": {
+          "type": "string"
+        },
+        "completed_at": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "loop_id",
+        "project_id",
+        "research_goal",
+        "status",
+        "phase",
+        "current_iteration",
+        "max_iterations",
+        "total_hypotheses_tested",
+        "total_experiments_run",
+        "total_findings",
+        "success_rate",
+        "started_at",
+        "completed_at",
+        "metadata"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

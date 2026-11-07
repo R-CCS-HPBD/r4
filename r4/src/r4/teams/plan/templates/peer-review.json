@@ -1,0 +1,109 @@
+{
+  "plan_version": 1,
+  "name": "peer-review",
+  "description": "The peer-review crew (ADR-092 slice 4): a constructive peer-review packet. The chair summarises what the submission claims, three auditors audit its methods, the validity of its results and its reproducibility (data availability, code, environment), and the chair writes the review a journal form takes: summary, strengths, weaknesses, the reproducibility checklist, a justified recommendation and the response to the authors. Read-only.",
+  "params": {
+    "submission": {"type": "string", "required": true, "description": "the submission: a file path in this workspace, or its title as the project's knowledge holds it"},
+    "context": {"type": "string", "default": "", "description": "the venue, its criteria, what the editor asked for"}
+  },
+  "agents": {
+    "chair": {
+      "instructions": {"ref": "crew_role:peer-review/chair"},
+      "tools": ["knowledge_query", "file_read", "grep_search", "glob_search", "list_dir"],
+      "max_tool_rounds": 6
+    },
+    "auditor": {
+      "instructions": {"ref": "crew_role:peer-review/auditor"},
+      "tools": ["knowledge_query", "file_read", "grep_search", "glob_search", "list_dir"],
+      "max_tool_rounds": 6
+    }
+  },
+  "concurrency": 3,
+  "budget": {"max_tokens": 500000, "max_agents": 10, "max_wallclock_sec": 3600},
+  "phases": [
+    {
+      "id": "summary",
+      "title": "Quick summary",
+      "steps": [
+        {
+          "id": "summary",
+          "kind": "agent",
+          "use": "chair",
+          "label": "chair",
+          "prompt": "Produce a constructive peer review of this submission, with a clear assessment of the validity of its methods and results and a tiered recommendation (minor, major or reject, justified).\nThe submission: {{params.submission}}\nThe venue and its criteria: {{params.context}}\nRead it first, then state what it claims and how it supports those claims.",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "summary": {"type": "string", "maxLength": 2000},
+              "claims": {"type": "array", "minItems": 1, "maxItems": 12, "items": {"type": "string", "maxLength": 400}}
+            },
+            "required": ["summary", "claims"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "audit",
+      "title": "Methods, results and reproducibility",
+      "steps": [
+        {
+          "id": "audits",
+          "kind": "agent",
+          "use": "auditor",
+          "label": "auditor",
+          "fanout": {"values": ["methods", "results-validity", "reproducibility"], "as": "aspect"},
+          "prompt": "Audit the '{{aspect}}' of this submission: {{params.submission}}\nFor reproducibility, check data availability, code and the computing environment.\nWhat it claims, according to the chair:\n{{steps.summary.output|json}}",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "aspect": {"type": "string", "enum": ["methods", "results-validity", "reproducibility"]},
+              "verdict": {"type": "string", "enum": ["sound", "concerns", "unsound"]},
+              "strengths": {"type": "array", "maxItems": 10, "items": {"type": "string", "maxLength": 600}},
+              "weaknesses": {"type": "array", "maxItems": 10, "items": {"type": "string", "maxLength": 600}}
+            },
+            "required": ["aspect", "verdict", "strengths", "weaknesses"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "recommendation",
+      "title": "Recommendation",
+      "steps": [
+        {
+          "id": "review",
+          "kind": "agent",
+          "use": "chair",
+          "label": "chair-review",
+          "prompt": "Write the review of {{params.submission}} for the journal form, resting every judgement on the audits.\nYour summary:\n{{steps.summary.output|json}}\nThe audits:\n{{steps.audits.output|json}}",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "summary": {"type": "string", "maxLength": 2000},
+              "strengths": {"type": "array", "maxItems": 15, "items": {"type": "string", "maxLength": 600}},
+              "weaknesses": {"type": "array", "maxItems": 15, "items": {"type": "string", "maxLength": 600}},
+              "reproducibility": {
+                "type": "object",
+                "properties": {
+                  "data": {"type": "string", "maxLength": 600},
+                  "code": {"type": "string", "maxLength": 600},
+                  "environment": {"type": "string", "maxLength": 600}
+                },
+                "required": ["data", "code", "environment"]
+              },
+              "recommendation": {"type": "string", "enum": ["accept", "minor_revision", "major_revision", "reject"]},
+              "justification": {"type": "string", "maxLength": 2000},
+              "response_to_authors": {"type": "string", "maxLength": 8000}
+            },
+            "required": ["summary", "strengths", "weaknesses", "reproducibility", "recommendation", "justification", "response_to_authors"]
+          }
+        }
+      ]
+    }
+  ],
+  "output": {
+    "summary": "steps.summary.output",
+    "audits": "steps.audits.output",
+    "review": "steps.review.output"
+  }
+}

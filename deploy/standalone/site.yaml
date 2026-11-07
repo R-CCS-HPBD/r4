@@ -1,0 +1,117 @@
+# yaml-language-server: $schema=../../umrs/src/umrs/orchestrator/site-config.schema.json
+# ─────────────────────────────────────────────────────────────
+# UMRS site configuration — STAND-ALONE (one host, one scientist)
+# ADR-090 (docs/adr/090-standalone-single-host-deployment.md).
+#
+# This is the whole "mode switch". `scheduler.kind: compose` makes
+# get_orchestrator() hand back DockerComposeBackend (orchestrator/factory.py:45-49)
+# instead of SlurmPodmanBackend. Everything above that line — the durable job
+# store, the attempt state machine, the sidecar routers, the X-Verified-* HMAC
+# handshake, the ZAP session binding, the access guard, the knowledge spine —
+# is the same process reading a different YAML file.
+#
+# Mounted at /etc/umrs/site.yaml; selected by UMRS_SITE_CONFIG.
+# Secrets live in env/.env.secrets, never here (ADR-008 inject_env never
+# overwrites an already-set variable, so env always wins).
+# ─────────────────────────────────────────────────────────────
+
+name: standalone
+description: >-
+  Stand-alone single-host deployment. The whole platform — umrs-server,
+  Postgres+pgvector, SeaweedFS, the NGINX + auth-sidecar edge, MCP and the
+  model — runs in containers on the scientist's own machine. No cluster, no
+  front-end split, one user.
+
+strict_secrets: true
+
+scheduler:
+  # ADR-004: one of the three legal execution authorities, already registered.
+  kind: compose
+  partition: ""
+  account: ""
+  qos: ""
+  time_limit: "04:00:00"
+  # No GPU is assumed. Backend (a) is ollama, adopted as an EndpointRegistry
+  # row (ADR-090 D-3); nothing here provisions it.
+  gpus: 0
+  cpus: 4
+  memory: ""
+  require_user_slurm_account: false
+
+runtime:
+  kind: docker-compose
+  rivault_dir: ""
+  repo_dir: ""
+  vision_image: ""
+  compose_file: ""
+  profiles: []
+  gpu_passthrough: "false"
+  cgroup_manager: cgroupfs
+  storage_root: ""
+
+storage:
+  # Container-local paths; both are volumes, not host binds, so podman and
+  # docker behave the same and `standalone.sh reset` has one thing to remove.
+  model_cache_dir: /models/hf
+  user_model_path: /models
+  s3_tunnel_host: ""
+  s3_tunnel_port: 9000
+
+network:
+  litellm_port: 8000
+  litellm_master_key: ""        # LITELLM_MASTER_KEY in env/.env.secrets
+  port_range_min: 11434
+  port_range_max: 11534
+  port_strategy: static_range
+
+vllm:
+  # Not used: stand-alone adopts an endpoint rather than provisioning one.
+  # Kept schema-valid and inert so no code path reads a half-set block.
+  model: ""
+  docker_tag: ""
+  gpu_mem_util: 0.0
+  max_model_len: 32768
+  max_num_seqs: 2
+  tensor_parallel_size: 1
+
+step_executor:
+  # Sibling containers through the host podman socket. The workdir MUST sit
+  # under an identical-path mount: PodmanExecutor mkdtemp's inside the UMRS
+  # container (step_executor.py:569) and passes that same string to a sibling
+  # (`-v {workdir}:/umrs-step:Z`), which the podman HOST resolves. Measured
+  # 2026-10-08.
+  kind: podman
+  partition: ""
+  gpus: 0
+  cpus: 4
+  memory: ""
+  time_limit: "01:00:00"
+  account: ""
+  gpu: false
+
+database:
+  host: postgres
+  port: 5432
+  superuser: umrs
+  superuser_password: ""        # POSTGRES_PASSWORD in env/.env.secrets
+  user_password: ""
+  registry_dsn: ""              # derived from runtime env; never a literal here
+
+extra:
+  # NOTE (2026-10-08): an `extra.model_backend` block used to live here. It was
+  # removed because NOTHING READS IT — SiteConfig.to_env composes seven layers
+  # and `extra` is not one of them, and the cfg.extra readers in the tree look
+  # only at venues, the ssh control block and knowledge_ingest. A config block
+  # no code consumes is worse than none: it reads like a working switch.
+  #
+  # Model selection lives in env/base.env (STANDALONE_CHAT_MODEL,
+  # OLLAMA_CONTEXT_LENGTH, UMRS_KNOWLEDGE_EMBED_MODEL), which compose and
+  # standalone.sh actually read. The model is then adopted as an EndpointRegistry
+  # row (ADR-090 D-3) — that row, not this file, is what UMRS consumers resolve.
+
+  venues:
+    # One host: `local` and `frontend` collapse onto it. `cluster:<name>` is
+    # declared by no site, so it refuses by name instead of timing out against
+    # a hostname that does not resolve.
+    cpu_hosts: []
+    trusted_hosts: []

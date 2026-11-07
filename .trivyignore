@@ -1,0 +1,23 @@
+# Accepted Trivy findings for the Security Scan gate (.github/workflows/ci.yaml,
+# job `security`; hardening plan H-0.5, 2026-10-18). That job and the contract
+# test named below belong to the development repository's CI (noted
+# 2026-11-07); a local `trivy fs --ignorefile .trivyignore .` reads this file too.
+#
+# The gate fails on fixed CRITICAL/HIGH vulnerabilities (scanners: vuln). Add
+# an entry only for a finding that is accepted for now, never to make a red
+# run green unread:
+#
+#   # <reason: why it does not apply or why the upgrade waits>; <who>, <date>
+#   CVE-YYYY-NNNNN exp:YYYY-MM-DD
+#
+# One ID per line; the comment line directly above it carries the reason
+# (tests/test_ci_workflow_contract.py enforces that). `exp:` makes Trivy
+# report the finding again after that date.
+#
+# Empty on purpose: Trivy was not installed where the gate was written, so no
+# finding was invented. The first red run lists the real ones (maintainer).
+#
+# Vulnerability IDs only. Secrets are not gated here (the SARIF report still
+# lists them): a secret rule ID in this file would mute that rule for the
+# whole repository, and a committed credential needs rotation, not an ignore
+# line. A future secret gate gets path-scoped allow rules (trivy-secret.yaml).

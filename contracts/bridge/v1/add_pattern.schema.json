@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/add_pattern.schema.json",
+  "title": "add_pattern",
+  "description": "add_pattern / add_anti_pattern: the new row id.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/AddPatternResult",
+  "$defs": {
+    "AddPatternResult": {
+      "type": "object",
+      "description": "add_pattern / add_anti_pattern: the new row id.",
+      "properties": {
+        "pattern_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "pattern_id"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

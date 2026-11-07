@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# r4-local — R4 + UMRS on this machine, in one command (2026-10-15).
+#
+#   ./r4-local up [--yes] [--model NAME]   set up and start everything, then prove it
+#                                          works (deploy/standalone/standalone.sh quickstart)
+#   ./r4-local down                        stop; your data is kept
+#   ./r4-local status                      the stack's containers
+#   ./r4-local doctor                      health probes
+#   ./r4-local logs [service]              follow logs (default: all)
+#   ./r4-local register                    register the stack as the r4 source
+#                                          'standalone' again (a fresh 30-day token)
+#
+# `up` checks the host and fixes what it can (with --yes or your yes for
+# anything outside this checkout), sizes a local model to your memory,
+# starts the stack with the dev profile, installs the r4 client from this
+# checkout into .venv, registers the stack as an r4 source without changing
+# your active one, and runs a smoke test: one chat, one document ingested and
+# one question answered from it. Run it again at any time: on a working
+# stack it only checks. It never deletes data.
+#
+# Everything else: deploy/standalone/standalone.sh --help and
+# docs/user-manual/29-standalone-deployment.md.
+
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+STANDALONE="${ROOT}/deploy/standalone/standalone.sh"
+
+usage() { awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "${BASH_SOURCE[0]}"; }
+
+# The server source is the umrs submodule. A clone without --recursive has
+# an empty umrs/, and bootstrap needs it.
+need_umrs() {
+  [[ -f "${ROOT}/umrs/deploy/_common/render_seaweedfs_iam.sh" ]] && return 0
+  printf 'r4-local: the umrs submodule is not checked out. Fetch it:\n  git -C %s submodule update --init umrs\n' "$ROOT" >&2
+  exit 1
+}
+
+case "${1:-}" in
+  up) shift; need_umrs; exec "$STANDALONE" quickstart "$@" ;;
+  down|status|doctor|logs|register) cmd="$1"; shift; exec "$STANDALONE" "$cmd" "$@" ;;
+  ""|-h|--help|help) usage ;;
+  *) usage >&2; printf '\nr4-local: unknown command %s\n' "$1" >&2; exit 2 ;;
+esac

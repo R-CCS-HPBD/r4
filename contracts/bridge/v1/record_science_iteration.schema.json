@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/record_science_iteration.schema.json",
+  "title": "record_science_iteration",
+  "description": "record_science_iteration: the new iteration id.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/RecordScienceIterationResult",
+  "$defs": {
+    "RecordScienceIterationResult": {
+      "type": "object",
+      "description": "record_science_iteration: the new iteration id.",
+      "properties": {
+        "iteration_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "iteration_id"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

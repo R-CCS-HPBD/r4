@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/list_up_models.schema.json",
+  "title": "list_up_models",
+  "description": "list_up_models: registry options and the session's current model.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ListUpModelsResult",
+  "$defs": {
+    "ListUpModelsResult": {
+      "type": "object",
+      "description": "list_up_models: registry options and the session's current model.",
+      "properties": {
+        "models": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/UpModelRow"
+          }
+        },
+        "session_model": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "models",
+        "session_model"
+      ],
+      "additionalProperties": true
+    },
+    "UpModelRow": {
+      "type": "object",
+      "description": "One registry model that `/endpoint up` can start.",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "running": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "source",
+        "status",
+        "label",
+        "running"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

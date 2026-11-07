@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/research_knowledge.status.schema.json",
+  "title": "research_knowledge.status",
+  "description": "research_knowledge.status: location + graph digest.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ResearchKnowledgeStatusResult",
+  "$defs": {
+    "ResearchKnowledgeStatusResult": {
+      "type": "object",
+      "description": "research_knowledge.status: location + graph digest.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "research_knowledge_status"
+          ]
+        },
+        "project_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "runtime": {
+          "type": "string"
+        },
+        "durable": {
+          "type": "boolean"
+        },
+        "distributed": {
+          "type": "boolean"
+        },
+        "backends": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "nodes": {
+          "type": "integer"
+        },
+        "edges": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "type",
+        "project_id",
+        "runtime",
+        "durable",
+        "distributed",
+        "backends",
+        "available"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

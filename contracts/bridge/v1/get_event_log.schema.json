@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/get_event_log.schema.json",
+  "title": "get_event_log",
+  "description": "get_event_log: newest events, oldest-to-newest.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/GetEventLogResult",
+  "$defs": {
+    "EventLogRow": {
+      "type": "object",
+      "description": "One persisted event (the event_log row; ``data`` is the parsed JSON",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "event_type": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object"
+        },
+        "tool_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tool_status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tool_duration_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "agent_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parent_agent_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "task_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "progress_pct": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "intent": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rationale": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "session_id",
+        "event_type",
+        "timestamp",
+        "message",
+        "data",
+        "tool_name",
+        "tool_status",
+        "tool_duration_ms",
+        "agent_id",
+        "parent_agent_id",
+        "task_id",
+        "progress_pct",
+        "intent",
+        "rationale"
+      ],
+      "additionalProperties": true
+    },
+    "GetEventLogResult": {
+      "type": "object",
+      "description": "get_event_log: newest events, oldest-to-newest.",
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EventLogRow"
+          }
+        },
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "events",
+        "session_id"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

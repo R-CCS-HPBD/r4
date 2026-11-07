@@ -1,0 +1,39 @@
+# Gateway ConfigMap
+# Non-sensitive configuration for the Gateway
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rivault-gateway-config
+  namespace: rivault-system
+  labels:
+    app.kubernetes.io/name: rivault-gateway
+    app.kubernetes.io/component: gateway
+    app.kubernetes.io/part-of: ai-platform
+data:
+  # Service Configuration
+  GATEWAY_PORT: "8080"
+  GATEWAY_HOST: "0.0.0.0"
+  GATEWAY_ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+
+  # UMRS Connection
+  # Use Kubernetes service DNS for internal communication
+  UMRS_BASE_URL: "http://umrs.rivault-system.svc.cluster.local:8000"
+  UMRS_TIMEOUT_SEC: "10"
+  # Set to "umrs" once UMRS is deployed; empty allows gateway to start standalone
+  READINESS_REQUIRES: ""
+
+  # Rate Limiting
+  RATE_LIMIT_ENABLED: "true"
+  RATE_LIMIT_RPM: "60"
+  RATE_LIMIT_RPS: "10"
+  RATE_LIMIT_BURST: "20"
+
+  # Request Timeouts
+  REQUEST_TIMEOUT_SEC: "120"
+  CONNECT_TIMEOUT_SEC: "10"
+
+  # JWT Configuration (non-secret parts)
+  JWT_ALGORITHM: "HS256"
+  # JWT_ISSUER: "https://auth.example.com"  # Uncomment and set if using issuer validation
+  # JWT_AUDIENCE: "rivault-api"              # Uncomment and set if using audience validation

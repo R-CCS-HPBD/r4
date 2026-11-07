@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/loops.resume.schema.json",
+  "title": "loops.resume",
+  "description": "Result union for loops.resume (see branches).",
+  "x-bridge-protocol": 1,
+  "anyOf": [
+    {
+      "$ref": "#/$defs/UmrsLoopStart"
+    },
+    {
+      "$ref": "#/$defs/LocalLoopControl"
+    }
+  ],
+  "$defs": {
+    "LocalLoopControl": {
+      "type": "object",
+      "description": "loops.stop/pause/resume (local/hybrid lane): serialized loop + location.",
+      "properties": {
+        "loop_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "phase": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "research_goal": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "current_iteration": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_iterations": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tracks": {
+          "anyOf": [
+            {
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_tracks": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "runtime": {
+          "type": "string"
+        },
+        "durable": {
+          "type": "boolean"
+        },
+        "distributed": {
+          "type": "boolean"
+        },
+        "backends": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "loop_id",
+        "status",
+        "phase",
+        "research_goal",
+        "current_iteration",
+        "max_iterations",
+        "runtime",
+        "durable",
+        "distributed",
+        "backends"
+      ],
+      "additionalProperties": true
+    },
+    "UmrsLoopStart": {
+      "type": "object",
+      "description": "loops.resume (UMRS lane): StartLoopResponse.",
+      "properties": {
+        "loop_id": {
+          "type": "string"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "workflow_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "loop_id",
+        "project_id",
+        "status",
+        "phase",
+        "message",
+        "workflow_name"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

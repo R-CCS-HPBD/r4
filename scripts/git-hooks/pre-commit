@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Tracked pre-commit hook (plan H-3.4, 2026-10-18).
+# Install (idempotent): bash scripts/install-hooks.sh
+#
+# Blocking, on the staged paths only:
+#   - packages/r4-tui-v3/ staged  -> `bun run check` in that package
+#   - anything staged             -> scripts/ci-lint-local.sh --files <staged>
+#     (AGENTS.md rule 1; the complexity baseline is the ratchet, so lizard,
+#     C901 and xenon stay informational exactly as in CI and pre-existing
+#     lizard noise never blocks a commit)
+#
+# Every check runs without the hook's GIT_* variables. Git exports
+# GIT_INDEX_FILE (and, from a linked worktree, GIT_DIR and friends) to hooks;
+# a test that runs `git init` / `git config` in a temp dir under those
+# variables writes the real repository instead (2026-10-15: `core.bare = true`
+# and `user.name = test` in the shared .git/config; plan H-3.3).
+set -euo pipefail
+
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+
+# Staged paths, read with the hook's own index (a partial commit's temp index).
+staged=()
+while IFS= read -r -d '' path; do
+    staged+=("$path")
+done < <(git diff --cached --name-only -z --diff-filter=ACMR)
+if [ ${#staged[@]} -eq 0 ]; then
+    exit 0
+fi
+
+run_without_git_env() {
+    local unset_args=()
+    local name
+    while IFS= read -r name; do
+        unset_args+=(-u "$name")
+    done < <(compgen -e | grep '^GIT_' || true)
+    env ${unset_args[@]+"${unset_args[@]}"} "$@"
+}
+
+has_staged_prefix() {
+    local prefix="$1" path
+    for path in "${staged[@]}"; do
+        case "$path" in
+            "$prefix"*) return 0 ;;
+        esac
+    done
+    return 1
+}
+
+if has_staged_prefix "packages/r4-tui-v3/"; then
+    echo "pre-commit: packages/r4-tui-v3 staged -> bun run check"
+    if ! command -v bun >/dev/null 2>&1; then
+        echo "pre-commit: bun is not on PATH; install it (docs/onboarding/developer.md)" >&2
+        exit 1
+    fi
+    if ! (cd packages/r4-tui-v3 && run_without_git_env bun run check); then
+        echo "pre-commit: BLOCKED by bun run check (packages/r4-tui-v3)" >&2
+        exit 1
+    fi
+fi
+
+echo "pre-commit: gate on ${#staged[@]} staged path(s) -> scripts/ci-lint-local.sh --files"
+if ! run_without_git_env bash scripts/ci-lint-local.sh --files "${staged[@]}"; then
+    echo "pre-commit: BLOCKED by scripts/ci-lint-local.sh (fix the findings above)" >&2
+    exit 1
+fi
+echo "pre-commit: checks passed."

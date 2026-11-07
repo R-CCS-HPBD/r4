@@ -1,0 +1,83 @@
+{
+  "plan_version": 1,
+  "name": "adversarial-review",
+  "description": "Find defects in a target, then let independent skeptics try to refute each one. A strict majority of valid refutations kills a finding; a tie or too few valid votes leaves it undecided.",
+  "params": {
+    "target": {"type": "string", "required": true, "description": "a file or directory to review"},
+    "focus": {"type": "string", "default": "", "description": "what to look for (empty: correctness defects)"},
+    "max_findings": {"type": "integer", "default": 5, "min": 1, "max": 8},
+    "skeptics": {"type": "integer", "default": 3, "min": 1, "max": 5},
+    "reviewer_model": {"type": "string", "default": null, "description": "a different model for the skeptics (suggestion 10)"}
+  },
+  "agents": {
+    "finder": {
+      "instructions": "You review code or documents for real defects. Report only defects you can ground in a file:line or a quoted passage. Prefer few, certain findings over many speculative ones.",
+      "tools": ["file_read", "grep_search", "glob_search", "list_dir"],
+      "max_tool_rounds": 6
+    },
+    "skeptic": {
+      "instructions": "You are a skeptic. You are given one claimed defect. Try hard to REFUTE it by reading the cited code yourself. Answer refuted=true unless the defect is concretely demonstrated by what you read.",
+      "tools": ["file_read", "grep_search"],
+      "model": "{{params.reviewer_model}}",
+      "max_tool_rounds": 4
+    }
+  },
+  "concurrency": 4,
+  "budget": {"max_tokens": 600000, "max_agents": 50, "max_wallclock_sec": 2400},
+  "phases": [
+    {
+      "id": "find",
+      "title": "Find defects",
+      "steps": [
+        {
+          "id": "find",
+          "kind": "agent",
+          "use": "finder",
+          "label": "finder",
+          "prompt": "Review {{params.target}}. Focus: {{params.focus}}\nReturn at most {{params.max_findings}} findings, each with a title, the evidence (file:line and a short quote) and a severity.",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "findings": {
+                "type": "array",
+                "maxItems": 8,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "title": {"type": "string", "maxLength": 200},
+                    "evidence": {"type": "string", "maxLength": 800},
+                    "severity": {"type": "string", "enum": ["high", "medium", "low"]}
+                  },
+                  "required": ["title", "evidence", "severity"]
+                }
+              }
+            },
+            "required": ["findings"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "verify",
+      "title": "Adversarially verify",
+      "steps": [
+        {
+          "id": "verify",
+          "kind": "pattern",
+          "pattern": "adversarial_verify",
+          "over": "steps.find.output.findings",
+          "use": "skeptic",
+          "skeptics": "{{params.skeptics}}",
+          "max_items": "{{params.max_findings}}",
+          "label": "skeptic",
+          "prompt": "Claimed defect in {{params.target}}:\n{{item|json}}\nRead the cited code and decide: is the claim refuted?"
+        }
+      ]
+    }
+  ],
+  "output": {
+    "survivors": "steps.verify.output.survivors",
+    "killed": "steps.verify.output.killed",
+    "undecided": "steps.verify.output.undecided"
+  }
+}

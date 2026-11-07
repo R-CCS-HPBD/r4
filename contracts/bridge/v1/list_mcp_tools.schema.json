@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/list_mcp_tools.schema.json",
+  "title": "list_mcp_tools",
+  "description": "list_mcp_tools: tools across servers (or one).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ListMcpToolsResult",
+  "$defs": {
+    "ListMcpToolsResult": {
+      "type": "object",
+      "description": "list_mcp_tools: tools across servers (or one).",
+      "properties": {
+        "tools": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/McpToolRow"
+          }
+        }
+      },
+      "required": [
+        "tools"
+      ],
+      "additionalProperties": true
+    },
+    "McpToolRow": {
+      "type": "object",
+      "description": "One MCP tool row (``client.mcp.list_tools``).",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "server": {
+          "type": "string"
+        },
+        "input_schema": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "server",
+        "input_schema"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

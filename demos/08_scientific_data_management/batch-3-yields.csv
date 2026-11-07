@@ -1,0 +1,4 @@
+batch_id,yield_pct,co2_uptake_mmol_g,notes
+batch-1,72.1,3.42,baseline MOF-5 run
+batch-2,78.4,3.89,improved activation
+batch-3,85.0,4.21,highest yield in series

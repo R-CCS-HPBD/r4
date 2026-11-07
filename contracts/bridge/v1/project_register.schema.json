@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/project_register.schema.json",
+  "title": "project_register",
+  "description": "project_register: the platform row (POST /gw/projects) + local record.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ProjectRegisterResult",
+  "$defs": {
+    "ProjectRegisterResult": {
+      "type": "object",
+      "description": "project_register: the platform row (POST /gw/projects) + local record.",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "gateway_url": {
+          "type": "string"
+        },
+        "local": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ok",
+        "project_id",
+        "message",
+        "gateway_url",
+        "local"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

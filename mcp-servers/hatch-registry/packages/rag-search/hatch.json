@@ -1,0 +1,43 @@
+{
+  "name": "rag-search",
+  "version": "1.0.0",
+  "description": "RAG document search and index status via the Gateway RAG proxy",
+  "author": "AI4S Platform",
+  "license": "MIT",
+  "tools": [
+    "rag_search",
+    "rag_list_documents",
+    "rag_status"
+  ],
+  "dependencies": [],
+  "tags": [
+    "rag",
+    "search",
+    "documents",
+    "default"
+  ],
+  "capabilities": {
+    "tools": [
+      "rag_search",
+      "rag_list_documents",
+      "rag_status"
+    ],
+    "tool_capabilities": {
+      "rag_search": [
+        "STANDARD_USER"
+      ],
+      "rag_list_documents": [
+        "STANDARD_USER"
+      ],
+      "rag_status": [
+        "STANDARD_USER"
+      ]
+    }
+  },
+  "contract": {
+    "lane": "v1",
+    "version": "1.0.0",
+    "pinned_at": "2026-08-17",
+    "note": "S8 schema pinning: tools/capabilities are the published contract; changes require a version bump + snapshot update (S12 rule)."
+  }
+}

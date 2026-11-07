@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/session.sandbox_get.schema.json",
+  "title": "session.sandbox_get",
+  "description": "session.sandbox_get: the session's local tool sandbox.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/SessionSandboxGetResult",
+  "$defs": {
+    "SandboxState": {
+      "type": "object",
+      "description": "The session's local tool sandbox (ADR-101 D-12; ``sandbox_state``).",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "off",
+            "on",
+            "remote"
+          ]
+        },
+        "source": {
+          "type": "string"
+        },
+        "backend": {
+          "type": "string"
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "tmp_dir": {
+          "type": "string"
+        },
+        "write_roots": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "network": {
+          "type": "string"
+        },
+        "notice": {
+          "type": "string"
+        },
+        "mcp_error": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "mode",
+        "source",
+        "backend",
+        "available",
+        "reason",
+        "tmp_dir",
+        "write_roots",
+        "network",
+        "notice",
+        "mcp_error",
+        "detail"
+      ],
+      "additionalProperties": true
+    },
+    "SessionSandboxGetResult": {
+      "type": "object",
+      "description": "session.sandbox_get: the session's local tool sandbox.",
+      "properties": {
+        "sandbox": {
+          "$ref": "#/$defs/SandboxState"
+        }
+      },
+      "required": [
+        "sandbox"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

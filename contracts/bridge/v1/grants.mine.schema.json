@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/grants.mine.schema.json",
+  "title": "grants.mine",
+  "description": "grants.mine: live grants received by the caller.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/GrantsMineResult",
+  "$defs": {
+    "GrantRow": {
+      "type": "object",
+      "description": "One live grant (``grants/store.py`` ``to_dict``).",
+      "properties": {
+        "grant_id": {
+          "type": "string"
+        },
+        "asset_kind": {
+          "type": "string"
+        },
+        "asset_id": {
+          "type": "string"
+        },
+        "grantee_kind": {
+          "type": "string"
+        },
+        "grantee_id": {
+          "type": "string"
+        },
+        "version_pin": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "expires_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tombstoned_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "created_by": {
+          "type": "string"
+        },
+        "created_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "grant_id",
+        "asset_kind",
+        "asset_id",
+        "grantee_kind",
+        "grantee_id",
+        "version_pin",
+        "expires_at",
+        "tombstoned_at",
+        "created_by",
+        "created_at"
+      ],
+      "additionalProperties": true
+    },
+    "GrantsMineResult": {
+      "type": "object",
+      "description": "grants.mine: live grants received by the caller.",
+      "properties": {
+        "grants": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/GrantRow"
+          }
+        },
+        "count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "grants",
+        "count"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

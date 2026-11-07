@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/teamup.hardware.schema.json",
+  "title": "teamup.hardware",
+  "description": "teamup.hardware: the profiles a session can target.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/TeamupHardwareResult",
+  "$defs": {
+    "TeamupHardwareResult": {
+      "type": "object",
+      "description": "teamup.hardware: the profiles a session can target.",
+      "properties": {
+        "profiles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TeamupHardwareRow"
+          }
+        },
+        "count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "profiles",
+        "count"
+      ],
+      "additionalProperties": true
+    },
+    "TeamupHardwareRow": {
+      "type": "object",
+      "description": "One hardware profile (``list_hardware_profiles``).",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

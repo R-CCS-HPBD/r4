@@ -1,0 +1,68 @@
+#!/bin/bash
+# Mock squeue - Display job queue
+#
+# Reads job state from /var/spool/slurm/jobs.json
+
+set -e
+
+STATE_FILE="/var/spool/slurm/jobs.json"
+
+# Parse arguments
+FORMAT=""
+JOB_ID=""
+USER=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -j|--job)
+            JOB_ID="$2"
+            shift 2
+            ;;
+        -u|--user)
+            USER="$2"
+            shift 2
+            ;;
+        -o|--format)
+            FORMAT="$2"
+            shift 2
+            ;;
+        --json)
+            if [ -n "$JOB_ID" ]; then
+                jq --arg id "$JOB_ID" '.jobs[$id] // empty' "$STATE_FILE"
+            else
+                jq '.jobs | to_entries | map(.value)' "$STATE_FILE"
+            fi
+            exit 0
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
+# Check if state file exists
+if [ ! -f "$STATE_FILE" ]; then
+    echo "JOBID PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)"
+    exit 0
+fi
+
+# Header
+echo "JOBID PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)"
+
+# Output jobs
+if [ -n "$JOB_ID" ]; then
+    # Single job
+    jq -r --arg id "$JOB_ID" '
+        .jobs[$id] // empty |
+        [.job_id, .partition, .name, "user", .state[0:2], "0:00", "1", .node] |
+        @tsv
+    ' "$STATE_FILE" | column -t
+else
+    # All jobs
+    jq -r '
+        .jobs | to_entries[] | .value |
+        select(.state != "COMPLETED" and .state != "CANCELLED") |
+        [.job_id, .partition, .name, "user", .state[0:2], "0:00", "1", .node] |
+        @tsv
+    ' "$STATE_FILE" | column -t
+fi

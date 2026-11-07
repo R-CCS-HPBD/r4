@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/usage.me.schema.json",
+  "title": "usage.me",
+  "description": "usage.me: caller-attributed rows, grouped.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/UsageMeResult",
+  "$defs": {
+    "UsageMeResult": {
+      "type": "object",
+      "description": "usage.me: caller-attributed rows, grouped.",
+      "properties": {
+        "user_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_by": {
+          "type": "string"
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      },
+      "required": [
+        "user_id",
+        "group_by",
+        "rows"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

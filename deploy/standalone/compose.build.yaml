@@ -1,0 +1,24 @@
+# Build the UMRS image from this checkout instead of pulling the published one.
+# Selected by STANDALONE_BUILD=1 (exported or in env/local.env); for UMRS
+# developers whose umrs/ is ahead of the published image. A from-scratch build
+# needs ~30 GB free (MIN_BUILD_DISK_GB; ~16 GB of transient layers that a
+# macOS podman VM never returns). The image name is the one every stand-alone
+# install used before the published image (2026-11-06), so an existing local
+# build is reused.
+services:
+  umrs:
+    image: ai4s-standalone-umrs:latest
+    build:
+      # Repo-root context: Dockerfile.server COPYs r4-contracts/ alongside umrs/.
+      context: ../..
+      dockerfile: umrs/docker/Dockerfile.server
+      args:
+        # CPU-only wheels. Measured 2026-10-08: the default (CUDA) pull brought
+        # torch 454 MB + cudnn 651 MB + cublas 543 MB + cuda_toolkit onto an
+        # aarch64 Mac with no GPU, and filled the host disk during the first
+        # build smoke. None of it can execute on a stand-alone host.
+        TORCH_INDEX_URL: ${TORCH_INDEX_URL:-https://download.pytorch.org/whl/cpu}
+  rag:
+    image: ai4s-standalone-umrs:latest
+    # Built by the umrs service above; never pulled.
+    pull_policy: never

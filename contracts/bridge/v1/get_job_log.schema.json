@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/get_job_log.schema.json",
+  "title": "get_job_log",
+  "description": "get_job_log: the log tail.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/GetJobLogResult",
+  "$defs": {
+    "GetJobLogResult": {
+      "type": "object",
+      "description": "get_job_log: the log tail.",
+      "properties": {
+        "log": {
+          "type": "string"
+        },
+        "job_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "log",
+        "job_id"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

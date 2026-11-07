@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "r4-teamengine-spi"
+version = "0.2.0rc1"
+description = "Team Engine SPI — interfaces, plugin loader, and broker contracts for pluggable multi-agent orchestration (ADR-020)."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+authors = [
+    { name = "RCCS AI Platform Team" },
+]
+keywords = ["r4", "team-engine", "spi", "multi-agent", "orchestration"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+# Per ADR-020: the SPI depends ONLY on r4-contracts. Nothing else from R4.
+dependencies = [
+    "r4-contracts>=0.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "ruff>=0.4",
+    "mypy>=1.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/r4_teamengine_spi"]

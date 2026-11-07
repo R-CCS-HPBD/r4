@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/circles.create.schema.json",
+  "title": "circles.create",
+  "description": "circles.create: the ensured circle row (ADR-086 amendment 2026-10-19).",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/CirclesCreateResult",
+  "$defs": {
+    "CircleRow": {
+      "type": "object",
+      "description": "One circle listing row (``api/circles.py`` ``_row_response``).",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "circle_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "owner_id": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "retired_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "created_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "updated_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "project_id",
+        "circle_id",
+        "name",
+        "owner_id",
+        "status",
+        "retired_at",
+        "created_at",
+        "updated_at"
+      ],
+      "additionalProperties": true
+    },
+    "CirclesCreateResult": {
+      "type": "object",
+      "description": "circles.create: the ensured circle row (ADR-086 amendment 2026-10-19).",
+      "properties": {
+        "circle": {
+          "$ref": "#/$defs/CircleRow"
+        },
+        "created": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "circle",
+        "created"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,10 @@
+# Gateway Namespace
+# All Gateway resources are deployed in the rivault-system namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rivault-system
+  labels:
+    app.kubernetes.io/name: rivault
+    app.kubernetes.io/component: gateway
+    app.kubernetes.io/part-of: ai-platform

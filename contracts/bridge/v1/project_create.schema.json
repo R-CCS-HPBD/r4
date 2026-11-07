@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/project_create.schema.json",
+  "title": "project_create",
+  "description": "project_create: create + tab-scoped select.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ProjectCreateResult",
+  "$defs": {
+    "ProjectCreateResult": {
+      "type": "object",
+      "description": "project_create: create + tab-scoped select.",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "created": {
+          "type": "boolean"
+        },
+        "selected": {
+          "type": "boolean"
+        },
+        "config_changed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "ok",
+        "project_id",
+        "created",
+        "selected",
+        "config_changed"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

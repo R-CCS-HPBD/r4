@@ -1,0 +1,29 @@
+{
+  "name": "r4-vscode-default-v1",
+  "tools": {
+    "workspace.readFile": {
+      "access": "allow",
+      "pathArgument": "path"
+    },
+    "workspace.diagnostics": {
+      "access": "allow",
+      "pathArgument": "path"
+    },
+    "workspace.writeFile": {
+      "access": "approval",
+      "pathArgument": "path"
+    },
+    "workspace.applyEdit": {
+      "access": "approval",
+      "pathArgument": "path"
+    },
+    "terminal.run": {
+      "access": "approval",
+      "pathArgument": "cwd",
+      "commands": {
+        "git": ["status", "diff", "log", "show", "branch", "grep", "ls-files"],
+        "pwd": []
+      }
+    }
+  }
+}

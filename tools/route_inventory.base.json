@@ -1,0 +1,3402 @@
+{
+  "routes": [
+    {
+      "path": "/health",
+      "methods": [
+        "GET"
+      ],
+      "router": "umrs.server.http_sidecar",
+      "auth": "open(white)"
+    },
+    {
+      "path": "/metrics",
+      "methods": [
+        "GET"
+      ],
+      "router": "umrs.server.http_sidecar",
+      "auth": "open(white)"
+    },
+    {
+      "path": "/readiness",
+      "methods": [
+        "GET"
+      ],
+      "router": "umrs.server.http_sidecar",
+      "auth": "open(white)"
+    },
+    {
+      "path": "/umrs/a2l/artifacts",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/a2l/derive",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/a2l/ledger/agent-executions",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/a2l/ledger/agent-executions",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/a2l/ledger/agent-executions/{execution_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/a2l/ledger/agent-executions/{execution_id}",
+      "methods": [
+        "PATCH"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/a2l/ledger/artifacts",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/a2l/ledger/artifacts",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/a2l/ledger/artifacts/derive",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/a2l/ledger/artifacts/{artifact_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/a2l/ledger/artifacts/{artifact_id}/lineage",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/a2l/ledger/artifacts/{artifact_id}/status",
+      "methods": [
+        "PATCH"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/a2l/ledger/decisions",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/a2l/ledger/decisions",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/a2l/ledger/health",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "open(probe)"
+    },
+    {
+      "path": "/umrs/a2l/ledger/jobs/{job_id}/view",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/a2l/resolve",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/admin/session-policy",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "admin(jwt|verified-admin)"
+    },
+    {
+      "path": "/umrs/admin/session-policy/effective",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "admin(jwt|verified-admin)"
+    },
+    {
+      "path": "/umrs/admin/session-policy/{scope}/{subject}",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "admin(jwt|verified-admin)"
+    },
+    {
+      "path": "/umrs/admin/session-policy/{scope}/{subject}",
+      "methods": [
+        "PUT"
+      ],
+      "router": "fastapi.routing",
+      "auth": "admin(jwt|verified-admin)"
+    },
+    {
+      "path": "/umrs/admin/sessions",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "admin(jwt|verified-admin)"
+    },
+    {
+      "path": "/umrs/admin/sessions/{session_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "admin(jwt|verified-admin)"
+    },
+    {
+      "path": "/umrs/admin/sessions/{session_id}/stop",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "admin(jwt|verified-admin)"
+    },
+    {
+      "path": "/umrs/admin/usage",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "admin(jwt|verified-admin)"
+    },
+    {
+      "path": "/umrs/artifacts",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/artifacts",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/artifacts/{artifact_id}",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/artifacts/{artifact_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/artifacts/{artifact_id}/lineage",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/artifacts/{artifact_id}/metadata",
+      "methods": [
+        "PATCH"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/assets",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/assets/patch",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/assets/{kind}/{asset_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/buckets",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/buckets",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/buckets/{bucket}/access",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/buckets/{bucket}/access",
+      "methods": [
+        "PUT"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/catalog/read",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/catalog/search",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/catalog/stats",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/chat/manifest",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/chat/v1/chat/completions",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/chat/v1/models",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/circles",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/circles/mine",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/circles/{project_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/circles/{project_id}/{circle_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/circles/{project_id}/{circle_id}",
+      "methods": [
+        "PATCH"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/circles/{project_id}/{circle_id}/members",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/circles/{project_id}/{circle_id}/members",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/circles/{project_id}/{circle_id}/members/{user_id}",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/approvals/pending",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/approvals/{approval_id}/decision",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/chat",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/sessions",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/approvals",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/approvals",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/approvals/{approval_id}/decision",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/archive",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/questions",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/questions/{question_id}/answer",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/queue",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/rail/approvals",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "lease-token"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/rail/approvals/{approval_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "lease-token"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/rail/gw/{path:path}",
+      "methods": [
+        "DELETE",
+        "GET",
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "lease-token"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/rail/heartbeat",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "lease-token"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/rail/plan-gates",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "lease-token"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/rail/plan-gates/{approval_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "lease-token"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/rail/questions",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "lease-token"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/rail/questions/{question_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "lease-token"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/rail/questions/{question_id}/expire",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "lease-token"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/rail/queue/pop",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "lease-token"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/rail/settings",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "lease-token"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/rail/snapshot",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "lease-token"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/rail/snapshot",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "lease-token"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/snapshot",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/turns",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/turns/{turn_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/venue",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/venue/pause",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/venue/policy",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/venue/resume",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/venue/settings",
+      "methods": [
+        "PUT"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/venue/start",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/venue/stop",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/trust",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/companion/trust",
+      "methods": [
+        "PUT"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/companion/trust/check",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/companion/trust/{tool_name}",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/companion/turns/{attempt_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/turns/{attempt_id}/events",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/workers",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/workers/{registry_key}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/components/chunkers",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/components/embedders",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/components/rerankers",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/egress/audit",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/egress/audit",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/endpoints",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/endpoints",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/endpoints/active",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/endpoints/health",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/endpoints/provision",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/endpoints/stats",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/endpoints/{job_id}",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/endpoints/{job_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/endpoints/{job_id}/access",
+      "methods": [
+        "PUT"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/endpoints/{job_id}/deprovision",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/endpoints/{job_id}/location",
+      "methods": [
+        "PUT"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/endpoints/{job_id}/metrics",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/endpoints/{job_id}/refresh",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/endpoints/{job_id}/roll",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/endpoints/{job_id}/status",
+      "methods": [
+        "PUT"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/endpoints/{job_id}/upgrade",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/endpoints/{job_id}/used",
+      "methods": [
+        "PUT"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/evidence",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/evidence",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/evidence/claims/{claim_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/evidence/count",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/evidence/search",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/evidence/{evidence_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/evidence/{evidence_id}/status",
+      "methods": [
+        "PUT"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/experiment-registry",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/experiment-registry",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/experiment-registry/history/{project_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/experiment-registry/{experiment_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/experiment-registry/{experiment_id}/results",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/experiment-registry/{experiment_id}/status",
+      "methods": [
+        "PUT"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/files/download-status",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/files/download/{path:path}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/files/exists",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/files/list",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "suspect-param"
+    },
+    {
+      "path": "/umrs/files/presign",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/files/presign/batch",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/files/upload",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/files/{file_id:path}",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/files/{file_id:path}/metadata",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/grants",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/grants",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/grants/mine",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/grants/{grant_id}/revoke",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/jobs",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/jobs",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/jobs/events",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/jobs/{job_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/jobs/{job_id}/attempts/{attempt_id}/credentials",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/jobs/{job_id}/attempts/{attempt_id}/credentials/sts",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/jobs/{job_id}/attempts/{attempt_id}/presign",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/jobs/{job_id}/cancel",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/jobs/{job_id}/manifest",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/jobs/{job_id}/manifests",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/jobs/{job_id}/reproduce",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/jobs/{job_id}/retry",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/k2/artifacts",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/k2/emit-workflow",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/k2/ingest",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/k2/ingest/allowlist",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/k2/lint",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/k2/readiness",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/k2/verify",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/knowledge/approval",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/knowledge/approve",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/knowledge/artifacts/{artifact_id}",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/knowledge/corpus-attrition-report",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/knowledge/export",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/knowledge/external/search",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/knowledge/findings",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/knowledge/findings/{finding_key}",
+      "methods": [
+        "PATCH"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/knowledge/graph",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/knowledge/graph-pg",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/knowledge/graphs",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/knowledge/graphs",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/knowledge/graphs/{graph_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/knowledge/graphs/{graph_id}",
+      "methods": [
+        "PATCH"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/knowledge/graphs/{graph_id}/access",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/knowledge/graphs/{graph_id}/access",
+      "methods": [
+        "PUT"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/knowledge/graphs/{graph_id}/content",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/knowledge/graphs/{graph_id}/edges/{edge_id}/establish",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/knowledge/graphs/{graph_id}/nodes/{node_id}/establish",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/knowledge/graphs/{graph_id}/proposals",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/knowledge/graphs/{graph_id}/proposals",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/knowledge/graphs/{graph_id}/proposed",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/knowledge/import",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/knowledge/lineage/{artifact_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/knowledge/projects/{project_id}/events",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/knowledge/projects/{project_id}/events/health",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/knowledge/proposals/stats",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/knowledge/proposals/{proposal_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/knowledge/proposals/{proposal_id}/decision",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/knowledge/query",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/knowledge/readiness",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/knowledge/readiness/approve",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/knowledge/readiness/graph",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/knowledge/reconcile",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/knowledge/restore",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/knowledge/status",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/knowledge/understand",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/knowledge/upload",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/knowledge/verify",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/knowledge/verify/trigger",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/llm/v1/chat/completions",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/llm/v1/completions",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/llm/v1/embeddings",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/llm/v1/models",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/loops",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/loops",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/loops/{loop_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/loops/{loop_id}/iterations",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/loops/{loop_id}/iterations",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/loops/{loop_id}/pause",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/loops/{loop_id}/resume",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/loops/{loop_id}/snapshot",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/loops/{loop_id}/state",
+      "methods": [
+        "PUT"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/loops/{loop_id}/stop",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/mcp/call",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/mcp/health",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/mcp/invoke",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/mcp/servers",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/mcp/servers",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/mcp/servers/{server_id_or_name}",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/mcp/servers/{server_id_or_name}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/mcp/tools",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/mcp/tools/lookup",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/models",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/models",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/models/stage",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/models/system",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/models/system",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/models/{model_id}",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/models/{model_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/models/{model_id}",
+      "methods": [
+        "PATCH"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/models/{model_id}/detect",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/models/{model_id}/path",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/models/{model_id}/publish",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/models/{model_id}/versions",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/models/{model_id}/versions",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/models/{model_id}/versions/{version_str}",
+      "methods": [
+        "PATCH"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/models/{model_id}/versions/{version_str}/activate",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/models/{model_id}/versions/{version_str}/deactivate",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/models/{model_name}/download",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/models/{model_name}/policy",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/models/{model_name}/policy",
+      "methods": [
+        "PATCH"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/ops/audit/retention",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "admin-token(x-admin-token)"
+    },
+    {
+      "path": "/umrs/ops/audit/trace",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/ops/connect-info",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "open(discovery)|verified(s3cfg)"
+    },
+    {
+      "path": "/umrs/ops/governance/analytics",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "admin-token(x-admin-token)"
+    },
+    {
+      "path": "/umrs/ops/governance/orphans",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "admin-token(x-admin-token)"
+    },
+    {
+      "path": "/umrs/ops/governance/orphans",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "admin-token(x-admin-token)"
+    },
+    {
+      "path": "/umrs/ops/governance/ownership",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/ops/governance/ownership/transfer",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "admin-token(x-admin-token)"
+    },
+    {
+      "path": "/umrs/ops/governance/quotas",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/ops/governance/quotas",
+      "methods": [
+        "PUT"
+      ],
+      "router": "fastapi.routing",
+      "auth": "admin-token(x-admin-token)"
+    },
+    {
+      "path": "/umrs/ops/governance/shares",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "owner-or-admin-token(governance_user_id|x-admin-token)"
+    },
+    {
+      "path": "/umrs/ops/governance/shares",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "owner-or-admin-token(governance_user_id|x-admin-token)"
+    },
+    {
+      "path": "/umrs/ops/governance/shares",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "owner-or-admin-token(governance_user_id|x-admin-token)"
+    },
+    {
+      "path": "/umrs/ops/health",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/ops/ping",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/ops/reload",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/ops/schema/versions",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/ops/timeline",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/ops/topology",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/projects",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/projects",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/projects/{project_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/projects/{project_id}",
+      "methods": [
+        "PATCH"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/projects/{project_id}/agent-brief",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/projects/{project_id}/budget",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/projects/{project_id}/budget",
+      "methods": [
+        "PUT"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/projects/{project_id}/session-policy",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/projects/{project_id}/session-policy",
+      "methods": [
+        "PUT"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/projects/{project_id}/storage",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/projects/{project_id}/storage",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/projects/{project_id}/storage",
+      "methods": [
+        "PUT"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/projects/{project_id}/storage/check",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/provenance",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/provenance/diff",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/provenance/{job_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/provenance/{job_id}/lineage",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/quota/units",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/rag/corpus-access",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/rag/corpus-access",
+      "methods": [
+        "PUT"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/rag/documents",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/rag/documents/{document_id}",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/rag/documents/{document_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/rag/passages/{node_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/rag/query",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/rag/retrieve",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/rag/stats",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/rag/upload",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/reflective-memory",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/reflective-memory/{tier}/reset",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/reflective-memory/{tier}/{entry_id}",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/research/sessions",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/research/sessions",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/research/sessions/{session_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/research/sessions/{session_id}",
+      "methods": [
+        "PATCH"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/research/sessions/{session_id}/loops",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/research/sessions/{session_id}/loops",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/research/sessions/{session_id}/loops/{loop_id}",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/scientific-catalogs",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/scientific-catalogs",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/scientific-catalogs/pins/by-ref/{ref}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/scientific-catalogs/versions/list",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/scientific-catalogs/{catalog_id}",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/scientific-catalogs/{catalog_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/scientific-catalogs/{catalog_id}",
+      "methods": [
+        "PATCH"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/scientific-catalogs/{catalog_id}/access",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/scientific-catalogs/{catalog_id}/access",
+      "methods": [
+        "PUT"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/scientific-catalogs/{catalog_id}/pins",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/scientific-memory/count",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/scientific-memory/entries",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/scientific-memory/entries",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/scientific-memory/entries/{entry_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/scientific-memory/entries/{entry_id}/status",
+      "methods": [
+        "PUT"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/scientific-memory/search",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/scientific-memory/timeline",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/scopes",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/scopes/revoke",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/secrets/audit",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/secrets/cleanup",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/secrets/job/{job_id}/revoke",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/secrets/lease",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/secrets/lease",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/secrets/lease/{lease_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/secrets/lease/{lease_id}/renew",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/secrets/lease/{lease_id}/revoke",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/secrets/validate",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/sites/me",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/skills",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/skills",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/skills/",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/skills/",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/skills/pending",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/skills/search",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/skills/{skill_id_or_name}",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/skills/{skill_id_or_name}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/skills/{skill_id}/review",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/traces",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/traces/execution/{execution_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/traces/expired",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/traces/job/{job_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/traces/plan-runs/{run_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/traces/plan-runs/{run_id}/attempts",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/traces/plan-runs/{run_id}/attempts/{attempt_id}/finish",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/traces/plan-runs/{run_id}/cancel",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/traces/plan-runs/{run_id}/records",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/traces/plan-runs/{run_id}/records",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/traces/plan-runs/{run_id}/venue",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/traces/plan-runs/{run_id}/venue",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/traces/step/{step_name}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/traces/{trace_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/traces/{trace_id}",
+      "methods": [
+        "PATCH"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/traces/{trace_id}/children",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/traces/{trace_id}/inputs",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/traces/{trace_id}/lineage",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/traces/{trace_id}/outputs",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/uploads/manifests",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/uploads/manifests/{manifest_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/uploads/manifests/{manifest_id}/complete",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/uploads/manifests/{manifest_id}/parts/{part_no}",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/uploads/manifests/{manifest_id}/parts/{part_no}/presign",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/usage/billing",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/usage/me",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/usage/records",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/usage/summary",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/user-sources/audit",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/user-sources/grants",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/user-sources/grants/for-me",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/user-sources/grants/mine",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/user-sources/grants/{grant_id}/revoke",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/user-sources/sealed",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/user-sources/sealed",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/user-sources/sealed/{name}",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/vision/infer/cancel",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/vision/infer/get",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/vision/infer/status",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/vision/infer/submit",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/web",
+      "methods": [
+        "GET"
+      ],
+      "router": "umrs.server.http_sidecar",
+      "auth": "open(white)"
+    },
+    {
+      "path": "/umrs/web/dashboard/connectors",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/web/dashboard/health",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "open(white)"
+    },
+    {
+      "path": "/umrs/web/dashboard/jobs",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/web/dashboard/jobs/{job_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/web/dashboard/knowledge",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/web/dashboard/metrics",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "open(white)"
+    },
+    {
+      "path": "/umrs/web/dashboard/models",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/web/dashboard/models/{model_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/web/dashboard/notifications",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/web/dashboard/overview",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/web/dashboard/sse/intake",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/web/dashboard/sse/jobs",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/web/dashboard/sse/workflows",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/web/dashboard/workflows",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/workflows",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/workflows/executions/{execution_id}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/workflows/executions/{execution_id}/cancel",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/workflows/executions/{execution_id}/results",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/workflows/executions/{execution_id}/steps/{step_name}/approve",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/workflows/run-definitions",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/workflows/run-definitions",
+      "methods": [
+        "PUT"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/workflows/run-definitions/{name}",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/workflows/run-definitions/{name}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/workflows/run-definitions/{name}/trigger",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/workflows/upload",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/workflows/{workflow_name}",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/workflows/{workflow_name}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/workflows/{workflow_name}/access",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/workflows/{workflow_name}/access",
+      "methods": [
+        "PUT"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/workflows/{workflow_name}/commit",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/workflows/{workflow_name}/package",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/workflows/{workflow_name}/plan",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/workflows/{workflow_name}/trigger",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/workflows/{workflow_name}/triggers",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/zmq/server-key",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/zmq/session",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/zmq/session",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/zmq/session/{session_id}",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/zmq/session/{session_id}/refresh",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "edge-auth(nginx)"
+    }
+  ],
+  "summary": {
+    "open(white)": 6,
+    "verified": 244,
+    "edge-auth(nginx)": 140,
+    "open(probe)": 1,
+    "admin(jwt|verified-admin)": 8,
+    "lease-token": 13,
+    "suspect-param": 1,
+    "admin-token(x-admin-token)": 6,
+    "open(discovery)|verified(s3cfg)": 1,
+    "owner-or-admin-token(governance_user_id|x-admin-token)": 3
+  }
+}

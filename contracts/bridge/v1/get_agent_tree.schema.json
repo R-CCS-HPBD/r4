@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/get_agent_tree.schema.json",
+  "title": "get_agent_tree",
+  "description": "get_agent_tree: rooted subtrees with counters.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/GetAgentTreeResult",
+  "$defs": {
+    "AgentTreeNode": {
+      "type": "object",
+      "description": "get_agent_tree node: a record whose children embed full subtrees.",
+      "properties": {
+        "agent_id": {
+          "type": "string"
+        },
+        "parent_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "task": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "current_tool": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "last_tool": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "started_at": {
+          "type": "string"
+        },
+        "ended_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tool_count": {
+          "type": "integer"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AgentTreeNode"
+          }
+        },
+        "elapsed_sec": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "agent_id",
+        "parent_id",
+        "name",
+        "task",
+        "status",
+        "current_tool",
+        "last_tool",
+        "started_at",
+        "ended_at",
+        "tool_count",
+        "children",
+        "elapsed_sec"
+      ],
+      "additionalProperties": true
+    },
+    "GetAgentTreeResult": {
+      "type": "object",
+      "description": "get_agent_tree: rooted subtrees with counters.",
+      "properties": {
+        "agents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AgentTreeNode"
+          }
+        },
+        "active_count": {
+          "type": "integer"
+        },
+        "total_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "agents",
+        "active_count",
+        "total_count"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

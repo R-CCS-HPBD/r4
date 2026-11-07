@@ -1,0 +1,55 @@
+#!/bin/bash
+# Mock sinfo - Display Slurm partition/node information
+#
+# Simulates a single partition "gpu" with one compute node
+
+set -e
+
+COMPUTE_NODE="${MOCK_SLURM_COMPUTE_NODE:-compute-mock}"
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -N|--nodes)
+            echo "NODELIST"
+            echo "$COMPUTE_NODE"
+            exit 0
+            ;;
+        -p|--partition)
+            PARTITION="$2"
+            shift 2
+            ;;
+        --json)
+            cat <<EOF
+{
+  "nodes": [
+    {
+      "name": "$COMPUTE_NODE",
+      "state": "idle",
+      "cpus": 8,
+      "memory": 65536,
+      "gres": "gpu:1"
+    }
+  ],
+  "partitions": [
+    {
+      "name": "gpu",
+      "state": "up",
+      "nodes": "$COMPUTE_NODE"
+    }
+  ]
+}
+EOF
+            exit 0
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
+# Default output
+cat <<EOF
+PARTITION AVAIL  TIMELIMIT  NODES  STATE NODELIST
+gpu*         up   infinite      1   idle $COMPUTE_NODE
+EOF

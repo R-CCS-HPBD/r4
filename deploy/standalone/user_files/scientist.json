@@ -1,0 +1,40 @@
+{
+  "username": "scientist",
+  "fullname": "Stand-alone scientist",
+  "s3_configuration_file": "/var/lib/umrs/s3cfg_scientist",
+  "experiences": [
+    {
+      "xp_name": "default",
+      "sql_username": "scientist_default",
+      "modalities": [
+        {
+          "modality_name": "text",
+          "s3": {
+            "bucket_alias": "text",
+            "data": {
+              "type": "inline",
+              "mime_type": "text/plain"
+            }
+          },
+          "model": {
+            "model_name": "/opt/umrs/models/e5-base-v2",
+            "vector_size": "768",
+            "model_type": "TransformerEncoder",
+            "spacy_model": "en_core_web_sm",
+            "return_type": null
+          },
+          "sql": {
+            "store_embeddings": "yes",
+            "table_name": "text",
+            "meta_data": [
+              {
+                "name": "keywords",
+                "type": "TEXT"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

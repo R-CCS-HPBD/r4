@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/trust_list.schema.json",
+  "title": "trust_list",
+  "description": "trust_list: the caller's unexpired trust rows.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/TrustListResult",
+  "$defs": {
+    "TrustListResult": {
+      "type": "object",
+      "description": "trust_list: the caller's unexpired trust rows.",
+      "properties": {
+        "rows": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TrustRow"
+          }
+        },
+        "count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "rows",
+        "count"
+      ],
+      "additionalProperties": true
+    },
+    "TrustRow": {
+      "type": "object",
+      "description": "One server-side trust allowlist row (UMRS ``TrustRow.to_dict``).",
+      "properties": {
+        "user_id": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "tool_name": {
+          "type": "string"
+        },
+        "expires_at": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "created_by": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_id",
+        "scope",
+        "tool_name",
+        "expires_at"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

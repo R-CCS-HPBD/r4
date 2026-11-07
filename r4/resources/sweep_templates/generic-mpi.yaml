@@ -1,0 +1,23 @@
+name: generic-mpi
+description: Generic MPI command sweep across node/task sizes
+defaults:
+  partition: bigmem
+  time: 01:00:00
+  mem: 16G
+  nodes: 1
+params:
+  ntasks: {required: true}
+  cmd: {required: true}
+  workdir: {default: "$SLURM_SUBMIT_DIR"}
+script: |
+  #!/bin/bash
+  #SBATCH --job-name=r4sweep-generic-mpi-{{ntasks}}
+  #SBATCH --partition={{partition}}
+  #SBATCH --time={{time}}
+  #SBATCH --mem={{mem}}
+  #SBATCH --nodes={{nodes}}
+  #SBATCH --ntasks={{ntasks}}
+
+  set -euo pipefail
+  cd "{{workdir}}"
+  srun --mpi=pmi2 {{cmd}}

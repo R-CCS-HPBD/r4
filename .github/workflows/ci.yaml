@@ -1,0 +1,68 @@
+# Public CI for R-CCS-HPBD/r4. The export (scripts/public_export/export.py in
+# the development repository) installs this file as .github/workflows/ci.yaml
+# and drops every private workflow. GitHub-hosted runners only: a public
+# repository must never reach a self-hosted runner (fork PRs would run there).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install "ruff==0.16.6"  # the private CI's pin
+      - run: ruff check r4/src r4-contracts/src
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install the client packages
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ./r4-contracts -e ./packages/r4-teamengine-spi -e ./science \
+            -e "./r4[dev,test,umrs]" -e "./umrs/src[client]" -e ./mcp-servers \
+            fastapi python-multipart pytest-xdist ipython
+      - name: Contract tests
+        run: python -m pytest r4-contracts/tests -q
+      - name: r4 SDK tests
+        working-directory: r4
+        # The deselects mirror the development repository's hosted CI (suites
+        # still landing). test_umrs_api_modules_import_without_errors imports
+        # every UMRS server module and needs the full server stack (spaCy,
+        # LangChain, ...), which this client-only job does not install.
+        run: |
+          mkdir -p "$RUNNER_TEMP/test-home" && chmod a-w "$RUNNER_TEMP/test-home"
+          export HOME="$RUNNER_TEMP/test-home"
+          python -m pytest tests/ -q -n 4 -p no:cacheprovider \
+            --deselect tests/test_jupyter.py \
+            --ignore=tests/test_companion/test_jupyter_magic.py \
+            --deselect "tests/test_package_imports.py::test_import[r4.jupyter]" \
+            --deselect tests/test_cli.py::TestCLIConfigContext \
+            --deselect tests/test_cli_help.py::test_cli_help_exits_zero \
+            --deselect tests/test_gateway_down_ux.py \
+            --deselect tests/test_sweep_templates.py::TestCLIParserSetup::test_sweep_group_registered \
+            --deselect tests/test_user_journeys.py \
+            --deselect tests/test_tui_backend_audit_coverage.py::test_umrs_api_modules_import_without_errors

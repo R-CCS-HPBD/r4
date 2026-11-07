@@ -1,0 +1,150 @@
+{
+  "plan_version": 1,
+  "name": "kakenhi-report",
+  "description": "The kakenhi-report crew (ADR-092 slice 4): a JSPS-style (KAKENHI) outcome report. The lead establishes the baseline from the project's records (aims as funded, outcomes so far, what remains); writers draft the progress-to-date, the deliverables mapped to KAKEN categories and the future plan with milestones; a checker traces every outcome and reference; the lead fits the sections to the form's length. Read-only: the report comes back as the result.",
+  "params": {
+    "subject": {"type": "string", "required": true, "description": "the funded project the report is for"},
+    "context": {"type": "string", "default": "", "description": "the form's checklist, the grant number, what the records are"},
+    "section_chars": {"type": "integer", "default": 2000, "min": 300, "max": 8000, "description": "the form's length limit per section, in characters"},
+    "reviewer_model": {"type": "string", "default": null, "description": "a different model for the checker; the plan warns when it checks on the writer's model"}
+  },
+  "agents": {
+    "lead": {
+      "instructions": {"ref": "crew_role:kakenhi-report/lead"},
+      "tools": ["knowledge_query", "file_read", "grep_search", "glob_search", "list_dir"],
+      "max_tool_rounds": 6
+    },
+    "writer": {
+      "instructions": {"ref": "crew_role:kakenhi-report/writer"},
+      "tools": ["knowledge_query", "file_read", "grep_search"],
+      "max_tool_rounds": 6
+    },
+    "checker": {
+      "instructions": {"ref": "crew_role:kakenhi-report/checker"},
+      "model": "{{params.reviewer_model}}",
+      "tools": ["knowledge_query", "file_read", "grep_search"],
+      "max_tool_rounds": 6,
+      "reviews": ["writer"]
+    }
+  },
+  "concurrency": 3,
+  "budget": {"max_tokens": 500000, "max_agents": 10, "max_wallclock_sec": 3600},
+  "phases": [
+    {
+      "id": "baseline",
+      "title": "Baseline summary",
+      "steps": [
+        {
+          "id": "baseline",
+          "kind": "agent",
+          "use": "lead",
+          "label": "lead",
+          "prompt": "Draft a KAKENHI-style report for '{{params.subject}}' aligned to the latest form checklist, with the emphasis on research outcomes so far and the remaining goals with concrete milestones.\nThe form and the records: {{params.context}}\nFirst establish the baseline from the project's records: the aims as funded, each outcome so far with the record that shows it, and what remains.",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "aims": {"type": "string", "maxLength": 2000},
+              "outcomes": {
+                "type": "array",
+                "maxItems": 30,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "outcome": {"type": "string", "maxLength": 600},
+                    "evidence": {"type": "string", "maxLength": 600}
+                  },
+                  "required": ["outcome", "evidence"]
+                }
+              },
+              "remaining": {"type": "array", "maxItems": 20, "items": {"type": "string", "maxLength": 600}}
+            },
+            "required": ["aims", "outcomes", "remaining"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sections",
+      "title": "Draft the sections",
+      "steps": [
+        {
+          "id": "sections",
+          "kind": "agent",
+          "use": "writer",
+          "label": "writer",
+          "fanout": {"values": ["progress-to-date", "deliverables-map", "future-plan"], "as": "section"},
+          "prompt": "Report for '{{params.subject}}'. Draft the section '{{section}}' within {{params.section_chars}} characters. progress-to-date: the outcomes so far against the aims; deliverables-map: a table mapping each deliverable to its KAKEN category; future-plan: the remaining goals with concrete, dated milestones.\nThe baseline:\n{{steps.baseline.output|json}}",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "section": {"type": "string", "enum": ["progress-to-date", "deliverables-map", "future-plan"]},
+              "text": {"type": "string", "maxLength": 9000},
+              "references": {"type": "array", "maxItems": 40, "items": {"type": "string", "maxLength": 400}}
+            },
+            "required": ["section", "text", "references"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "check",
+      "title": "Trace outcomes and references",
+      "steps": [
+        {
+          "id": "check",
+          "kind": "agent",
+          "use": "checker",
+          "label": "checker",
+          "prompt": "Check the drafted sections of the report for '{{params.subject}}' against the baseline and the project's records.\nThe baseline:\n{{steps.baseline.output|json}}\nThe sections:\n{{steps.sections.output|json}}",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "issues": {
+                "type": "array",
+                "maxItems": 40,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "section": {"type": "string", "maxLength": 60},
+                    "problem": {"type": "string", "maxLength": 600},
+                    "fix": {"type": "string", "maxLength": 600}
+                  },
+                  "required": ["section", "problem", "fix"]
+                }
+              }
+            },
+            "required": ["issues"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "fit",
+      "title": "Fit to the form",
+      "steps": [
+        {
+          "id": "report",
+          "kind": "agent",
+          "use": "lead",
+          "label": "lead-fit",
+          "prompt": "Fit the report for '{{params.subject}}' to the form: apply every fix the checker names, keep each section within {{params.section_chars}} characters, and keep the form's order.\nThe sections:\n{{steps.sections.output|json}}\nThe checker's issues:\n{{steps.check.output|json}}",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "progress_to_date": {"type": "string", "maxLength": 9000},
+              "deliverables_map": {"type": "string", "maxLength": 9000},
+              "future_plan": {"type": "string", "maxLength": 9000},
+              "unresolved": {"type": "array", "maxItems": 20, "items": {"type": "string", "maxLength": 600}}
+            },
+            "required": ["progress_to_date", "deliverables_map", "future_plan", "unresolved"]
+          }
+        }
+      ]
+    }
+  ],
+  "output": {
+    "baseline": "steps.baseline.output",
+    "report": "steps.report.output",
+    "issues": "steps.check.output.issues"
+  }
+}

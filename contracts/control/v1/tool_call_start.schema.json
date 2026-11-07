@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/control/v1/tool_call_start.schema.json",
+  "title": "tool_call_start",
+  "description": "One governed tool invocation started.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "type",
+    "payload"
+  ],
+  "properties": {
+    "type": {
+      "const": "tool_call_start"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "version": {
+          "type": "integer",
+          "default": 1
+        },
+        "session_id": {
+          "type": "string",
+          "default": ""
+        },
+        "tool_call_id": {
+          "type": "string",
+          "default": ""
+        },
+        "name": {
+          "type": "string",
+          "default": ""
+        },
+        "args_summary": {
+          "type": "string",
+          "default": ""
+        },
+        "risk_tier": {
+          "type": "string",
+          "enum": [
+            "risky",
+            "never_auto"
+          ],
+          "default": "risky"
+        }
+      }
+    }
+  }
+}

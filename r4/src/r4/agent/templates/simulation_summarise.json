@@ -1,0 +1,63 @@
+{
+  "name": "simulation_summarise",
+  "version": "0.1",
+  "description": "Take a simulation output bundle (NetCDF/HDF5/CSV + metadata), produce a plain-language summary, KPIs, and follow-up experiments.",
+  "tags": ["simulation", "summarisation", "research"],
+  "parameters": [
+    {
+      "name": "artifact_id",
+      "kind": "string",
+      "required": true,
+      "description": "A2L artifact ID for the simulation output bundle."
+    },
+    {
+      "name": "audience",
+      "kind": "string",
+      "required": false,
+      "default": "PI",
+      "description": "Reading audience (e.g. 'PI', 'collaborator', 'student')."
+    },
+    {
+      "name": "kpis",
+      "kind": "list[string]",
+      "required": false,
+      "default": [],
+      "description": "Optional list of named KPIs to extract."
+    }
+  ],
+  "steps": [
+    {
+      "id": "resolve_artifact",
+      "tool": "artifact.show",
+      "args": {"artifact_id": "{{artifact_id}}"}
+    },
+    {
+      "id": "fetch_metadata",
+      "tool": "files.fetch",
+      "depends_on": ["resolve_artifact"],
+      "args": {"url": "{{resolve_artifact.metadata_url}}"}
+    },
+    {
+      "id": "extract_kpis",
+      "tool": "llm.chat",
+      "depends_on": ["fetch_metadata"],
+      "args": {
+        "system": "Extract the requested KPIs from the metadata; missing KPIs should be returned as null. Output JSON.",
+        "input": "kpis:{{kpis}}\n\nmetadata:{{fetch_metadata.result}}"
+      }
+    },
+    {
+      "id": "summarise",
+      "tool": "llm.chat",
+      "depends_on": ["extract_kpis", "fetch_metadata"],
+      "args": {
+        "system": "Write a plain-language summary tailored to a {{audience}}. Include the KPIs and 2-3 follow-up experiments worth running.",
+        "input": "kpis:{{extract_kpis.result}}\n\nmetadata:{{fetch_metadata.result}}"
+      }
+    }
+  ],
+  "outputs": [
+    {"name": "summary", "from": "summarise.result"},
+    {"name": "kpis", "from": "extract_kpis.result"}
+  ]
+}

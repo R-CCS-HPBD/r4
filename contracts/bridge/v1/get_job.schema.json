@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/get_job.schema.json",
+  "title": "get_job",
+  "description": "get_job: the local row, or the durable view when only UMRS has it.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/GetJobResult",
+  "$defs": {
+    "DurableJobRow": {
+      "type": "object",
+      "description": "One UMRS durable job view (``_durable_job``).",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "job_id": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "job_type": {
+          "type": "string"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "attempts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JobAttemptRow"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "job_id",
+        "state",
+        "status",
+        "job_type",
+        "project_id",
+        "attempts"
+      ],
+      "additionalProperties": true
+    },
+    "GetJobResult": {
+      "type": "object",
+      "description": "get_job: the local row, or the durable view when only UMRS has it.",
+      "properties": {
+        "job": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LocalJobRow"
+            },
+            {
+              "$ref": "#/$defs/DurableJobRow"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "job"
+      ],
+      "additionalProperties": true
+    },
+    "JobAttemptRow": {
+      "type": "object",
+      "description": "One durable attempt (``_attempt_row``).",
+      "properties": {
+        "attempt_id": {
+          "type": "string"
+        },
+        "attempt_no": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "string"
+        },
+        "backend": {
+          "type": "string"
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ended_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "detail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "attempt_id",
+        "attempt_no",
+        "status",
+        "backend",
+        "started_at",
+        "ended_at",
+        "detail"
+      ],
+      "additionalProperties": true
+    },
+    "LocalJobRow": {
+      "type": "object",
+      "description": "One detached-agent job (the job manager's sqlite row).",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "pid": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "type": "string"
+        },
+        "started_at": {
+          "type": "string"
+        },
+        "ended_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "log_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "task_description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "session_id",
+        "pid",
+        "status",
+        "started_at",
+        "ended_at",
+        "log_path",
+        "task_description"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

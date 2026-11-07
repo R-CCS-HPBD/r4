@@ -1,0 +1,38 @@
+{
+  "name": "sample_coding",
+  "version": 1,
+  "description": "Minimal smoke suite: file creation, stub implementation, broken-code repair. Cheap to run; validates the full adapter+grader path.",
+  "cases": [
+    {
+      "id": "hello-file",
+      "prompt": "In the current working directory, create a file hello.py that prints exactly 'hello world' when run with `python hello.py`. Run it to verify, then stop.",
+      "graders": ["status_success", "metrics_sanity", "artifact_present", "test_pass"],
+      "expected_outputs": ["hello.py"],
+      "test_command": "python hello.py"
+    },
+    {
+      "id": "implement-add",
+      "prompt": "The file calc.py contains a stub `def add(a, b)` that returns None. Implement it so that `python test_calc.py` passes. Run the test to verify, then stop.",
+      "setup": {
+        "files": {
+          "calc.py": "def add(a, b):\n    \"\"\"Return the sum of a and b.\"\"\"\n    return None\n",
+          "test_calc.py": "import calc\n\n\ndef test_add():\n    assert calc.add(2, 3) == 5\n    assert calc.add(-1, 1) == 0\n\n\nif __name__ == \"__main__\":\n    test_add()\n    print(\"ok\")\n"
+        }
+      },
+      "graders": ["status_success", "test_pass"],
+      "test_command": "python test_calc.py"
+    },
+    {
+      "id": "repair-syntax",
+      "prompt": "The file broken.py has a syntax error. Fix it so that `python broken.py` runs and prints a number. Run it to verify, then stop.",
+      "setup": {
+        "files": {
+          "broken.py": "def main()\n    print(40 + 2)\n\nmain()\n"
+        }
+      },
+      "graders": ["status_success", "test_pass", "content_match"],
+      "test_command": "python broken.py",
+      "expect": {"content_match": {"broken.py": ["def main\\(\\):"]}}
+    }
+  ]
+}

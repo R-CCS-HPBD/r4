@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/circles.members.schema.json",
+  "title": "circles.members",
+  "description": "circles.members: the roster of one circle.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/CirclesMembersResult",
+  "$defs": {
+    "CircleMemberRow": {
+      "type": "object",
+      "description": "One circle member (the store's member row).",
+      "properties": {
+        "user_id": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "added_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "added_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "user_id",
+        "role",
+        "added_by",
+        "added_at"
+      ],
+      "additionalProperties": true
+    },
+    "CirclesMembersResult": {
+      "type": "object",
+      "description": "circles.members: the roster of one circle.",
+      "properties": {
+        "members": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CircleMemberRow"
+          }
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "circle_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "members",
+        "project_id",
+        "circle_id"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/research_loop.list.schema.json",
+  "title": "research_loop.list",
+  "description": "research_loop.list: live loops for the project.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ResearchLoopListResult",
+  "$defs": {
+    "BridgeLoopRow": {
+      "type": "object",
+      "description": "One loop in the research_loop.* projections (``_serialize_loop``).",
+      "properties": {
+        "loop_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "phase": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "research_goal": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "current_iteration": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_iterations": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tracks": {
+          "anyOf": [
+            {
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_tracks": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "loop_id",
+        "status",
+        "phase",
+        "research_goal",
+        "current_iteration",
+        "max_iterations"
+      ],
+      "additionalProperties": true
+    },
+    "ResearchLoopListResult": {
+      "type": "object",
+      "description": "research_loop.list: live loops for the project.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "research_loop_list"
+          ]
+        },
+        "project_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "loops": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/BridgeLoopRow"
+          }
+        },
+        "active_count": {
+          "type": "integer"
+        },
+        "runtime": {
+          "type": "string"
+        },
+        "durable": {
+          "type": "boolean"
+        },
+        "distributed": {
+          "type": "boolean"
+        },
+        "backends": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "type",
+        "project_id",
+        "loops",
+        "active_count",
+        "runtime",
+        "durable",
+        "distributed",
+        "backends"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

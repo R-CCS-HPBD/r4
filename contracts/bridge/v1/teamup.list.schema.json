@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/teamup.list.schema.json",
+  "title": "teamup.list",
+  "description": "teamup.list: every session in the local store, newest first.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/TeamupListResult",
+  "$defs": {
+    "TeamupListResult": {
+      "type": "object",
+      "description": "teamup.list: every session in the local store, newest first.",
+      "properties": {
+        "sessions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TeamupSessionRow"
+          }
+        },
+        "count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "sessions",
+        "count"
+      ],
+      "additionalProperties": true
+    },
+    "TeamupSessionRow": {
+      "type": "object",
+      "description": "One stored teamup session (``TeamupSession.list_sessions``).",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "iteration": {
+          "type": "integer"
+        },
+        "updated_at": {
+          "type": "string"
+        },
+        "project_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "max_iterations": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "name",
+        "status",
+        "iteration",
+        "updated_at",
+        "project_id",
+        "roles",
+        "max_iterations"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

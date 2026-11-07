@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/workflow_describe.schema.json",
+  "title": "workflow_describe",
+  "description": "workflow_describe: UMRS ``GET /workflows/{name}`` body, relayed.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/WorkflowDescription",
+  "$defs": {
+    "WorkflowDescription": {
+      "type": "object",
+      "description": "workflow_describe: UMRS ``GET /workflows/{name}`` body, relayed.",
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "contract_version": {
+          "type": "string"
+        },
+        "workflow_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "version": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        },
+        "parameter_schema": {
+          "$ref": "#/$defs/WorkflowParameterSchema"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/WorkflowStepDefinition"
+          }
+        },
+        "requirements": {
+          "type": "array"
+        },
+        "triggers": {
+          "type": "array"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "WorkflowParameterSchema": {
+      "type": "object",
+      "description": "A workflow's declared parameter JSON Schema (UMRS ``_workflow_parameter_schema``).",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "properties": {
+          "type": "object"
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "WorkflowStepDefinition": {
+      "type": "object",
+      "description": "One declared step: a catalog row (name, entrypoint) or a workflow.json step.",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "entrypoint": {
+          "type": "string"
+        },
+        "config": {
+          "type": "object"
+        },
+        "depends_on": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "model_type": {
+          "type": "string"
+        },
+        "requires": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

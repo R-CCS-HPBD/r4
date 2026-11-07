@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "pinned_at": "2026-08-17",
+  "servers": {
+    "platform-tools": {
+      "lane": "v1",
+      "version": "1.0.0",
+      "tools": ["endpoint_health", "list_endpoints", "list_jobs", "list_models"]
+    },
+    "rag-search": {
+      "lane": "v1",
+      "version": "1.0.0",
+      "tools": ["rag_list_documents", "rag_search", "rag_status"]
+    },
+    "knowledge-tools": {
+      "lane": "v1beta",
+      "version": "1.0.0",
+      "tools": ["knowledge_readiness", "knowledge_search", "knowledge_status", "knowledge_verify"]
+    }
+  }
+}

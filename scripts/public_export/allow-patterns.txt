@@ -1,0 +1,18 @@
+# Reviewed exceptions to the internal-detail scan (export.py PATTERNS).
+# One per line: '<fnmatch glob> <pattern-name|*>'. Every line needs a reason
+# in the comment above it. Empty on purpose until the P5b review: the first
+# dry run lists every hit, and each one is either fixed in mnagaso/r4 or
+# allowed here with its reason.
+
+
+# Recorded PTY output (pty-live goldens) showing the workspace path of the
+# machine that recorded them; editing them would invalidate the recording.
+# The path names only the maintainer's public GitHub login (P5b-2, 2026-11-06).
+packages/r4-tui-v3/tests/pty-live/golden/work-after.txt home-path
+packages/r4-tui-v3/tests/pty-live/golden/work-still.txt home-path
+
+
+# Not a personal address (P5b-4, 2026-11-06): an obviously fictional fixture
+# user in a key-escaping test. (The team address once allowed here was not a
+# monitored mailbox and is gone, 2026-11-07.)
+r4/tests/test_companion/test_site_routing.py person-email

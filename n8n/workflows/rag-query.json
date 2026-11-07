@@ -1,0 +1,242 @@
+{
+  "name": "RAG Query Workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "inputSource": "define",
+        "definitions": [
+          {
+            "id": "query",
+            "name": "query",
+            "type": "string",
+            "value": "What are the key findings in the uploaded documents?"
+          },
+          {
+            "id": "collection",
+            "name": "collection",
+            "type": "string",
+            "value": "default"
+          },
+          {
+            "id": "top_k",
+            "name": "top_k",
+            "type": "number",
+            "value": 5
+          }
+        ]
+      },
+      "id": "set_input",
+      "name": "Set RAG Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.GATEWAY_URL }}/gw/rag/v1/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\": \"{{ $json.query }}\",\n  \"collection\": \"{{ $json.collection }}\",\n  \"top_k\": {{ $json.top_k }},\n  \"include_metadata\": true\n}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "rag_query",
+      "name": "RAG Query",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "gateway-credential",
+          "name": "AI-for-Science Platform Gateway"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputSource": "define",
+        "definitions": [
+          {
+            "id": "context",
+            "name": "context",
+            "type": "string",
+            "value": "={{ $json.results.map(r => r.content).join('\\n\\n') }}"
+          },
+          {
+            "id": "sources",
+            "name": "sources",
+            "type": "string",
+            "value": "={{ $json.results.map(r => r.metadata.source || 'unknown').join(', ') }}"
+          }
+        ]
+      },
+      "id": "extract_context",
+      "name": "Extract Context",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.GATEWAY_URL }}/gw/llm/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"rivault-gpt-oss-static\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a helpful assistant. Answer questions based on the provided context. If the context doesn't contain relevant information, say so.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Context:\\n{{ $json.context }}\\n\\nQuestion: {{ $('Set RAG Input').item.json.query }}\"\n    }\n  ],\n  \"max_tokens\": 2048,\n  \"temperature\": 0.3\n}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "llm_with_context",
+      "name": "LLM with Context",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1050, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "gateway-credential",
+          "name": "AI-for-Science Platform Gateway"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputSource": "define",
+        "definitions": [
+          {
+            "id": "answer",
+            "name": "answer",
+            "type": "string",
+            "value": "={{ $json.choices[0].message.content }}"
+          },
+          {
+            "id": "sources_used",
+            "name": "sources_used",
+            "type": "string",
+            "value": "={{ $('Extract Context').item.json.sources }}"
+          },
+          {
+            "id": "original_query",
+            "name": "original_query",
+            "type": "string",
+            "value": "={{ $('Set RAG Input').item.json.query }}"
+          }
+        ]
+      },
+      "id": "format_output",
+      "name": "Format Output",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [1250, 300]
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Set RAG Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set RAG Input": {
+      "main": [
+        [
+          {
+            "node": "RAG Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RAG Query": {
+      "main": [
+        [
+          {
+            "node": "Extract Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Context": {
+      "main": [
+        [
+          {
+            "node": "LLM with Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM with Context": {
+      "main": [
+        [
+          {
+            "node": "Format Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "saveExecutionProgress": true
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "rag"
+    },
+    {
+      "name": "llm"
+    },
+    {
+      "name": "ai-platform"
+    }
+  ],
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

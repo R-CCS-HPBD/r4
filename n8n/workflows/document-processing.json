@@ -1,0 +1,705 @@
+{{
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}  }    "templateCredsSetupCompleted": false  "meta": {  ],    }      "name": "ai-platform"    {    },      "name": "document"    {    },      "name": "rag"    {  "tags": [  "staticData": null,  },    "saveExecutionProgress": true    "saveDataErrorExecution": "all",    "saveDataSuccessExecution": "all",  "settings": {  },    }      ]        ]          }            "index": 0            "type": "main",            "node": "Final Output",          {        [      "main": [    "Send Notification": {    },      ]        ]          }            "index": 0            "type": "main",            "node": "Final Output",          {        [        ],          }            "index": 0            "type": "main",            "node": "Send Notification",          {        [      "main": [    "Should Notify?": {    },      ]        ]          }            "index": 0            "type": "main",            "node": "Should Notify?",          {        [      "main": [    "Error Output": {    },      ]        ]          }            "index": 0            "type": "main",            "node": "Should Notify?",          {        [      "main": [    "Success Output": {    },      ]        ]          }            "index": 0            "type": "main",            "node": "Error Output",          {        [        ],          }            "index": 0            "type": "main",            "node": "Success Output",          {        [      "main": [    "Check Status": {    },      ]        ]          }            "index": 0            "type": "main",            "node": "Check Status",          {        [      "main": [    "Ingest Document": {    },      ]        ]          }            "index": 0            "type": "main",            "node": "Ingest Document",          {        [      "main": [    "Extract Parameters": {    },      ]        ]          }            "index": 0            "type": "main",            "node": "Extract Parameters",          {        [      "main": [    "Webhook Trigger": {  "connections": {  ],    }      "position": [1650, 200]      "typeVersion": 1,      "type": "n8n-nodes-base.noOp",      "name": "Final Output",      "id": "final_output",      },        "options": {}      "parameters": {    {    },      }        }          "name": "SMTP"          "id": "smtp-credential",        "smtp": {      "credentials": {      "position": [1450, 100],      "typeVersion": 2.1,      "type": "n8n-nodes-base.emailSend",      "name": "Send Notification",      "id": "send_notification",      },        "options": {}        "text": "=Document Processing Report\n\nStatus: {{ $json.status }}\nCollection: {{ $json.collection || 'N/A' }}\nDocument ID: {{ $json.document_id || 'N/A' }}\nChunks Created: {{ $json.chunks_created || 0 }}\n\n{{ $json.message }}\n{{ $json.error_message ? '\\nError: ' + $json.error_message : '' }}",        "subject": "=Document Processing {{ $json.status === 'success' ? 'Complete' : 'Failed' }}",        "toEmail": "={{ $('Extract Parameters').item.json.notify_email }}",        "fromEmail": "noreply@ai-platform.local",      "parameters": {    {    },      "position": [1250, 200]      "typeVersion": 2,      "type": "n8n-nodes-base.if",      "name": "Should Notify?",      "id": "check_notify",      },        "options": {}        },          "combinator": "and"          ],            }              }                "operation": "notEquals"                "type": "string",              "operator": {              "rightValue": "",              "leftValue": "={{ $('Extract Parameters').item.json.notify_email }}",              "id": "check_email",            {          "conditions": [          },            "typeValidation": "strict"            "leftValue": "",            "caseSensitive": true,          "options": {        "conditions": {      "parameters": {    {    },      "position": [1050, 400]      "typeVersion": 3,      "type": "n8n-nodes-base.set",      "name": "Error Output",      "id": "error_output",      },        ]          }            "value": "Document processing failed"            "type": "string",            "name": "message",            "id": "message",          {          },            "value": "={{ $json.error || 'Unknown error during processing' }}"            "type": "string",            "name": "error_message",            "id": "error_message",          {          },            "value": "error"            "type": "string",            "name": "status",            "id": "status",          {        "definitions": [        "inputSource": "define",      "parameters": {    {    },      "position": [1050, 200]      "typeVersion": 3,      "type": "n8n-nodes-base.set",      "name": "Success Output",      "id": "success_output",      },        ]          }            "value": "Document successfully processed and indexed"            "type": "string",            "name": "message",            "id": "message",          {          },            "value": "={{ $('Extract Parameters').item.json.collection }}"            "type": "string",            "name": "collection",            "id": "collection",          {          },            "value": "={{ $json.chunks_count }}"            "type": "number",            "name": "chunks_created",            "id": "chunks_created",          {          },            "value": "={{ $json.document_id }}"            "type": "string",            "name": "document_id",            "id": "document_id",          {          },            "value": "success"            "type": "string",            "name": "status",            "id": "status",          {        "definitions": [        "inputSource": "define",      "parameters": {    {    },      "position": [850, 300]      "typeVersion": 2,      "type": "n8n-nodes-base.if",      "name": "Check Status",      "id": "check_status",      },        "options": {}        },          "combinator": "and"          ],            }              }                "operation": "equals"                "type": "string",              "operator": {              "rightValue": "success",              "leftValue": "={{ $json.status }}",              "id": "check_success",            {          "conditions": [          },            "typeValidation": "strict"            "leftValue": "",            "caseSensitive": true,          "options": {        "conditions": {      "parameters": {    {    },      }        }          "name": "AI-for-Science Platform Gateway"          "id": "gateway-credential",        "httpHeaderAuth": {      "credentials": {      "position": [650, 300],      "typeVersion": 4.1,      "type": "n8n-nodes-base.httpRequest",      "name": "Ingest Document",      "id": "ingest_document",      },        }          "timeout": 300000        "options": {        "jsonBody": "={\n  \"file_url\": \"{{ $json.file_url }}\",\n  \"collection\": \"{{ $json.collection }}\",\n  \"metadata\": {{ $json.metadata }},\n  \"chunk_size\": 512,\n  \"chunk_overlap\": 50\n}",        "specifyBody": "json",        "sendBody": true,        },          ]            }              "value": "application/json"              "name": "Content-Type",            {          "parameters": [        "headerParameters": {        "sendHeaders": true,        "genericAuthType": "httpHeaderAuth",        "authentication": "genericCredentialType",        "url": "={{ $env.GATEWAY_URL }}/gw/rag/v1/ingest",        "method": "POST",      "parameters": {    {    },      "position": [450, 300]      "typeVersion": 3,      "type": "n8n-nodes-base.set",      "name": "Extract Parameters",      "id": "extract_params",      },        ]          }            "value": "={{ JSON.stringify($json.body.metadata || {}) }}"            "type": "string",            "name": "metadata",            "id": "metadata",          {          },            "value": "={{ $json.body.notify_email || '' }}"            "type": "string",            "name": "notify_email",            "id": "notify_email",          {          },            "value": "={{ $json.body.collection || 'default' }}"            "type": "string",            "name": "collection",            "id": "collection",          {          },            "value": "={{ $json.body.file_url }}"            "type": "string",            "name": "file_url",            "id": "file_url",          {        "definitions": [        "inputSource": "define",      "parameters": {    {    },      "webhookId": "document-process-webhook"      "position": [250, 300],      "typeVersion": 1.1,      "type": "n8n-nodes-base.webhook",      "name": "Webhook Trigger",      "id": "webhook_trigger",      },        "options": {}        "path": "process-document",        "httpMethod": "POST",      "parameters": {    {  "nodes": [  "name": "Document Processing Workflow",  "name": "Document Processing Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "document-upload",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook_trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "document-upload"
+    },
+    {
+      "parameters": {
+        "inputSource": "define",
+        "definitions": [
+          {
+            "id": "file_name",
+            "name": "file_name",
+            "type": "string",
+            "value": "={{ $json.body.file_name }}"
+          },
+          {
+            "id": "file_content",
+            "name": "file_content",
+            "type": "string",
+            "value": "={{ $json.body.content }}"
+          },
+          {
+            "id": "collection",
+            "name": "collection",
+            "type": "string",
+            "value": "={{ $json.body.collection || 'default' }}"
+          },
+          {
+            "id": "notify_email",
+            "name": "notify_email",
+            "type": "string",
+            "value": "={{ $json.body.notify_email || '' }}"
+          }
+        ]
+      },
+      "id": "extract_params",
+      "name": "Extract Parameters",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.GATEWAY_URL }}/gw/rag/v1/documents",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"file_name\": \"{{ $json.file_name }}\",\n  \"content\": \"{{ $json.file_content }}\",\n  \"collection\": \"{{ $json.collection }}\",\n  \"metadata\": {\n    \"uploaded_via\": \"n8n\",\n    \"workflow\": \"document-processing\"\n  }\n}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "upload_document",
+      "name": "Upload Document",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "gateway-credential",
+          "name": "AI-for-Science Platform Gateway"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.GATEWAY_URL }}/gw/rag/v1/embed",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"document_id\": \"{{ $json.document_id }}\",\n  \"collection\": \"{{ $('Extract Parameters').item.json.collection }}\",\n  \"chunk_size\": 512,\n  \"chunk_overlap\": 50\n}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "generate_embeddings",
+      "name": "Generate Embeddings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [850, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "gateway-credential",
+          "name": "AI-for-Science Platform Gateway"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputSource": "define",
+        "definitions": [
+          {
+            "id": "status",
+            "name": "status",
+            "type": "string",
+            "value": "success"
+          },
+          {
+            "id": "document_id",
+            "name": "document_id",
+            "type": "string",
+            "value": "={{ $('Upload Document').item.json.document_id }}"
+          },
+          {
+            "id": "chunks_created",
+            "name": "chunks_created",
+            "type": "number",
+            "value": "={{ $json.chunks_count }}"
+          },
+          {
+            "id": "file_name",
+            "name": "file_name",
+            "type": "string",
+            "value": "={{ $('Extract Parameters').item.json.file_name }}"
+          },
+          {
+            "id": "collection",
+            "name": "collection",
+            "type": "string",
+            "value": "={{ $('Extract Parameters').item.json.collection }}"
+          }
+        ]
+      },
+      "id": "prepare_result",
+      "name": "Prepare Result",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check_email",
+              "leftValue": "={{ $('Extract Parameters').item.json.notify_email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check_notification",
+      "name": "Should Notify?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@ai-platform.local",
+        "toEmail": "={{ $('Extract Parameters').item.json.notify_email }}",
+        "subject": "Document Processing Complete: {{ $json.file_name }}",
+        "emailType": "text",
+        "message": "Your document has been processed successfully.\n\nDetails:\n- File: {{ $json.file_name }}\n- Collection: {{ $json.collection }}\n- Document ID: {{ $json.document_id }}\n- Chunks Created: {{ $json.chunks_created }}\n\nThe document is now searchable via RAG queries.",
+        "options": {}
+      },
+      "id": "send_notification",
+      "name": "Send Email Notification",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1450, 200],
+      "credentials": {
+        "smtp": {
+          "id": "smtp-credential",
+          "name": "SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "respond_success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1650, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Parameters": {
+      "main": [
+        [
+          {
+            "node": "Upload Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Document": {
+      "main": [
+        [
+          {
+            "node": "Generate Embeddings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Embeddings": {
+      "main": [
+        [
+          {
+            "node": "Prepare Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Result": {
+      "main": [
+        [
+          {
+            "node": "Should Notify?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should Notify?": {
+      "main": [
+        [
+          {
+            "node": "Send Email Notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email Notification": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "saveExecutionProgress": true
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "rag"
+    },
+    {
+      "name": "document"
+    },
+    {
+      "name": "ai-platform"
+    }
+  ],
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

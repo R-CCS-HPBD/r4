@@ -1,0 +1,17 @@
+# Data never lives here (paths.py keeps it under $R4_SAME_MODEL_BENCH, outside git).
+# Belt and braces in case a run is pointed at this directory by mistake:
+results*/
+logs/
+run/
+work/
+r4_variants/
+grades*.json
+report*.json
+full_metrics.*
+gap_struct.json
+gap_analysis.out
+loss_causes.json
+judge_reliability.json
+toolbench*.json
+*.out
+__pycache__/

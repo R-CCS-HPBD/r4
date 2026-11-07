@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Install: ln -sf ../../scripts/git-hooks/pre-push .git/hooks/pre-push
+# Refuses a parent push whose umrs pin is not on UMRS-org (release plan P0-2).
+set -euo pipefail
+root="$(git rev-parse --show-toplevel)"
+[ -d "$root/umrs/.git" ] || [ -f "$root/umrs/.git" ] || exit 0
+exec bash "$root/scripts/check-umrs-lineage.sh" HEAD

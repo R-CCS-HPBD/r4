@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/teamup.resume.schema.json",
+  "title": "teamup.resume",
+  "description": "teamup.pause / teamup.resume / teamup.cancel: the session's new status.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/TeamupLifecycleResult",
+  "$defs": {
+    "TeamupLifecycleResult": {
+      "type": "object",
+      "description": "teamup.pause / teamup.resume / teamup.cancel: the session's new status.",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "status"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,59 @@
+# Stand-alone — DEV overlay. Applied when the profile is dev: STANDALONE_PROFILE=dev,
+# `up --dev`, or the quickstart for a new stack; `up` records it in env/.state
+# and later verbs follow the record (2026-10-15).
+#
+# The host-access contract (decided 2026-10-08):
+#   hardened — NOTHING but the gateway (8080) and the ZMQ planes is published.
+#              Conformance and debugging reach the stores through
+#              `compose exec -T`, never a host port.
+#   dev      — the stores are published on loopback for debugging and for
+#              conformance lanes that are easier to write against a port.
+#              Each host port is a variable (default in brackets), so a port
+#              another program holds moves instead of failing `up`:
+#              quickstart writes the moved value to env/local.env
+#              (lib/preflight.sh preflight_dev_ports; 2026-10-15).
+#
+# This is why the suite's command vocabulary must be `compose exec -T`: it is
+# the only form that works in BOTH profiles.
+services:
+  umrs:
+    # Live source. The image COPYs umrs/src to /app/umrs-src and r4-contracts to
+    # /app/r4-contracts, then installs both EDITABLE (Dockerfile.server:77-82),
+    # so mounting the checkout over the same paths makes a code change a
+    # `./standalone.sh restart umrs` instead of an image rebuild. That matters
+    # most on macOS, where every rebuild costs ~16 GB of transient layers the
+    # podman VM never returns to the host. Rebuild only when dependencies change.
+    volumes:
+      - ../../umrs/src:/app/umrs-src:ro,z
+      - ../../r4-contracts:/app/r4-contracts:ro,z
+    environment:
+      # `--env-file` only interpolates `${...}`, so profile.dev.env's step
+      # settings never reached the container. It ran site.yaml's podman executor
+      # and refused uploaded steps, so a research loop could not run a single
+      # experiment (2026-10-09). UMRS_STEP_EXECUTOR is mapped in compose.yaml
+      # for both profiles.
+      # This switch is dev-only. It is ADR-074's transition switch: uploaded
+      # step code runs inside the UMRS process, for one user running their own
+      # code on throwaway state. Hardened refuses it by name until ADR-091's
+      # local podman lane.
+      UMRS_STEP_UPLOADED_CODE: ${UMRS_STEP_UPLOADED_CODE:-legacy_in_process}
+    ports:
+      # Dev only. The sidecar trusts X-Verified-* headers without an HMAC check
+      # (they are normally set by the edge), so this port lets any local process
+      # act as any project. Acceptable in the announced dev profile; never in
+      # hardened.
+      - "127.0.0.1:${STANDALONE_UMRS_HTTP_PORT:-8082}:8082"
+  rag:
+    volumes:
+      - ../../umrs/src:/app/umrs-src:ro,z
+      - ../../r4-contracts:/app/r4-contracts:ro,z
+  postgres:
+    ports:
+      - "127.0.0.1:${STANDALONE_POSTGRES_PORT:-5432}:5432"
+  seaweedfs:
+    ports:
+      - "127.0.0.1:${STANDALONE_S3_PORT:-9000}:9000"   # S3 API
+      - "127.0.0.1:${STANDALONE_S3_IAM_PORT:-8111}:8111"   # IAM API (per-user identities, STS)
+  gateway-sidecar:
+    ports:
+      - "127.0.0.1:${STANDALONE_SIDECAR_PORT:-8081}:8081"

@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/provenance.job.schema.json",
+  "title": "provenance.job",
+  "description": "provenance.job: UMRS ``ProvenanceResponse`` for one durable job.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/ProvenanceRecord",
+  "$defs": {
+    "ProvenanceRecord": {
+      "type": "object",
+      "description": "provenance.job: UMRS ``ProvenanceResponse`` for one durable job.",
+      "properties": {
+        "job_id": {
+          "type": "string"
+        },
+        "job_type": {
+          "type": "string"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "spec": {
+          "type": "object"
+        },
+        "created_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "completed_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "total_duration_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "attempts": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "total_attempts": {
+          "type": "integer"
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "workflow_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "execution_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parent_job_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "job_id",
+        "job_type",
+        "project_id",
+        "user_id",
+        "status"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/control/v1/budget_state.schema.json",
+  "title": "budget_state",
+  "description": "Per-session budget counters (GAP-COMP-2 read-model payload).",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "type",
+    "payload"
+  ],
+  "properties": {
+    "type": {
+      "const": "budget_state"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "version": {
+          "type": "integer",
+          "default": 1
+        },
+        "llm_calls_used": {
+          "type": "integer",
+          "default": 0
+        },
+        "llm_calls_limit": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "tool_rounds_used": {
+          "type": "integer",
+          "default": 0
+        },
+        "tool_rounds_limit": {
+          "type": "integer",
+          "default": 1000
+        },
+        "context_used_tokens": {
+          "type": "integer",
+          "default": 0
+        },
+        "context_limit_tokens": {
+          "type": "integer",
+          "default": 120000
+        },
+        "session_id": {
+          "type": "string",
+          "default": ""
+        }
+      }
+    }
+  }
+}
