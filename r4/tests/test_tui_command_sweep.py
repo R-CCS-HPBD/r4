@@ -489,7 +489,7 @@ def _main_command_inputs(tmp_path: Path) -> dict[str, str]:
         "governance": "/governance quotas demo",
         "knowledge": "/knowledge quantum",
         "visibility": "/visibility show served-model",
-        "memory": "/memory list session",
+        "memory": "/memory list",
         "secret": "/secret list demo",
         "pipeline": "/pipeline components chunkers",
     }

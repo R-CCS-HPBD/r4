@@ -115,6 +115,8 @@ SAFE_TOOLS: frozenset[str] = frozenset(
         "worktree_enter",
         "file_read",
         "list_dir",
+        # ADR-111: reads the user's own saved memory files; changes nothing.
+        "memory_read",
         "search_docs",
         # K1.4: reads one passage under the retrieve verb's access rule.
         "open_passage",
@@ -687,6 +689,38 @@ class Decision:
 
 _DEFAULT_ASK = Decision("ask", "default")
 
+# Tools that change saved memory (ADR-111); ``_rung_memory_taint`` asks for
+# them once the session has seen untrusted content.
+MEMORY_WRITE_TOOLS = frozenset({"memory_write", "memory_forget"})
+# Other calls that reach the memory files: the CLI, its folder variable, the
+# Jupyter magic, the default folder in any spelling of the home directory.
+_MEMORY_MARKERS = ("r4 memory", "R4_MEMORY_DIR", "companion_remember", ".config/r4/memory")
+
+
+def _untrusted_seen(registry: Any) -> bool:
+    """Untrusted content entered the session (sticky mark or live excerpts)."""
+    if getattr(registry, "ever_tainted", False) is True:
+        return True
+    try:
+        return len(registry) > 0
+    except TypeError:  # a registry without a size (test doubles): its mark only
+        return False
+
+
+def touches_memory(tool_name: str, arguments: Any) -> bool:
+    """Whether a call writes saved memory: a memory tool, or a non-read-only
+    call whose arguments name the memory folder or the memory CLI."""
+    if tool_name in MEMORY_WRITE_TOOLS:
+        return True
+    if tool_name in SAFE_TOOLS:
+        return False
+    from .memory_store import memory_root
+
+    text = json.dumps(arguments, default=str, ensure_ascii=False)
+    markers = (*_MEMORY_MARKERS, str(memory_root()))
+    return any(marker in text for marker in markers)
+
+
 # Never-auto tools autopilot runs (ADR-104 amendment 2, maintainer
 # 2026-11-05): a plan gate and a plan run's budget card. The knowledge
 # decisions stay a person's (CONSTITUTION §2), in every mode.
@@ -715,6 +749,7 @@ class PermissionManager:
         "_rung_deny_rule",
         "_rung_never_auto",
         "_rung_taint",
+        "_rung_memory_taint",
         "_rung_fence",
         "_rung_ask_rule",
         "_rung_protected_path",
@@ -1053,6 +1088,19 @@ class PermissionManager:
             "tool result (ADR-039 taint fence)"
         )
         return Decision("ask", "taint", reason, fenced=True)
+
+    def _rung_memory_taint(self, tool_name: str, arguments: dict[str, Any]) -> Decision | None:
+        # ADR-111 D-4: saved memory outlives the session. Once untrusted
+        # content (RAG, document, lab, MCP or web results) entered it, a
+        # memory write is a person's decision in every mode, autopilot too:
+        # an injected instruction must not save itself for later sessions.
+        # The mark is sticky (``ever_tainted``: no TTL, kept across a resume)
+        # and covers the other ways to a memory file: a file tool on the
+        # memory folder, a shell ``r4 memory`` (review 2026-11-07).
+        if not touches_memory(tool_name, arguments) or not _untrusted_seen(self._taint_registry):
+            return None
+        reason = "saving memory after untrusted content entered this session (ADR-111 D-4)"
+        return Decision("ask", "memory_taint", reason, fenced=True)
 
     def _rung_fence(self, tool_name: str, arguments: dict[str, Any]) -> Decision | None:
         # Credential / identity probes and force-pushes in shell commands,

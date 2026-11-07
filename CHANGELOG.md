@@ -7,6 +7,14 @@ the TUI binaries. Gap rows `D-nn` refer to
 [docs/R4-UMRS-GAP-ANALYSIS-2026-09-22.md](docs/R4-UMRS-GAP-ANALYSIS-2026-09-22.md);
 the per-wave detail is kept in the maintainers' development records.
 
+## [v0.2.0-rc4] — 2026-11-07
+
+- Rebuild of v0.2.0-rc3, whose export was refused by the secret-scanning gate: a test fixture shaped like a Stripe key is now built at runtime.
+
+## [v0.2.0-rc3] — 2026-11-07
+
+- Rebuild of v0.2.0-rc2, whose public release could not be published: the macOS arm64 console job used the retired `macos-14` runner. Release workflows now use `macos-15`.
+
 ## [v0.2.0-rc2] — 2026-11-07
 
 Since `v0.2.0-rc1` (2026-09-15). The platform was re-based on the

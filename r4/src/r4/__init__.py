@@ -38,7 +38,7 @@ The SDK provides:
 # All public symbols are resolved on first access via __getattr__.
 from __future__ import annotations
 
-__version__ = "0.2.0rc2"
+__version__ = "0.2.0rc4"
 
 # Map every public symbol to its origin module (relative to this package).
 _LAZY_IMPORTS: dict[str, str] = {

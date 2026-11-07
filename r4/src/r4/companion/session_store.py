@@ -482,6 +482,7 @@ class CompanionSessionStore:
         """The row one save writes (named parameters of the CAS statements)."""
         session.updated_at = _offset_marker(session.updated_at)
         session._sync_metadata_usage_state()
+        _sync_untrusted_mark(session)
         # Auto-title: while the name is still the create-time placeholder,
         # replace it with a title derived from the first user message. A
         # renamed/forked name no longer matches the pattern, so user intent
@@ -497,15 +498,6 @@ class CompanionSessionStore:
             "gateway_url": self._config_attr(config, "gateway_url", ""),
             "project_id": self._config_attr(config, "project_id", ""),
         }
-        memory = {
-            key: {
-                "key": memory_item.key,
-                "value": memory_item.value,
-                "created_at": memory_item.created_at,
-                "source": memory_item.source,
-            }
-            for key, memory_item in session.context._memory.items()
-        }
         return {
             "id": session.session_id,
             "name": session.name,
@@ -513,7 +505,9 @@ class CompanionSessionStore:
             "updated_at": session.updated_at,
             "messages": _messages_json(session),
             "active_skills": json.dumps(list(session.skills._active)),
-            "memory": json.dumps(memory),
+            # ADR-111 M0: saved memory lives in its own files, never in a
+            # session row (the column stays for older readers, always {}).
+            "memory": "{}",
             "metadata": json.dumps(session.metadata),
             "model": session.agent.model or "",
         }
@@ -1264,8 +1258,10 @@ class CompanionSessionStore:
         )
         self._restore_messages(session, decoded["messages"])
         self._restore_skills(session, decoded["active_skills"])
-        self._restore_memory(session, decoded["memory"])
+        # ADR-111 M0: an older row's memory snapshot is ignored; restoring it
+        # brought back facts deleted since and wrote them out for everyone.
         session.metadata = metadata
+        _sync_untrusted_mark(session)
         session._load_usage_state_from_metadata()
         session.reload_permission_rules()  # the restored project's rule file
         return session
@@ -1284,12 +1280,6 @@ class CompanionSessionStore:
     def _restore_skills(self, session: CompanionSession, active_skills: list[Any]) -> None:
         for skill_name in active_skills:
             session.skills.activate(skill_name)
-
-    def _restore_memory(self, session: CompanionSession, memory: dict[str, Any]) -> None:
-        from .context import MemoryItem
-
-        for key, value in memory.items():
-            session.context._memory[key] = MemoryItem(**value)
 
     def raw_row(self, session_id: str) -> dict[str, Any] | None:
         """The stored columns exactly as written (the export of a corrupt row)."""
@@ -1885,3 +1875,11 @@ class CompanionSessionStore:
         # advanced the server's filtered lists).
         self._mirror_state_change(session_id)
         return True
+
+
+def _sync_untrusted_mark(session: Any) -> None:
+    """ADR-111 D-4: carry the sticky "untrusted content entered" mark between
+    the taint registry and the row's metadata (stub sessions have no sync)."""
+    sync = getattr(session, "sync_untrusted_mark", None)
+    if callable(sync):
+        sync()

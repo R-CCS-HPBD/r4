@@ -195,6 +195,21 @@ class SteeringLoop:
     def list_lessons(self) -> list[Lesson]:
         return list(self._lessons)
 
+    def reload(self) -> None:
+        """Read the lessons file again (another tab may have written it)."""
+        self._lessons = self._load()
+
+    def remove(self, index: int) -> Lesson | None:
+        """Delete the lesson at ``index`` (0-based, oldest first); ``/memory
+        lessons forget`` (ADR-111). Reloads first: another tab may have
+        recorded one since this loop read the file."""
+        self._lessons = self._load()
+        if not 0 <= index < len(self._lessons):
+            return None
+        lesson = self._lessons.pop(index)
+        self._save()
+        return lesson
+
     def clear(self) -> None:
         self._lessons.clear()
         self._save()

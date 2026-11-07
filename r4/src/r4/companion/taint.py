@@ -122,6 +122,10 @@ class TaintRegistry:
         self._lock = threading.RLock()
         # Where downloaded data (or a fetch script) lives: path -> recorded at.
         self._network_paths: dict[str, float] = {}
+        # ADR-111 D-4: untrusted content entered this session at some point.
+        # Sticky (no TTL, survives a resume through the session metadata):
+        # the memory-write rung must keep asking after the excerpts expire.
+        self.ever_tainted = False
 
     def __len__(self) -> int:
         with self._lock:
@@ -145,6 +149,7 @@ class TaintRegistry:
             self._record_paths(taint_exec.write_targets(tool_name, arguments))
         if taint_class is None:
             return 0
+        self.ever_tainted = True
         if not isinstance(result_text, str) or not result_text.strip():
             return 0
         if len(_normalize(result_text)) < self._min_len:
@@ -266,6 +271,7 @@ class TaintRegistry:
                 incoming[_segment_key(segment)] = replace(segment, registered_at=now)
         if not incoming:
             return 0
+        self.ever_tainted = True
         with self._lock:
             self._purge()
             kept = [entry for entry in self._entries if _segment_key(entry) not in incoming]

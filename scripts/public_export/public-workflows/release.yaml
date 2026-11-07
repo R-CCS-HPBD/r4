@@ -134,7 +134,7 @@ jobs:
   # signature, a real smoke test), one runner per architecture.
   tui-darwin-arm64:
     name: console darwin-arm64
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5

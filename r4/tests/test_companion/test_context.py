@@ -22,10 +22,8 @@ def mock_client():
 
 @pytest.fixture
 def ctx(mock_client, tmp_path, monkeypatch):
-    import r4.companion.context as ctx_mod
-
-    monkeypatch.setattr(ctx_mod, "MEMORY_DIR", tmp_path)
-    monkeypatch.setattr(ctx_mod, "MEMORY_FILE", tmp_path / "memory.json")
+    monkeypatch.setenv("R4_MEMORY_DIR", str(tmp_path / "memory"))
+    monkeypatch.setenv("R4_COMPANION_MEMORY_DIR", str(tmp_path / "legacy"))
     return ContextManager(client=mock_client, max_context_tokens=1000, response_reserve_tokens=100)
 
 
@@ -124,10 +122,6 @@ def test_memory_crud(ctx, tmp_path):
 
 
 def test_memory_persistence(ctx, tmp_path, mock_client, monkeypatch):
-    import r4.companion.context as ctx_mod
-
-    monkeypatch.setattr(ctx_mod, "MEMORY_DIR", tmp_path)
-    monkeypatch.setattr(ctx_mod, "MEMORY_FILE", tmp_path / "memory.json")
     ctx.remember("key1", "value1", source="user")
 
     # Create new context manager, should load persisted memory
@@ -143,10 +137,13 @@ def test_memory_as_context(ctx):
     prompt = ctx.memory_as_context()
     assert "seismology" in prompt
     assert "SPECFEM3D" in prompt
-    assert prompt.splitlines() == [
-        "[Persistent memory]",
-        "- domain: seismology",
-        "- tool: SPECFEM3D",
+    # ADR-111: a capped index, one line per fact, never the bodies alone.
+    lines = prompt.splitlines()
+    assert lines[0].startswith("[Saved memory:")
+    assert lines[1:] == [
+        "## project",
+        "- domain [project]: domain: seismology",
+        "- tool [project]: tool: SPECFEM3D",
     ]
 
 

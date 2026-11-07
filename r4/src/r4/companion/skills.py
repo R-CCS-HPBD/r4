@@ -191,6 +191,11 @@ ALWAYS_ON_TOOL_NAMES: frozenset[str] = frozenset(
         "tool_search",
         "final_output",
         "platform_guide",
+        # ADR-111: saved memory is harness plumbing too; a skill filter never
+        # hides it (the lead session alone carries these tools).
+        "memory_read",
+        "memory_write",
+        "memory_forget",
         # G9: background-agent orchestration metas (like todo_write, they are
         # harness plumbing, not skill domain tools).
         "async_agent_spawn",

@@ -50,6 +50,9 @@ companion/
   permissions.py           — PermissionManager (ask_always / auto_safe / trust) + server trust checker (ADR-035)
   taint.py                 — taint registry: provenance of untrusted content (ADR-039)
   context.py               — ContextManager: token budget, compaction, memory, RAG
+  memory_store.py          — saved memory, one private file per fact, user + project scopes (2026-11-07, ADR-111)
+  memory_tools.py          — memory_read / memory_write / memory_forget, attached by the lead session only (ADR-111 D-4)
+  memory_commands.py       — /memory and `r4 memory` verbs: list, add, forget, lessons, promote, off/on
   context_budget.py        — budget resolved from the active model
   skills.py                — SkillRegistry + unified SKILL.md parser (all sources)
   builtin/                 — 27 built-in skill groups, Agent Skills format (<name>/SKILL.md)
@@ -204,7 +207,12 @@ Use `CompanionEventType` (`agent.py`) for all agent→UI communication. Never pr
 - Sessions: SQLite at `~/.config/r4/companion/sessions.db` (`R4_COMPANION_DB`);
   mirrored to Postgres on the server (ADR-036 amendment 1; chat-turn
   authority is ADR-057, D-30/D-56)
-- Memory: `~/.config/r4/companion/memory.json` (`R4_COMPANION_MEMORY_DIR`)
+- Memory (2026-11-07, ADR-111): `~/.config/r4/memory/{user,projects/<key>}/<name>.md`
+  (`R4_MEMORY_DIR`), one fact per file, never in a session row or on a
+  server; the old `~/.config/r4/companion/memory.json` is only imported once.
+  Agent-facing memory tools go on the lead session, not into
+  `get_builtin_tools` (roles, plan agents and recipes read, never write).
+  Team rules belong in `R4.md`, domain facts in the project's knowledge.
 - Progress: `~/.config/r4/companion/progress/current.json` (`R4_COMPANION_PROGRESS_DIR`)
 - Lessons: `~/.config/r4/companion/lessons.json` (`R4_COMPANION_LESSONS_DIR`)
 - Event log and checkpoints: SQLite tables (`event_log`, `checkpoints`) in the database path `ui/bridge_server.py` hands to `EventLog` / `CheckpointManager`

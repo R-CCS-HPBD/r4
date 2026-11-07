@@ -15,6 +15,7 @@ Components:
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from .. import agent_profile
@@ -57,6 +58,9 @@ class ResearchHarness:
         self.sensors = QualitySensor()
         self.progress = ProgressTracker()
         self.steering = SteeringLoop()
+        #: ADR-111: the session's ``/memory off`` switch; when it answers
+        #: False, lessons are neither shown nor recorded for this session.
+        self.memory_enabled: Callable[[], bool] = lambda: True
         self._templates = get_builtin_templates()
         self._active_template: HarnessTemplate | None = None
 
@@ -78,7 +82,7 @@ class ResearchHarness:
             parts.append(orientation)
 
         # Lessons from steering (benchmark ablation: R4_HARNESS_ABLATE_STEERING)
-        if not steering_off():
+        if not steering_off() and self._memory_on():
             lessons = self.steering.as_prompt()
             if lessons:
                 parts.append(lessons)
@@ -199,8 +203,13 @@ class ResearchHarness:
     def post_turn(self, *, user_message: str, response: str, messages: list) -> None:
         """Run post-turn hooks: progress and steering updates."""
         self.progress.record_turn(user_message, response)
-        if not steering_off():
+        if not steering_off() and self._memory_on():
             self.steering.observe_turn(user_message, response, confirm=self._lesson_is_real)
+
+    def _memory_on(self) -> bool:
+        """The session's ``/memory`` switch; on when nothing wired one."""
+        switch = getattr(self, "memory_enabled", None)
+        return bool(switch()) if callable(switch) else True
 
     def _lesson_is_real(self, user_message: str, last_response: str) -> bool:
         """Decision-model veto for a rule-matched correction (ADR-076; True when off)."""

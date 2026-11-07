@@ -96,6 +96,7 @@ Inside the companion TUI, type `/` to see available commands:
 | `/skills` | `/skill` | Manage skill bundles |
 | `/usage` | | Token usage and cost for this session |
 | `/sessions` | `/resume` | Session management |
+| `/memory` | `/mem` | Saved memory: list, add, forget, promote, off/on |
 | `/health` | | Check connectivity |
 | `/quit` | `/exit`, `/q` | Save session and exit |
 
@@ -158,6 +159,53 @@ r4 companion --resume <session-id>   # Resume a companion session
 r4 companion export <session-id>     # Export a session transcript
 r4 session show <session-id>         # Show companion session details
 ```
+
+## Saved Memory
+
+*Added 2026-11-07.* The agent keeps short private notes between sessions:
+who you are, how you like to work, corrections you gave it, and working notes
+for the current project. Each note is one small file on your machine, never
+on the server:
+
+- **user** notes apply to every project (`~/.config/r4/memory/user/`);
+- **project** notes apply to the current project
+  (`~/.config/r4/memory/projects/<gateway>--<project>/`; outside a project,
+  one folder per repository, shared by its worktrees).
+
+Each turn the agent sees a one-line index of your notes (about 6,000
+characters at most) and reads a note's full text only when it needs it. It
+treats notes as possibly out of date.
+
+```text
+/memory                       list your notes and the lesson count
+/memory add <text>            save a project note (--user for all projects,
+                              --expires YYYY-MM-DD to let it lapse)
+/memory show <name>           one note in full
+/memory forget <name>         delete it
+/memory lessons               rules the agent took from your corrections;
+                              /memory lessons forget <n>, /memory lessons clear
+/memory off                   this session neither reads nor saves memory;
+                              /memory on turns it back on
+/memory path                  where the files are
+```
+
+The agent can save notes too (`memory_write`). In chat and plan mode it asks
+first. In autopilot it asks as soon as the session has read untrusted content
+(web pages, documents, search results, MCP output), so text planted in a page
+cannot save itself for later sessions. It never saves anything that looks
+like a password or token.
+
+**Memory is not for team rules or science.** Rules everyone on the repository
+should follow belong in `R4.md` (reviewed with git); domain facts, data and
+results belong in the project's knowledge. `/memory promote <name> briefing`
+appends a note to `R4.md` for you to review and commit; `/memory promote <name>
+knowledge <graph>` files a knowledge proposal that changes nothing until a
+reviewer runs `r4 knowledge review approve <proposal>`.
+
+The same commands work in a shell: `r4 memory list`, `r4 memory add …` (see
+[13. CLI Reference](13-cli-reference.md#memory-r4-memory)). Notes saved with
+older versions in `~/.config/r4/companion/memory.json` are copied into the
+user notes once.
 
 ## Skills
 

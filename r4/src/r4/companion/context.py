@@ -4,7 +4,8 @@ The ContextManager is the central authority for what enters the LLM's
 context window on each turn. It implements:
 - Message history with estimated token tracking
 - Compaction (summarise old messages when nearing the window limit)
-- Persistent memory (key-value facts injected as system context)
+- Saved memory (ADR-111: one private file per fact, ``memory_store``; the
+  turn carries a capped index, ``memory_read`` shows a fact's body)
 - RAG integration (auto-query when relevant)
 """
 
@@ -13,26 +14,23 @@ from __future__ import annotations
 import json
 import logging
 import os
-from dataclasses import dataclass, field
-from datetime import datetime
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
-from r4._atomic import atomic_write_text
-
 from .cancellation import TurnCancelledError
+from .memory_store import (
+    DESCRIPTION_MAX,
+    MemoryFact,
+    MemoryStore,
+    slugify,
+    store_for,
+)
 
 if TYPE_CHECKING:
     from r4.client import Client
 
 logger = logging.getLogger(__name__)
-
-MEMORY_DIR = Path(
-    os.environ.get("R4_COMPANION_MEMORY_DIR")
-    or os.environ.get("R4_COMPANION_MEMORY_DIR")
-    or os.path.expanduser("~/.config/r4/companion")
-)
-MEMORY_FILE = MEMORY_DIR / "memory.json"
 
 SUMMARY_PROMPT = (
     "Summarise the following conversation for an AI assistant that needs "
@@ -95,16 +93,6 @@ def _standalone_summary_request(
 
 
 @dataclass
-class MemoryItem:
-    """A persistent fact stored across sessions."""
-
-    key: str
-    value: str
-    created_at: str = field(default_factory=lambda: datetime.now().isoformat())
-    source: str = "user"  # user | agent | system
-
-
-@dataclass
 class BudgetBreakdown:
     """Estimated token usage for a fully assembled outbound prompt."""
 
@@ -151,9 +139,9 @@ class ContextManager:
         self._usage_callback = usage_callback
         self._pre_llm_call = pre_llm_call
 
-        # Persistent memory
-        self._memory: dict[str, MemoryItem] = {}
-        self._load_memory()
+        # Saved memory (ADR-111) lives in files read per call; the session
+        # sets ``workspace`` (default: cwd) for the project-less scope key.
+        self.workspace: Path | None = None
 
         # Session-level accumulated context (reset per session)
         self._session_context: dict[str, str] = {}
@@ -656,61 +644,50 @@ class ContextManager:
         summary_prompt = SUMMARY_PROMPT + self._build_summary_input(messages)
         return _standalone_summary_request(self.client, summary_prompt), summary_prompt
 
-    # -- persistent memory ---------------------------------------------------
+    # -- saved memory (ADR-111) ---------------------------------------------
 
-    def remember(self, key: str, value: str, source: str = "user") -> None:
-        """Store a persistent fact."""
-        self._memory[key] = MemoryItem(key=key, value=value, source=source)
-        self._save_memory()
+    def memory_store(self) -> MemoryStore:
+        """The user scope plus this session's project scope, resolved now:
+        a project switch reaches the next call."""
+        return store_for(self.client, workspace=self.workspace)
+
+    def remember(
+        self, key: str, value: str, source: str = "user", *, scope: str = "project"
+    ) -> MemoryFact:
+        """Save ``value`` under ``key`` (replacing it): the Jupyter magic's
+        call. Raises ``MemoryStoreError`` for a bad name or a secret-shaped text."""
+        fact = MemoryFact(
+            name=slugify(key),
+            type="project",
+            description=" ".join(f"{key}: {value}".split())[:DESCRIPTION_MAX],
+            body=value,
+            scope=scope,
+            source=source,
+        )
+        return self.memory_store().write(fact, replace_existing=True)
 
     def forget(self, key: str) -> bool:
-        """Remove a persistent fact."""
-        if key in self._memory:
-            del self._memory[key]
-            self._save_memory()
-            return True
-        return False
+        """Delete ``key`` from the project scope, else the user scope."""
+        store = self.memory_store()
+        name = slugify(key)
+        return store.forget(name, "project") or store.forget(name, "user")
 
     def get_memory(self, key: str) -> str | None:
-        """Retrieve a single memory item."""
-        item = self._memory.get(key)
-        return item.value if item else None
+        """The body saved under ``key`` (project scope first)."""
+        fact = self.memory_store().find(slugify(key))
+        return fact.body if fact else None
 
-    def list_memories(self) -> list[MemoryItem]:
-        """List all memories."""
-        return [self._memory[key] for key in sorted(self._memory)]
+    def list_memories(self) -> list[MemoryFact]:
+        """Every saved fact, user scope first."""
+        return self.memory_store().facts()
 
     def memory_as_context(self) -> str:
-        """Format all memories as a system prompt fragment."""
-        if not self._memory:
+        """The per-turn memory block: a capped index, never the bodies."""
+        try:
+            return self.memory_store().index_prompt()
+        except (OSError, ValueError) as exc:
+            logger.warning("Saved memory unreadable: %s", exc)
             return ""
-        lines = ["[Persistent memory]"]
-        for item in self.list_memories():
-            lines.append(f"- {item.key}: {item.value}")
-        return "\n".join(lines)
-
-    def _load_memory(self) -> None:
-        """Load memory from disk."""
-        if MEMORY_FILE.exists():
-            try:
-                data = json.loads(MEMORY_FILE.read_text())
-                for key, val in sorted(data.items()):
-                    if isinstance(val, dict):
-                        self._memory[key] = MemoryItem(**val)
-                    else:
-                        self._memory[key] = MemoryItem(key=key, value=str(val))
-            except Exception as e:
-                logger.warning("Failed to load memory: %s", e)
-
-    def _save_memory(self) -> None:
-        """Persist memory to disk (atomic: parallel bridges never tear it —
-        a reader seeing a truncated file would silently unload memory)."""
-        MEMORY_DIR.mkdir(parents=True, exist_ok=True)
-        data = {
-            k: {"key": v.key, "value": v.value, "created_at": v.created_at, "source": v.source}
-            for k, v in self._memory.items()
-        }
-        atomic_write_text(MEMORY_FILE, json.dumps(data, indent=2, sort_keys=True))
 
     # -- session context -----------------------------------------------------
 

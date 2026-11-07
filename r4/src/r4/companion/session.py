@@ -351,6 +351,11 @@ class CompanionSession:
             # session's evidence ledger, so their citations are shown.
             evidence=ToolEvidence(self),
         )
+        # ADR-111 D-3: saved-memory tools belong to the lead session only;
+        # get_builtin_tools also builds team roles, plan agents and recipes.
+        from .memory_tools import build_memory_tools
+
+        self.tools.extend(build_memory_tools(self))
         # H15: the availability gate reads the session's choice per turn and
         # does not offer a web tool that would only refuse.
         for tool in self.tools:
@@ -587,7 +592,26 @@ class CompanionSession:
         if self._harness is not None:
             # Harness-side decisions (the lesson check) log beside the session's.
             self._harness.decision_log = self.metadata.setdefault("decision_log", [])
+            # ADR-111: ``/memory off`` keeps lessons out of this session too.
+            self._harness.memory_enabled = self.memory_enabled
         return self._harness
+
+    def memory_enabled(self) -> bool:
+        """False after ``/memory off`` (ADR-111): saved memory and lessons
+        are neither read nor written in this session."""
+        from .memory_commands import SESSION_OFF_KEY
+
+        return not self.metadata.get(SESSION_OFF_KEY)
+
+    def sync_untrusted_mark(self) -> None:
+        """ADR-111 D-4: the "untrusted content entered" mark survives a save
+        and a resume (metadata ``untrusted_seen``), so memory writes keep
+        asking in a resumed session; the store calls it on save and load."""
+        registry = getattr(self.agent, "_taint_registry", None) or self.permissions.taint_registry
+        if self.metadata.get("untrusted_seen"):
+            registry.ever_tainted = True
+        elif getattr(registry, "ever_tainted", False):
+            self.metadata["untrusted_seen"] = True
 
     def _wire_plan_gate(self) -> None:
         """T5 topic-24: plan-gate wiring — session metadata → agent attrs at
@@ -1280,7 +1304,11 @@ class CompanionSession:
         turn_parts = assemble_turn_reminder(
             skills_prompt="",
             # Benchmark ablation: R4_HARNESS_ABLATE_MEMORY drops the injection
-            memory_context="" if memory_off() else self.context.memory_as_context(),
+            memory_context=(
+                self.context.memory_as_context()
+                if self.memory_enabled() and not memory_off()
+                else ""
+            ),
             session_context=self.context.session_context_as_prompt(),
             harness=self.harness,
             messages=self.messages,

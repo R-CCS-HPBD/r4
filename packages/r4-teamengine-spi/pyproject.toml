@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "r4-teamengine-spi"
-version = "0.2.0rc2"
+version = "0.2.0rc4"
 description = "Team Engine SPI — interfaces, plugin loader, and broker contracts for pluggable multi-agent orchestration (ADR-020)."
 readme = "README.md"
 license = "Apache-2.0"

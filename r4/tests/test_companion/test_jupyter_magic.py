@@ -35,10 +35,8 @@ def magics(mock_client, tmp_path, monkeypatch):
     monkeypatch.setattr(sess_mod, "DB_PATH", tmp_path / "sessions.db")
 
     # Point memory to tmp
-    import r4.companion.context as ctx_mod
-
-    monkeypatch.setattr(ctx_mod, "MEMORY_DIR", tmp_path / "memory")
-    monkeypatch.setattr(ctx_mod, "MEMORY_FILE", tmp_path / "memory" / "memory.json")
+    monkeypatch.setenv("R4_MEMORY_DIR", str(tmp_path / "memory"))
+    monkeypatch.setenv("R4_COMPANION_MEMORY_DIR", str(tmp_path / "legacy"))
 
     from r4.jupyter.companion_magic import CompanionMagics
 

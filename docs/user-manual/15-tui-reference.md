@@ -91,7 +91,7 @@ Research, governance, and utility commands (shared registry):
 | `/adaptive` | | Adaptive routing settings |
 | `/vectors` | | Embedding/vector diagnostics |
 | `/visibility` | | Visibility scope controls |
-| `/memory` | `/mem` | Retired 2026-10-17: the reflective-memory routes have no gateway location; the command prints a notice |
+| `/memory` | `/mem` | Your saved memory (private notes the agent reads each turn): `list`, `show`, `add`, `forget`, `lessons`, `promote`, `path`, `off`/`on`. See [4. Chat](04-chat.md#saved-memory). (2026-11-07: replaces the 2026-10-17 notice; the old server-side reflective memory stays retired) |
 | `/secret` | | Retired 2026-10-17: the secret-broker routes have no gateway location; the command prints a notice |
 | `/pipeline` | | Pipeline composition |
 | `/code` | | Code search/actions |

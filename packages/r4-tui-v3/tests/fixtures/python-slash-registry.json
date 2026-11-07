@@ -453,7 +453,7 @@
         "mem"
       ],
       "category": "context",
-      "help": "Reflective/context memory (list, search, add, delete, reset)",
+      "help": "Saved memory (list, show, add, forget, lessons, promote, off, on)",
       "name": "memory",
       "takesArgs": false
     },

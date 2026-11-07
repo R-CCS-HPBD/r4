@@ -250,7 +250,13 @@ class CompanionMagics(Magics):
         self._ensure_session()
 
         value = " ".join(args.value) if args.value else args.key
-        self._session.context.remember(args.key, value, source="jupyter")
+        from r4.companion.memory_store import MemoryStoreError
+
+        try:
+            self._session.context.remember(args.key, value, source="jupyter")
+        except MemoryStoreError as exc:  # a bad name or secret-shaped text (ADR-111)
+            display(Markdown(f"Not remembered: {exc}"))
+            return
         display(Markdown(f"Remembered **{args.key}**: {value}"))
 
     # -- %companion_skill ---------------------------------------------------

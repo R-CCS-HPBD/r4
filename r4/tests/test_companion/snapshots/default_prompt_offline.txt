@@ -173,7 +173,7 @@ token budget (team_plans skill).
 
 [Skills not loaded: data_management, model_management, platform_ops, workflow_ops (they need the R4 platform, which this session cannot reach)]
 
-[Tool limit] Only these tools run this turn: apply_patch, ask_user, build_contract_pass, build_contract_start, build_contract_status, compile_code, detect_code_context, detect_language_servers, file_edit, file_read, file_write, final_output, glob_search, grep_search, list_dir, platform_guide, python_exec, run_code, shell_exec, shell_stream_cancel, start_language_servers, team_plan_cancel, team_plan_result, teamup_conclusions, teamup_list, teamup_run, teamup_start, teamup_status, test_code, test_fix_loop, todo_write, tool_search, worktree_enter, worktree_exit, tool_result_fetch, async_agent_spawn, async_agent_status, async_agent_message, build_contract_review. Calls to the other tools are refused (the active skills limit this turn's tools and this tool is not among them).
+[Tool limit] Only these tools run this turn: apply_patch, ask_user, build_contract_pass, build_contract_start, build_contract_status, compile_code, detect_code_context, detect_language_servers, file_edit, file_read, file_write, final_output, glob_search, grep_search, list_dir, memory_forget, memory_read, memory_write, platform_guide, python_exec, run_code, shell_exec, shell_stream_cancel, start_language_servers, team_plan_cancel, team_plan_result, teamup_conclusions, teamup_list, teamup_run, teamup_start, teamup_status, test_code, test_fix_loop, todo_write, tool_search, worktree_enter, worktree_exit, tool_result_fetch, async_agent_spawn, async_agent_status, async_agent_message, build_contract_review. Calls to the other tools are refused (the active skills limit this turn's tools and this tool is not among them).
 </turn_context>
 --- offered tools ---
 activate_skill
@@ -206,6 +206,9 @@ mcp_list_tools
 mcp_refresh
 mcp_register_server
 mcp_unregister_server
+memory_forget
+memory_read
+memory_write
 platform_guide
 project_ensure
 project_list

@@ -793,6 +793,26 @@ r4 session [list|show|archive|remove|delete|conclude|pull|reconcile] [SESSION_ID
 > `remote-only` row from the server journal into the local store — local
 > rows always win, it never overwrites an existing id.
 
+### Memory (`r4 memory`)
+
+*Added 2026-11-07.* Your private saved memory, the notes the agent reads each
+turn (see [4. Chat](04-chat.md#saved-memory)). Local files only; the project
+scope follows the active profile's project, else the current repository.
+
+```
+r4 memory [list]
+r4 memory show <name>
+r4 memory add [--user] [--type user|feedback|project|reference] [--expires YYYY-MM-DD] <text>
+r4 memory forget <name> [--user]
+r4 memory lessons [clear | forget <n>]
+r4 memory promote <name> briefing              # append to R4.md, then review and commit
+r4 memory promote <name> knowledge <graph>     # stage a knowledge proposal
+r4 memory path
+```
+
+Not to be confused with `r4 evidence memory`, the project's scientific memory
+(failed experiments, retractions) on the platform.
+
 ### Skills (`r4 skill`)
 
 ```

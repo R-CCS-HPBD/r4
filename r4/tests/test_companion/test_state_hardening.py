@@ -1,7 +1,7 @@
 """Companion state hardening pins (chat tabs, 2026-09-30).
 
 - r4._atomic.atomic_write_text: exact content, no tmp leftovers, rename swap.
-- context._save_memory / steering._save ride the atomic writer (a torn write
+- saved-memory facts (ADR-111) and steering._save ride the atomic writer (a torn write
   can never silently unload memory/lessons for a parallel reader).
 - session_store sqlite connections carry WAL + busy_timeout so up to 8
   bridge processes can write concurrently without SQLITE_BUSY.
@@ -46,26 +46,27 @@ def test_atomic_write_failure_keeps_destination_and_cleans_tmp(tmp_path: Path) -
     assert not list(tmp_path.glob("**/.*.tmp"))
 
 
-def test_save_memory_uses_atomic_writer(tmp_path: Path, monkeypatch) -> None:
-    from r4.companion import context as ctx_mod
+def test_memory_fact_uses_atomic_writer(tmp_path: Path, monkeypatch) -> None:
+    """ADR-111: each saved fact (and the scope's MEMORY.md view) is written
+    through the atomic writer, private to the user (0600)."""
+    from r4.companion import memory_store
 
-    calls: list[tuple[Path, str]] = []
-    monkeypatch.setattr(ctx_mod, "atomic_write_text", lambda p, t: calls.append((p, t)))
-    monkeypatch.setattr(ctx_mod, "MEMORY_DIR", tmp_path)
-    monkeypatch.setattr(ctx_mod, "MEMORY_FILE", tmp_path / "memory.json")
+    calls: list[tuple[Path, str, int]] = []
+    monkeypatch.setattr(
+        memory_store, "atomic_write_text", lambda p, t, mode=0o644: calls.append((p, t, mode))
+    )
+    monkeypatch.setenv("R4_MEMORY_DIR", str(tmp_path / "memory"))
+    monkeypatch.setenv("R4_COMPANION_MEMORY_DIR", str(tmp_path / "legacy"))
 
     from r4.companion.context import ContextManager
 
-    ctx = ContextManager()
-    ctx.remember("goal", "compare sft vs dpo", source="test")
-    ctx._save_memory()
+    ContextManager().remember("goal", "compare sft vs dpo", source="test")
 
-    assert calls, "atomic writer was not used"
-    path, text = calls[-1]
-    assert path.name == "memory.json"
-    payload = json.loads(text)
-    assert payload["goal"]["value"] == "compare sft vs dpo"
-    assert payload["goal"]["source"] == "test"
+    names = [path.name for path, _text, _mode in calls]
+    assert names == ["goal.md", "MEMORY.md"]
+    assert all(mode == 0o600 for _path, _text, mode in calls)
+    assert "source: test" in calls[0][1]
+    assert calls[0][1].rstrip().endswith("compare sft vs dpo")
 
 
 def test_steering_save_uses_atomic_writer(tmp_path: Path, monkeypatch) -> None:

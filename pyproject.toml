@@ -12,7 +12,7 @@
 
 [project]
 name = "ai-platform"
-version = "0.2.0rc2"
+version = "0.2.0rc4"
 description = "R4 Platform - HPC-first GenAI infrastructure for science"
 readme = "README.md"
 license = "Apache-2.0"

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "r4-contracts"
-version = "0.2.0rc2"
+version = "0.2.0rc4"
 description = "Shared schemas, DTOs, and validators between r4 (client SDK) and UMRS (platform)."
 readme = "README.md"
 license = "Apache-2.0"

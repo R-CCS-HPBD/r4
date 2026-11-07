@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "r4-mcp"
-version = "0.2.0rc2"
+version = "0.2.0rc4"
 description = "MCP servers for R4 Platform"
 readme = "README.md"
 license = "Apache-2.0"

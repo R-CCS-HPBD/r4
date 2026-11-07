@@ -42,7 +42,7 @@ wheels = [
 
 [[package]]
 name = "ai-platform"
-version = "0.2.0rc2"
+version = "0.2.0rc4"
 source = { virtual = "." }
 
 [package.optional-dependencies]
@@ -4664,7 +4664,7 @@ wheels = [
 
 [[package]]
 name = "r4"
-version = "0.2.0rc2"
+version = "0.2.0rc4"
 source = { editable = "r4" }
 dependencies = [
     { name = "httpx" },
@@ -4772,7 +4772,7 @@ provides-extras = ["companion-lite", "companion", "chat", "dev", "test", "mcp-us
 
 [[package]]
 name = "r4-contracts"
-version = "0.2.0rc2"
+version = "0.2.0rc4"
 source = { editable = "r4-contracts" }
 
 [package.optional-dependencies]
@@ -4820,7 +4820,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "r4-mcp"
-version = "0.2.0rc2"
+version = "0.2.0rc4"
 source = { editable = "mcp-servers" }
 dependencies = [
     { name = "anyio" },
@@ -4906,7 +4906,7 @@ provides-extras = ["dev", "test"]
 
 [[package]]
 name = "r4-teamengine-spi"
-version = "0.2.0rc2"
+version = "0.2.0rc4"
 source = { editable = "packages/r4-teamengine-spi" }
 dependencies = [
     { name = "r4-contracts" },
@@ -6402,7 +6402,7 @@ wheels = [
 
 [[package]]
 name = "umrs"
-version = "0.2.0rc2"
+version = "0.2.0rc4"
 source = { editable = "umrs/src" }
 dependencies = [
     { name = "jsonschema" },

@@ -324,7 +324,7 @@ def test_real_exclude_list_keeps_the_private_records_out() -> None:
 #: GitHub-hosted runner labels a public workflow may name. The release builds
 #: the macOS console binaries natively (2026-11-07), so the list holds the two
 #: macOS images besides ubuntu-latest; a self-hosted label or a list never fits.
-GITHUB_HOSTED = ("ubuntu-latest", "macos-14", "macos-15-intel")
+GITHUB_HOSTED = ("ubuntu-latest", "macos-15", "macos-15-intel")
 
 
 def test_public_workflows_never_use_a_self_hosted_runner() -> None:
@@ -905,3 +905,20 @@ def test_a_rerun_only_replaces_the_assets(tmp_path: Path, draft: str, published:
     assert not [c for c in calls if c.startswith("release create")]
     assert "release upload --clobber v1.0.0 -- SHA256SUMS install.sh" in calls
     assert ("release edit v1.0.0 --draft=false" in calls) is published
+
+
+RETIRED_RUNNER_LABELS = ("macos-12", "macos-13", "macos-14")
+
+
+def test_no_workflow_uses_a_retired_macos_runner() -> None:
+    # 2026-11-07: the first public release run was cancelled before any
+    # step ("configuration 'macos-14-arm64-us-default' is not supported").
+    files = sorted((ROOT / ".github" / "workflows").glob("*.y*ml"))
+    files += sorted((CONFIG / "public-workflows").glob("*.y*ml"))
+    hits = [
+        f"{path.name}: {label}"
+        for path in files
+        for label in RETIRED_RUNNER_LABELS
+        if f"runs-on: {label}" in path.read_text()
+    ]
+    assert hits == []

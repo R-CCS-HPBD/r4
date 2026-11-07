@@ -564,7 +564,7 @@ class SlashRegistry:
             SlashCommand(
                 "memory",
                 _cmd_memory,
-                "Reflective/context memory (list, search, add, delete, reset)",
+                "Saved memory (list, show, add, forget, lessons, promote, off, on)",
                 "context",
                 aliases=("mem",),
             )
@@ -4415,79 +4415,34 @@ def _cmd_visibility(app: "UnifiedTUI", args: List[str]) -> None:
         app.renderer.error(f"visibility query failed: {exc}")
 
 
-def _memory_list(app: "UnifiedTUI", args: List[str], client: Any) -> None:
-    tier = args[1] if len(args) > 1 else "session"
-    data = client.get(f"/gw/reflective-memory/{tier}")
-    _render_table(
-        app,
-        data.get("entries", []),
-        ["entry_id", "tier", "content_preview", "created_at"],
+def _memory_context(app: "UnifiedTUI") -> Any:
+    """The ``/memory`` verbs' context: this session's store and lessons, or
+    the current directory's when no chat session is attached."""
+    from r4.companion.memory_commands import MemoryCommandContext
+    from r4.companion.memory_store import store_for
+
+    session = getattr(getattr(app, "session", None), "_session", None)
+    context = getattr(session, "context", None)
+    store = context.memory_store() if context is not None else store_for(app.client)
+    harness = getattr(session, "harness", None)
+    return MemoryCommandContext(
+        store=store,
+        steering=getattr(harness, "steering", None),
+        client=app.client,
+        session=session,
     )
 
 
-def _memory_search(app: "UnifiedTUI", args: List[str], client: Any) -> None:
-    query = " ".join(args[1:])
-    data = client.post(
-        "/gw/reflective-memory/search",
-        json={"query": query, "limit": 20},
-    )
-    results = data.get("results", [])
-    app.renderer.info(f"Memory search results ({len(results)}):")
-    for i, result in enumerate(results[:20], start=1):
-        score = result.get("score", "")
-        preview = result.get("content_preview", "")
-        app.renderer.info(f"  [{i}] (score: {score}) {preview}")
-
-
-def _memory_add(app: "UnifiedTUI", args: List[str], client: Any) -> None:
-    text = " ".join(args[1:])
-    data = client.post(
-        "/gw/context/memory",
-        json={"content": text, "tier": "session"},
-    )
-    _render_kv(app, data)
-
-
-def _memory_delete(app: "UnifiedTUI", args: List[str], client: Any) -> None:
-    client.delete(f"/gw/reflective-memory/{args[1]}/{args[2]}")
-    app.renderer.system(f"deleted memory entry: {args[1]}/{args[2]}")
-
-
-def _memory_reset(app: "UnifiedTUI", args: List[str], client: Any) -> None:
-    client.post(f"/gw/reflective-memory/{args[1]}/reset")
-    app.renderer.system(f"reset memory tier: {args[1]}")
-
-
-_MEMORY_HANDLERS: dict[str, tuple[Any, int]] = {
-    "list": (_memory_list, 1),
-    "search": (_memory_search, 2),
-    "add": (_memory_add, 2),
-    "delete": (_memory_delete, 3),
-    "reset": (_memory_reset, 2),
-}
-
-
-# The edge has no /gw/reflective-memory or /gw/context location and
-# /umrs/context is not mounted; /secret targets /gw/secret-broker while the
-# edge serves only /gw/secrets with other shapes (TUI audit 2026-10-17).
-@_retired_surface("memory", _RETIRED_NO_EDGE_2026_10_17)
+# ADR-111 (2026-11-07): /memory is the person's view of the LOCAL saved
+# memory (one file per fact, user and project scopes). The 2026-10-17
+# retirement of the server-side reflective/context memory stands: those
+# routes still have no gateway location and that store has no project.
 def _cmd_memory(app: "UnifiedTUI", args: List[str]) -> None:
-    """``/memory list|search|add|delete|reset`` — reflective/context memory."""
-    if not args:
-        app.renderer.info("usage: /memory list [tier]")
-        app.renderer.info("       /memory search <query>")
-        app.renderer.info("       /memory add <text>")
-        app.renderer.info("       /memory delete <tier> <entry_id>")
-        app.renderer.info("       /memory reset <tier>")
-        return
+    """``/memory [list|show|add|forget|lessons|promote|path|off|on]``."""
+    from r4.companion.memory_commands import run_memory_command
 
-    _dispatch_subcommand(
-        app,
-        args,
-        _MEMORY_HANDLERS,
-        "usage: /memory list|search|add|delete|reset",
-        "memory",
-    )
+    for line in run_memory_command(args, _memory_context(app)):
+        app.renderer.info(line)
 
 
 def _secret_list(app: "UnifiedTUI", args: List[str], client: Any) -> None:
@@ -4557,6 +4512,8 @@ _SECRET_HANDLERS: dict[str, tuple[Any, int]] = {
 }
 
 
+# /secret targets /gw/secret-broker while the edge serves only /gw/secrets
+# with other shapes (TUI audit 2026-10-17).
 @_retired_surface("secret", _RETIRED_NO_EDGE_2026_10_17)
 def _cmd_secret(app: "UnifiedTUI", args: List[str]) -> None:
     """``/secret list|show|lease|revoke|renew|audit|cleanup`` — secret broker."""

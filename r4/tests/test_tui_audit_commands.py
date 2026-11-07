@@ -566,11 +566,13 @@ def test_30_governance_audit_since_duration_becomes_a_timestamp() -> None:
     assert app.renderer.error_lines == []
 
 
-# -- 24/25: /memory and /secret are retired (no gateway location) --------------
+# -- 24/25: /secret is retired (no gateway location) ---------------------------
+# /memory was retired with it on 2026-10-17 (its server routes had no edge
+# location); ADR-111 (2026-11-07) brought it back over the LOCAL saved memory.
 
 
-@pytest.mark.parametrize("line", ["/memory list session", "/mem search x", "/secret list demo"])
-def test_memory_and_secret_are_retired_and_call_nothing(line) -> None:
+@pytest.mark.parametrize("line", ["/secret list demo"])
+def test_secret_is_retired_and_calls_nothing(line) -> None:
     http = MagicMock()
     app = _app(get=http, post=http, delete=http)
     _dispatch(app, line)
@@ -578,6 +580,21 @@ def test_memory_and_secret_are_retired_and_call_nothing(line) -> None:
     assert app.renderer.error_lines == []
     assert "no gateway location" in app.renderer.system_lines[-1]
     assert "retired 2026-10-17" in app.renderer.system_lines[-1]
+
+
+def test_memory_uses_the_local_store_and_calls_no_gateway(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("R4_MEMORY_DIR", str(tmp_path / "memory"))
+    monkeypatch.setenv("R4_COMPANION_MEMORY_DIR", str(tmp_path / "legacy"))
+    http = MagicMock()
+    app = _app(get=http, post=http, delete=http)
+    _dispatch(app, "/memory add prefer sbatch arrays for sweeps")
+    _dispatch(app, "/mem list")
+    http.assert_not_called()
+    assert app.renderer.error_lines == []
+    assert any("prefer-sbatch-arrays-for-sweeps" in line for line in app.renderer.info_lines)
+    project_dir = next((tmp_path / "memory" / "projects").iterdir())
+    assert project_dir.name.endswith("--demo")
+    assert (project_dir / "prefer-sbatch-arrays-for-sweeps.md").is_file()
 
 
 def test_drift_retirements_keep_their_message() -> None:
