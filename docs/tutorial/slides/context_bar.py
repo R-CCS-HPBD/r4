@@ -27,6 +27,9 @@ from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.util import Inches, Pt
 
 WINDOW = 32_768  # qwen2.5:7b on the stand-alone stack (OLLAMA_CONTEXT_LENGTH)
+# Review 2026-11-07: draw the axis a little past the window so a red limit line
+# shows where the window ends (and what would overflow it).
+AXIS = 36_000
 
 # kind → (fill, text colour)
 KINDS = {
@@ -68,7 +71,7 @@ def bar(slide, x, y, w, h, segments, total=WINDOW, size=9) -> None:
 
 def scale(slide, x, y, w, total=WINDOW, step=8_192, size=8) -> None:
     """Tick labels under a bar: 0, 8k, 16k … up to ``total``."""
-    for t in range(0, total + 1, step):
+    for t in range(0, min(total, WINDOW) + 1, step):
         tx = x + int(w * t / total)
         rect(slide, tx, y, Inches(0.01), Inches(0.06), fill=MUTED)
         text_box(
@@ -96,6 +99,23 @@ def marker(slide, x, y, w, h, at, label, total=WINDOW, color=ALERT) -> None:
         label,
         Style(8, color, True),
         align=PP_ALIGN.CENTER,
+    )
+
+
+def limit_line(slide, x, y_top, y_bottom, w, total=AXIS, label=None) -> None:
+    """The window limit: a red vertical line at WINDOW tokens, labelled above."""
+    lx = x + int(w * WINDOW / total)
+    rect(slide, lx - Inches(0.015), y_top, Inches(0.03), y_bottom - y_top, fill=ALERT)
+    text = label or ("window limit 32,768", "ウィンドウの上限 32,768")
+    text_box(
+        slide,
+        lx - Inches(1.6),
+        y_top - Inches(0.22),
+        Inches(1.6) + Inches(0.9),
+        Inches(0.2),
+        text,
+        Style(9, ALERT, True),
+        align=PP_ALIGN.RIGHT,
     )
 
 

@@ -118,6 +118,12 @@ READ_RPCS: frozenset[str] = frozenset(
         "workflow.status",
         "workflow.results",
         "workflow.detail",
+        # A remote GET that streams for up to 600 s into a fresh local zip
+        # (``<name>-N.zip``, never an existing file). It changes no bridge,
+        # session or remote state, so it is a read: as a MUTATE it held the
+        # exclusive lock on the stdin thread and froze the console for the
+        # whole download (review fix 2026-11-07).
+        "workflow.export",
         "list_jobs",
         "get_job",
         "get_job_log",

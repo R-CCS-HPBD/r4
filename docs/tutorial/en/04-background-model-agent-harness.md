@@ -215,28 +215,35 @@ window × 0.90 − 4,096 = **25,395 tokens** on 32k
 
 **[General pattern]** — Claude `tool_use` / `tool_result`, OpenAI function
 calling (`@function_tool` in the Agents SDK), opencode tools, LangChain
-`bind_tools`: the model asks, the harness alone executes.
+`bind_tools`: the model asks, the harness executes. The loop is the same
+everywhere; the JSON shapes differ (Anthropic's `tool_use` carries `input` as
+an object and the result goes back as a `tool_result` block in a user
+message; OpenAI's Responses API uses `function_call` / `function_call_output`).
+Hosted tools of a cloud API (web search, code execution) run on the
+provider's servers instead.
 
-The model **never runs anything**. It writes JSON naming a tool; the
+The model **never runs anything**. It writes a request naming a tool; the
 harness decides whether to run it, runs it, and shows the model the result.
-The real shapes (OpenAI-compatible `/v1/chat/completions`; agent rounds are
-sent as a stream and reassembled, `client.py:1426-1450`; content
-shortened):
+The real shapes (OpenAI-compatible `/v1/chat/completions`, by default
+through the gateway at `<gateway>/gw/llm`; agent rounds are streamed and
+reassembled, `client.py:1444-1535`; content shortened; checked 2026-11-07):
 
 ```text
 1  harness → model
-POST /v1/chat/completions
-{"model": "qwen2.5:7b", "temperature": 0.4,
- "messages": [{"role": "system", ...},
-   {"role": "user", "content": "How many stations are in p_picks.csv, and which is farthest?"}],
+POST <gateway>/gw/llm/v1/chat/completions
+{"model": "qwen2.5:7b", "temperature": 0.4, "stream": true,
+ "messages": [{"role": "system", "content": "..."},
+   {"role": "user", "content": "How many stations are in p_picks.csv, and which is farthest?\n\n<turn_context>...</turn_context>"}],
  "tools": [{"type": "function", "function": {
-   "name": "python_exec",
-   "parameters": {"properties": {"code": {"type": "string"},
-     "timeout": {"type": "integer", "default": 180}},
+   "name": "python_exec", "description": "Run Python ...",
+   "parameters": {"type": "object", "properties": {
+     "code": {"type": "string", ...},
+     "timeout": {"type": "integer", "default": 180, ...}},
      "required": ["code"]}}}, ...]}
 
-2  model → harness: a request, not an action
-{"role": "assistant", "tool_calls": [{"id": "call_1",
+2  model → harness: a request, not an action (streamed; R4 joins the pieces)
+{"role": "assistant", "content": null,
+ "tool_calls": [{"id": "call_1", "type": "function",
   "function": {"name": "python_exec",
    "arguments": "{\"code\": \"df = pd.read_csv(...); ...\"}"}}]}
 
@@ -245,10 +252,12 @@ POST /v1/chat/completions
  "content": "25 stations; farthest JHT 267.6 km"}
 ```
 
-Tool "definitions" are just more text in the request (the `python_exec`
-schema: `companion/tools.py:1731-1746`). One assistant message with
-`tool_calls` is followed by one `role: tool` message per call
-(`_record_tool_round`, `companion/agent.py:3075`).
+Tool definitions travel as a separate JSON field; the model server writes
+them into the prompt text (for Qwen, into the system turn), so they cost
+input tokens (the `python_exec` schema: `companion/tools.py:1782-1798`). One
+assistant message with `tool_calls` (and its `reasoning_content`, when the
+model sends one) is followed by one `role: tool` message per call
+(`_record_tool_round`, `companion/agent.py:3109-3159`).
 
 What R4 adds around this:
 
@@ -257,19 +266,21 @@ What R4 adds around this:
   `<tool_call>{json}</tool_call>`, `<invoke name=…>` and Kimi's dialects —
   in this order: native `tool_calls` → `<tool_calls_section_begin>` → Kimi
   `<|open|>` → `<tool_call>` / `<invoke>` (`_extract_tool_calls`,
-  `companion/agent.py:4991-5013`). The idea goes back to ReAct (prompting a
+  `companion/agent.py:5062-5085`). The idea goes back to ReAct (prompting a
   model to write its thought and action as text); today vLLM and Ollama
-  usually do this parsing on the server, and Claude Code and the OpenAI
+  do this parsing on the server when started with a tool parser, and Claude Code and the OpenAI
   Agents SDK accept native tool calls only. R4 does it in the client so
   that any served model works.
 - **[R4-specific] Argument repair and null dropping.** Broken JSON is
   repaired before it is rejected (control characters, containers sent as
-  strings, trailing text; `_repair_tool_arguments`, `agent.py:1721-1751`).
+  strings, trailing text; `_repair_tool_arguments`, `agent.py:1682-1760`; OpenHands and
+  opencode patch similar mistakes).
   An explicit `null` for an optional argument is dropped so the tool's
-  default applies (`_without_null_optionals`, `agent.py:980-990`;
+  default applies (`_without_null_optionals`, `agent.py:1000-1010`;
   `llama3.2:3b` broke `file_read` this way). An unrepairable call or an
   unknown tool comes back to the model as an error before the permission
-  gate (`agent.py:5204-5221`) — never guessed.
+  gate (`agent.py:5276-5293`) — never guessed; every harness returns such
+  failures to the model.
 
 ## 8. The agent loop, as R4 implements it (slide 19)
 
@@ -308,7 +319,7 @@ it. Each line, with R4's numbers and how general it is:
 | `range(1000)` + `wrap_up_round()` | `DEFAULT_TOTAL_TOOL_ROUNDS = 1000` (`agent.py:80`). At the roof, one more round **without tools** lets the model write a summary of what it found; a fixed digest is the fallback (`_wrap_up_summary`, `agent.py:3699-3720`). | General · R4 settings | OpenAI Agents SDK `max_turns` (default 10, then an exception); LangGraph `recursion_limit` (25, hard stop); opencode's step limit with a wrap-up prompt, which R4 copied |
 | `finished_background_agents()` | A background agent that has finished lands as one user-role `<subagent-notification>` message at the next round; nothing is added while none has finished, so the cached prefix stays intact (G9, `agent.py:3242-3253`). At most 4 run at once (`async_agents.py:24`). | General · R4 settings | Claude Code's background agents and `<task-notification>` |
 | `fit(messages)` | Old tool results are shortened inside the turn (§10). | General · R4 settings | Claude Code microcompact; Anthropic API context editing |
-| `model(...)` | One streamed `/v1/chat/completions` call (`client.py:1426-1450`). Reasoning longer than 16,000 tokens or 600 s is closed by the harness (`agent.py:237, 277`). | R4-specific (the thinking budget) | Claude `budget_tokens` and OpenAI `reasoning_effort` are enforced by the provider instead |
+| `model(...)` | One streamed `/v1/chat/completions` call (`client.py:1444-1535`). Reasoning longer than 16,000 tokens or 600 s is closed by the harness (`agent.py:237, 277`). | R4-specific (the thinking budget) | Claude `budget_tokens` and OpenAI `reasoning_effort` are enforced by the provider instead |
 | `parse_tags` | The text fallback (§7). | General · R4 settings | — |
 | nudges | An **empty reply** gets a "continue" message, at most 2 times (`_EMPTY_REPLY_MAX_NUDGES`, `agent.py:141`); a reply that **announces a step** ("Let me …:") **but calls nothing** gets one, at most 3 times (`agent.py:143-150`). | R4-specific | Elsewhere a text-only reply simply ends the turn |
 | output limit | `finish_reason = length`: first one retry with the output cap raised to max(2×, +8,192) tokens, up to 131,072 (G19a, `_escalate_output_budget`, `agent.py:3343-3372`); then up to 4 "continue" nudges that hand back the last 12,000 characters of the cut reasoning (`agent.py:110-128, 196-205`); then a named stop. | General · R4 settings | Claude Code raises its output cap once, then sends up to 3 "resume" messages |
@@ -621,7 +632,11 @@ An embedding model turns any text into a vector — `e5-base-v2` gives 768
 numbers. Similar meaning → vectors pointing the same way (cosine
 similarity near 1). Directions carry meaning too: the classic word-vector
 example is **king − man + woman ≈ queen** (word2vec; Mikolov et al., 2013),
-shown on the slide as an illustration, not measured with e5. Slide 27 also
+shown on the slide as an illustration, not measured with e5. How two
+vectors are compared: **cosine similarity** = a·b / (|a||b|), 1 when they
+point the same way; e5 vectors have length 1, so it equals the dot product.
+UMRS ranks by it in pgvector (`<=>` is the cosine distance 1 − cosine, an
+exact scan; `umrs/src/umrs/knowledge/retrieval/dense.py:3, 157-165`). Slide 27 also
 scores one question ("How deep is the Moho under the Kii Channel?") against
 four sentences with `e5-base-v2`: the answer 0.81, the same fact in other
 words 0.76, the same topic but another question 0.68, an unrelated
@@ -704,22 +719,28 @@ citation convention; its Responses API `file_search` returns
 structured fields, not inline labels.
 
 **Does it help? (slide 29)** — measured on the same 3B model with exactly
-these two plain-text prompts (`next_token_probe.py`, `lab_en` /
-`lab_rag_en`):
+these plain-text prompts (`next_token_probe.py`, `lab_en` /
+`lab_rag_clear_en` / `lab_rag_en`); review 2026-11-07 added the clear
+passage to show when RAG works:
 
 - A: `Our observatory's reference model puts the Moho under the Kii Channel
   at a depth of `
-- B: `KRSO-1D v2 (Kinki Regional Seismic Observatory reference model): upper
-  crust 0-18 km, 5.9 km/s; lower crust 18-28 km, 6.7 km/s; mantle below the
-  Moho at 28 km, 7.9 km/s.` + a blank line + prompt A
+- B (clear): `KRSO-1D v2 (Kinki Regional Seismic Observatory reference
+  model): the Moho under the Kii Channel lies at 28 km depth.` + a blank
+  line + prompt A
+- C (table-like, also names 18 km): `KRSO-1D v2 (…): upper crust 0-18 km,
+  5.9 km/s; lower crust 18-28 km, 6.7 km/s; mantle below the Moho at 28 km,
+  7.9 km/s.` + a blank line + prompt A
 
-| | A · question only | B · with the passage |
-|---|---|---|
-| most likely answer | 100 km | **28 km** |
-| P(exactly "28 km"), temperature 0.4 (R4's default) | 0.5 % | **75 %** |
-| P(exactly "28 km"), temperature 1 | 0.9 % | 19 % |
+| | A · question only | B · clear passage | C · table-like passage |
+|---|---|---|---|
+| most likely answer | 100 km | **28 km** | **28 km** |
+| P(exactly "28 km"), temperature 0.4 (R4's default) | 0.5 % | **99.96 %** | 75 % |
+| P(exactly "28 km"), temperature 1 | 0.9 % | 88 % | 19 % |
 
-With the Japanese prompts: 100 km → 28 km; 0.1 % → 42 % at 0.4. "Exactly
+With the Japanese prompts at 0.4: 0.1 % / 98 % / 42 %. RAG works when the
+retrieved text states the fact clearly; a passage with several similar
+numbers leaves room for the wrong one. "Exactly
 28 km" = p("2") × p("8" | "2") × p(no further digit), from
 `next_token_probe.json` (`answer_28`). RAG moves the odds the right way; it
 does not guarantee the answer — read the cited source.

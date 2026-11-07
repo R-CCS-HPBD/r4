@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/workflow.export.schema.json",
+  "title": "workflow.export",
+  "description": "workflow.export: where the verified zip was saved, and its EXPORT.json counts.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/WorkflowExportResult",
+  "$defs": {
+    "WorkflowExportResult": {
+      "type": "object",
+      "description": "workflow.export: where the verified zip was saved, and its EXPORT.json counts.",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "workflow_name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "files": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "excluded": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "ok",
+        "workflow_name",
+        "path",
+        "files",
+        "excluded"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

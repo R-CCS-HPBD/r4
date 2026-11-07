@@ -1,6 +1,6 @@
 # 13. CLI Reference
 
-Complete command tree for the `r4` CLI. For exact flags on any command, use `r4 <command> --help`. (Project-loop, knowledge-transport and skill-review entries refreshed 2026-09-24; `r4 project storage` added 2026-10-01; `r4 bucket`, `r4 files list/--bucket/--recursive`, `r4 workflow results` added 2026-10-02; access verbs — `endpoint/graph/catalog/workflow/bucket access`, `rag corpus-access` — and the `r4 circle` / `r4 grant` sections added 2026-10-03; groups renamed to project-scoped circles 2026-10-05; `r4 model scale` added 2026-10-10; `r4 project data-class` added 2026-10-16; `r4 rag ingest` retired 2026-10-18; `r4 --sandbox` and `r4 config sandbox` added 2026-10-30.)
+Complete command tree for the `r4` CLI. For exact flags on any command, use `r4 <command> --help`. (Project-loop, knowledge-transport and skill-review entries refreshed 2026-09-24; `r4 project storage` added 2026-10-01; `r4 bucket`, `r4 files list/--bucket/--recursive`, `r4 workflow results` added 2026-10-02; access verbs — `endpoint/graph/catalog/workflow/bucket access`, `rag corpus-access` — and the `r4 circle` / `r4 grant` sections added 2026-10-03; groups renamed to project-scoped circles 2026-10-05; `r4 model scale` added 2026-10-10; `r4 project data-class` added 2026-10-16; `r4 rag ingest` retired 2026-10-18; `r4 --sandbox` and `r4 config sandbox` added 2026-10-30; `r4 workflow export` added 2026-11-07.)
 
 ## Command Ownership
 
@@ -357,6 +357,7 @@ r4 job retry ID
 ```
 r4 workflow list [--scope SCOPE] [--name NAME] [--all]   # --all: full catalog, admin only
 r4 workflow access NAME [--set SCOPE ...] [--private]   # who may run it
+r4 workflow export NAME [-o PATH] [--force] [--extract DIR] [--json]   # download a workflow you can see as a verified zip
 r4 workflow upload WORKFLOW_DIR|.zip [--name NAME]
 r4 workflow run WORKFLOW_DIR|.zip [--param KEY=VALUE ...] [--wait]   # upload + trigger
 r4 workflow lint PATH                  # Check a bundle against the upload contract (description, depends_on), offline
@@ -376,6 +377,14 @@ r4 workflow cancel EXEC_ID
 
 - `upload` takes a workflow **directory or .zip bundle** (containing
   `workflow.json` + sources), not a single YAML file.
+- `export` writes `./NAME.zip` (or `DIR/NAME.zip` when `-o` is a directory or ends in `/`;
+  a missing `DIR/` is created)
+  for any workflow you can see — own, `system`, or shared with you or your
+  active project. The zip holds the source tree, `workflow.json` and
+  `EXPORT.json` (sha256 per file, excluded secret-shaped paths); container
+  images are not included. It is verified before it is renamed into place;
+  `--force` overwrites, `--extract DIR` unpacks and refuses paths that
+  escape `DIR` (§9, Exporting a workflow).
 - `--input-file` is a repeatable **input file ID or S3 key**; pass run
   parameters with `--param`, `--params-file`, or `--params-json`.
 

@@ -93,4 +93,5 @@ metadata:
   name: grafana-secrets
 type: Opaque
 stringData:
-  admin-password: admin  # Change in production!
+  # REQUIRED: set a strong password before applying this manifest.
+  admin-password: CHANGE_ME

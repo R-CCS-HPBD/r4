@@ -16,17 +16,40 @@ The R4 client consists of three lightweight packages:
 | `r4` | Primary user CLI/SDK | `r4` |
 | `umrs` | UMRS diagnostics & control plane | `umrs` |
 
-### Recommended: One-Shot Installer
+### Recommended: One-Command Installer
+
+macOS and Linux; on Windows, run it inside
+[WSL2](https://learn.microsoft.com/windows/wsl/install):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/R-CCS-HPBD/r4/main/scripts/install-r4.sh | bash
-export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"   # only if the installer says so
 ```
 
-The installer clones the repository into `~/.r4/src` and installs the
-packages into the virtual environment `~/.r4/venv`. The packages are not on
-PyPI (`r4` depends on workspace packages of this repository), so `pip install
-r4` does not work; use the installer or a local clone.
+Since 2026-11-07 the installer installs the newest release (release
+candidates included) as a [uv](https://docs.astral.sh/uv/) tool. It uses your
+`uv` or installs it with the official installer, downloads the release's
+client bundle `r4-client-<tag>.tar.gz`, checks each package against the
+bundle's `SHA256SUMS` (a mismatch aborts), installs `r4` and `umrs` from those
+local files only (Python 3.12), and runs `r4 tui install` for the console
+binary of the same release.
+
+| Task | Command |
+|------|---------|
+| Pin a release | `curl -fsSL .../install-r4.sh \| R4_VERSION=v0.2.0-rc2 bash` |
+| Upgrade | run the install command again |
+| Uninstall | `uv tool uninstall r4`; `rm -f ~/.local/share/r4/bin/r4-tui` removes the console binary (`$R4_TUI_HOME/bin/r4-tui` when `R4_TUI_HOME` is set; the rest of `~/.local/share/r4` holds the delete-guard trash) |
+| Skip the console binary | `R4_SKIP_TUI=1` |
+| Install from source instead | `R4_FROM_SOURCE=1` (with `R4_BRANCH=<branch or tag>`) |
+
+When no release publishes a client bundle yet, or with `R4_FROM_SOURCE=1`,
+the installer falls back to the source install: a clone in `~/.r4/src` and a
+virtual environment in `~/.r4/venv` (needs `git` and Python 3.10+). All
+settings are listed at the top of `scripts/install-r4.sh`.
+
+The packages are not on PyPI (`r4` depends on workspace packages of this
+repository), so `pip install r4` does not work; use the installer or a local
+clone.
 
 ### From a Local Clone
 

@@ -5,6 +5,8 @@ applyTo: '**'
 
 # Living Documentation Policy
 
+> *(2026-11-07)* This file describes the development repository's process. Public contributors follow [CONTRIBUTING.md](../../CONTRIBUTING.md).
+
 Purpose: agents must never plan against stale context. Docs rot == wrong
 context for the next agent.
 

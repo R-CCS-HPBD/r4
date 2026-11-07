@@ -44,6 +44,9 @@ help:
 	@echo "  r4 completion install      Install r4 tab completion into your shell RC"
 	@echo "  umrs completion install      Install umrs tab completion"
 	@echo ""
+	@echo "Checks:"
+	@echo "  make ci                    Local CI gate on files changed vs origin/main"
+	@echo ""
 	@echo "Documentation:"
 	@echo "  make docs                  List documentation entry points"
 
@@ -163,7 +166,12 @@ docs:
 # CI/CD
 # =============================================================================
 
-ci: lint type-check test
+# The local CI gate: lint, complexity, boundary validators and the tests of the
+# changed components (files changed against origin/main). For the whole tree:
+# bash scripts/ci-lint-local.sh --full
+.PHONY: ci
+ci:
+	bash scripts/ci-lint-local.sh
 
 pre-commit:
 	uv run pre-commit run --all-files

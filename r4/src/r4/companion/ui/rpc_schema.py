@@ -581,6 +581,21 @@ class WorkflowPackage(WorkflowDescription):
     files_truncated: bool = absent(False)
 
 
+@dataclass(frozen=True)
+class WorkflowExportResult:
+    """workflow.export: where the verified zip was saved, and its EXPORT.json counts.
+
+    ``files`` / ``excluded`` are ``null`` when the manifest could not be read
+    back (the SDK already verified it; the counts are display only).
+    """
+
+    ok: bool = False
+    workflow_name: str = ""
+    path: str = ""
+    files: Optional[int] = None
+    excluded: Optional[int] = None
+
+
 # ── assets.* ────────────────────────────────────────────────────────────────
 
 
@@ -1065,6 +1080,7 @@ CORE_RESULT_TYPES: Dict[str, type] = {
     "workflow.detail": WorkflowDetailResult,
     "workflow.approve_gate": WorkflowStatusAck,
     "workflow.package": WorkflowPackage,
+    "workflow.export": WorkflowExportResult,
     "workflow_describe": WorkflowDescription,
     "assets.snapshot": AssetsSnapshotResult,
     "assets.patch": AssetsPatchResult,

@@ -19,14 +19,15 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const pkgDir = dirname(dirname(fileURLToPath(import.meta.url)));
-const hostTarget =
-  process.platform === "darwin"
-    ? "darwin-arm64"
-    : process.platform === "linux"
-      ? process.arch === "arm64"
-        ? "linux-arm64"
-        : "linux-x64"
-      : null;
+// Same host mapping as scripts/build-bin.mjs (`${platform}-${arch}`): an Intel
+// Mac builds darwin-x64 (2026-11-07; this used to assume darwin-arm64).
+const HOST_TARGETS: Record<string, string> = {
+  "darwin-arm64": "darwin-arm64",
+  "darwin-x64": "darwin-x64",
+  "linux-arm64": "linux-arm64",
+  "linux-x64": "linux-x64",
+};
+const hostTarget = HOST_TARGETS[`${process.platform}-${process.arch}`] ?? null;
 const binPath = hostTarget ? join(pkgDir, "dist-bin", `r4-tui-${hostTarget}`) : null;
 const haveBinary = binPath !== null && existsSync(binPath);
 

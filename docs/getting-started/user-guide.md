@@ -53,17 +53,20 @@ built with Hatch and pulled/started with Hatchling (`r4 mcp hatch …`).
 ### Install
 
 ```bash
-# One-shot installer (recommended)
+# One-command installer (recommended; macOS, Linux, Windows inside WSL2):
+# the newest release as a uv tool, checksum-verified, plus the console binary
 curl -fsSL https://raw.githubusercontent.com/R-CCS-HPBD/r4/main/scripts/install-r4.sh | bash
-export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"   # only if the installer says so
 
 # Or from a clone (the packages are not on PyPI)
 git clone --recurse-submodules https://github.com/R-CCS-HPBD/r4.git
 cd r4 && make install-client
-
-# Fetch the console binary (sha256-verified)
-r4 tui install
+r4 tui install                         # fetch the console binary (sha256-verified)
 ```
+
+Upgrade by running the installer again; pin a release with
+`R4_VERSION=<tag>`; uninstall with `uv tool uninstall r4`. Details:
+[Quickstart, step 1](../user-manual/02-quickstart.md#step-1-install-the-client).
 
 ### Authenticate
 

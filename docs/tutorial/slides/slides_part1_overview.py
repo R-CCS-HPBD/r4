@@ -322,8 +322,10 @@ TURN_STEPS = [
         "**1** 依頼文がコンテキストに入る:指示・履歴・有効なスキル",
     ),
     (
-        "**2** the context + the tool list go to the model as text",
-        "**2** コンテキストとツール一覧を、テキストとしてモデルへ送る",
+        "**2** the context + the tool list go to the model in one request; the model "
+        "server turns both into the text the model reads",
+        "**2** コンテキストとツール一覧を 1 つのリクエストで送り、モデルサーバがモデルの"
+        "読む文章に変える",
     ),
     (
         "**3** the reply is plain text (the answer, done) or a tool call",

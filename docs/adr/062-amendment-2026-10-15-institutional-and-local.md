@@ -56,7 +56,7 @@ The workstation's gate also never fired (it read the wrong field; see the onboar
 
 ## Rollout-status (2026-10-16)
 
-Accepted (unchanged). Implemented on branch `feat/easy-onboarding`, draft PR [#465](https://github.com/mnagaso/ai4s-platform/pull/465). *Updated 2026-10-16 (evening):* **merged into `main` as `d5334944` and deployed the same day to rccs, ai4s and bdrt by converge run 38897348299; the octopus front's gateway did not start (STATE OPS-20261016-001)** (public `/health` 200 on the three). Gap row D-51 records the same state.
+Accepted (unchanged). Implemented on branch `feat/easy-onboarding`, draft PR #465 in the development repository. *Updated 2026-10-16 (evening):* **merged into `main` as `d5334944` and deployed the same day to rccs, ai4s and bdrt by converge run 38897348299; the octopus front's gateway did not start (STATE OPS-20261016-001)** (public `/health` 200 on the three). Gap row D-51 records the same state.
 
 - **Wave 2, 2026-10-16** (umrs `ce78dd2b`, parent `afe67126`; wave ledger 2026-10-16 (22)):
   - Decisions 1 and 2: the allowlist `UMRS_INSTITUTIONAL_PROVIDER_HOSTS` (packaged default `api.rikyu.r-ccs.riken.jp`) at the venue-start and `umrs-infer` lease gates; `connect-info` advertises it, and `r4 login` stores it on the deployment's platform source.

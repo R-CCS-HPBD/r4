@@ -15,10 +15,14 @@ bridge it spawns imports your uncommitted code. For everyday research use a
 separate install:
 
 ```bash
-# own clone in ~/.r4/src and venv in ~/.r4/venv; pin a tag with R4_BRANCH
-curl -fsSL https://raw.githubusercontent.com/R-CCS-HPBD/r4/main/scripts/install-r4.sh | R4_BRANCH=<tag> bash
-r4 tui install          # release console binary for this host
+# the release's wheels as a uv tool (r4, umrs in ~/.local/bin) plus its
+# console binary; pin a tag with R4_VERSION
+curl -fsSL https://raw.githubusercontent.com/R-CCS-HPBD/r4/main/scripts/install-r4.sh | R4_VERSION=<tag> bash
 ```
+
+(2026-11-07: the installer used to clone into `~/.r4/src` and pin with
+`R4_BRANCH`; that is now its fallback, `R4_FROM_SOURCE=1 R4_BRANCH=<tag>`,
+used automatically only when no release publishes a client bundle.)
 
 Put that install's `r4` first on your `PATH` for daily work and call the
 checkout's `.venv/bin/r4` (or `make` targets) only while developing. Moving
@@ -26,12 +30,13 @@ the pinned install forward is a deliberate step: rerun the installer with the
 next tag.
 
 `r4 doctor` checks where the running `r4` package comes from (row
-`install_source`, added 2026-10-18, plan H-3.5). The pinned install
-(`install-r4.sh`'s clone in `~/.r4/src`, installed editable) and a clean
-development checkout both pass. With uncommitted changes under the package
+`install_source`, added 2026-10-18, plan H-3.5). The pinned install (a
+wheel install since 2026-11-07; the source fallback's clone in `~/.r4/src`,
+installed editable) and a clean development checkout both pass. With uncommitted changes under the package
 directory the row turns into a warning (`–`) naming the count and the path.
 `r4 doctor --json` also shows `kind`: `checkout` for any git clone, including
-the pinned one, and `installed` for a non-git install such as a wheel. The
+the source fallback's clone, and `installed` for a non-git install such as
+the installer's wheels. The
 warning never fails doctor. If you see it during daily use, check the path it
 names: usually your `r4` is the development checkout.
 
@@ -165,9 +170,9 @@ the heavyweight E2E files only skip unless you opt in (`R4_E2E_K8S=1`,
 tier), and `tests/test_root_suite_default_skips.py` keeps it that way. One
 exception: `tests/test_research_journey_e2e.py` runs its gateway steps
 whenever something answers on `GATEWAY_URL` (default `localhost:8080`), so
-a machine with a local stack up runs them against that stack. Test tiers and markers: [TESTING.md](../../TESTING.md). `make ci` fails:
-`Makefile` names `lint`, `type-check` and `test` targets that do not exist (a
-code fix is pending; noted 2026-10-18); use the commands above.
+a machine with a local stack up runs them against that stack. Test tiers and markers: [TESTING.md](../../TESTING.md). `make ci` runs
+`scripts/ci-lint-local.sh` on your changes (fixed 2026-11-07; before, it
+named targets that did not exist).
 
 ## 4. First PR
 

@@ -22,7 +22,7 @@ class TestPlatformMapping:
     def test_known_platforms(self, monkeypatch):
         cases = {
             ("darwin", "arm64"): "darwin-arm64",
-            ("darwin", "x86_64"): "darwin-arm64",
+            ("darwin", "x86_64"): "darwin-x64",
             ("linux", "x86_64"): "linux-x64",
             ("linux", "aarch64"): "linux-arm64",
         }
@@ -37,6 +37,28 @@ class TestPlatformMapping:
         monkeypatch.setattr(tui_module.platform, "machine", lambda: "AMD64")
         assert tui_module.platform_key() is None
         assert tui_module.tui_asset_name() is None
+
+    def test_intel_mac_gets_the_x64_build_not_arm64(self, monkeypatch):
+        """Rosetta runs x86_64 code on arm64, not arm64 code on an Intel Mac;
+        before 2026-11-07 an Intel Mac downloaded a binary it cannot exec."""
+        monkeypatch.setattr(tui_module.sys, "platform", "darwin")
+        monkeypatch.setattr(tui_module.platform, "machine", lambda: "x86_64")
+        assert tui_module.tui_asset_name() == "r4-tui-darwin-x64"
+
+    def test_windows_native_install_points_at_wsl2(self, monkeypatch, capsys):
+        monkeypatch.setattr(tui_module.sys, "platform", "win32")
+        monkeypatch.setattr(tui_module.platform, "machine", lambda: "AMD64")
+        assert tui_module.install_binary() == 1
+        err = capsys.readouterr().err
+        assert "No prebuilt TUI binary for win32/AMD64" in err
+        assert "WSL2" in err
+
+    def test_other_unsupported_platform_has_no_wsl_hint(self, monkeypatch):
+        monkeypatch.setattr(tui_module.sys, "platform", "freebsd14")
+        monkeypatch.setattr(tui_module.platform, "machine", lambda: "amd64")
+        msg = tui_module.unsupported_platform_message()
+        assert "freebsd14/amd64" in msg
+        assert "WSL2" not in msg
 
 
 class TestResolve:

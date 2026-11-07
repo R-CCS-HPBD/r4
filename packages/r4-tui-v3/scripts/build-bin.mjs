@@ -5,7 +5,7 @@
  * Usage:
  *   bun run scripts/build-bin.mjs                 # host platform only
  *   bun run scripts/build-bin.mjs --all           # full release matrix
- *   bun run scripts/build-bin.mjs --target=bun-linux-x64
+ *   bun run scripts/build-bin.mjs --target=linux-x64 --target=darwin-x64
  *
  * Output: dist-bin/r4-tui-<platform>[-<arch>]  (+ .sha256 files)
  */
@@ -21,6 +21,9 @@ const ENTRY = join(PACKAGE_DIR, "src", "cli.tsx");
 
 const MATRIX = {
   "darwin-arm64": "bun-darwin-arm64",
+  // Intel Macs (2026-11-07, one-command install): `r4 tui install` maps
+  // darwin/x86_64 here instead of handing them the arm64 build.
+  "darwin-x64": "bun-darwin-x64",
   "linux-x64": "bun-linux-x64",
   "linux-x64-baseline": "bun-linux-x64-baseline",
   "linux-arm64": "bun-linux-arm64",

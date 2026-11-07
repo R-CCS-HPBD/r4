@@ -385,6 +385,19 @@ workflows = client.workflows.list_workflows()
 Other workflow verbs: `upload`, `describe`, `get_results`, `cancel`,
 `wait_for_completion`, `approve_gate`, and `lint_file` for offline validation.
 
+### `client.workflows.export()`
+
+```python
+path = client.workflows.export("my-pipeline", "exports/", overwrite=False)
+```
+
+Downloads a workflow you can see (own, `system`, or shared) as a zip and
+returns its `Path`: `./NAME.zip` by default, `DIR/NAME.zip` for an existing
+directory or a destination ending in `/` (created when missing). The file is verified against its `EXPORT.json` checksums before
+it is renamed into place; a mismatch raises `R4Error` and leaves no file.
+`r4.workflows.extract_export(path, dest_dir)` unpacks it, refusing paths
+that escape `dest_dir`. Container images are not included.
+
 ### `client.workflows.trigger()`
 
 ```python
@@ -449,7 +462,7 @@ readiness = client.readiness()
 
 The retrieval router, profile and citation-check variables (`R4_RAG_*`,
 `R4_MODEL_SCALE`) are listed in
-[Appendix B](appendix-b-env-vars.md#r4-retrieval-adr-093).
+[Appendix B](appendix-b-env-vars.md#r4-retrieval).
 
 ## Code Examples
 

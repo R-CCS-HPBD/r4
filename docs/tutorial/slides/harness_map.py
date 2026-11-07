@@ -34,13 +34,15 @@ from deck_kit import (
     tr,
 )
 from lxml import etree
+from pptx.enum.dml import MSO_LINE
 from pptx.enum.shapes import MSO_CONNECTOR
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.oxml.ns import qn
 from pptx.util import Emu, Inches, Pt
 
-MAP_W, MAP_H = 12.1, 4.7
-ROW1, ROW2, ROW3, ROW_H = 0.5, 1.55, 2.85, 0.8
+MAP_W, MAP_H = 12.1, 4.85
+ROW1, ROW2, ROW3, ROW_H = 0.5, 1.68, 3.0, 0.8
+UMRS_Y = 4.2
 BUS_Y = ROW2 + ROW_H + 0.22
 MINI_W = Inches(2.9)
 MINI_TOP = Inches(0.14)
@@ -143,7 +145,7 @@ NODES = {
     ),
     "umrs": Node(
         4.5,
-        4.05,
+        UMRS_Y,
         4.35,
         0.65,
         ("UMRS", "UMRS"),
@@ -151,7 +153,7 @@ NODES = {
         False,
     ),
 }
-HARNESS = (2.1, 0.0, 7.0, 3.82)
+HARNESS = (2.1, 0.0, 7.0, 3.97)
 
 # Arrows (x1, y1, x2, y2) in map inches. Review 2026-11-05: every box joins
 # the flow — skills feed the context, the gate fans out to the three kinds of
@@ -167,8 +169,8 @@ ARROWS = (
     (5.52, BUS_Y, 5.52, ROW3),  # tool call → knowledge
     (7.77, BUS_Y, 7.77, ROW3),  # tool call → MCP
     (2.35, ROW3 + 0.4, 1.6, ROW3 + 0.4),  # local tools → your files
-    (5.52, ROW3 + ROW_H, 5.52, 4.05),  # knowledge → UMRS
-    (7.77, ROW3 + ROW_H, 7.77, 4.05),  # MCP → UMRS
+    (5.52, ROW3 + ROW_H, 5.52, UMRS_Y),  # knowledge → UMRS
+    (7.77, ROW3 + ROW_H, 7.77, UMRS_Y),  # MCP → UMRS
 )
 # The tool-call bus from the gate (plain lines, no heads).
 LINES = (
@@ -179,6 +181,14 @@ LINES = (
 # step 5 (a tool runs) sits on the tool-call bus.
 STEPS = {"context": "1", "model": "2", "loop": "3", "gate": "4"}
 BUS_STEP = (2.95, BUS_Y)
+# The result goes back (review 2026-11-07: "fix the arrows"): a dashed path
+# from the tools up the right side of the harness into the loop.
+RETURN_X = 8.98
+RETURN = (
+    (8.85, ROW3 + 0.55, RETURN_X, ROW3 + 0.55),
+    (RETURN_X, ROW3 + 0.55, RETURN_X, ROW1 + ROW_H - 0.06),
+)
+RETURN_HEAD = (RETURN_X, ROW1 + ROW_H - 0.06, 8.85, ROW1 + ROW_H - 0.06)
 EXCHANGE = (2, 3)  # the loop ⇄ model arrows
 
 # What each focus highlights: node keys, and whether the exchange arrows glow.
@@ -227,16 +237,17 @@ FOCUS_CAPTION = {
 }
 
 
-def _line(slide, x1, y1, x2, y2, color, width: float) -> None:
+def _line(slide, x1, y1, x2, y2, color, width: float, dashed: bool = False):
     conn = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, x1, y1, x2, y2)
     conn.line.color.rgb = color
     conn.line.width = Pt(width)
+    if dashed:
+        conn.line.dash_style = MSO_LINE.DASH
+    return conn
 
 
-def _arrow(slide, x1, y1, x2, y2, color, width: float) -> None:
-    conn = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, x1, y1, x2, y2)
-    conn.line.color.rgb = color
-    conn.line.width = Pt(width)
+def _arrow(slide, x1, y1, x2, y2, color, width: float, dashed: bool = False) -> None:
+    conn = _line(slide, x1, y1, x2, y2, color, width, dashed)
     ln = conn.line._get_or_add_ln()
     tail = etree.SubElement(ln, qn("a:tailEnd"))
     tail.set("type", "triangle")
@@ -318,6 +329,7 @@ def draw_full(slide, x, y, w, focus: str | None = None) -> int:
         _arrow(slide, s(x1, "x"), s(y1, "y"), s(x2, "x"), s(y2, "y"), OCEAN, 2.25)
     for x1, y1, x2, y2 in LINES:
         _line(slide, s(x1, "x"), s(y1, "y"), s(x2, "x"), s(y2, "y"), OCEAN, 2.25)
+    _return_path(slide, s)
     _bus_label(slide, s)
     size = Inches(0.32)
     for key, step in STEPS.items():
@@ -335,6 +347,23 @@ def draw_full(slide, x, y, w, focus: str | None = None) -> int:
     if focus:
         _frames(slide, s, focus, 3.0, 0.1)
     return int(s(MAP_H))
+
+
+def _return_path(slide, s: _Scale) -> None:
+    """Dashed: the tool's result goes back to the loop (then step 2 again)."""
+    for x1, y1, x2, y2 in RETURN:
+        _line(slide, s(x1, "x"), s(y1, "y"), s(x2, "x"), s(y2, "y"), AMBER, 2.0, dashed=True)
+    x1, y1, x2, y2 = RETURN_HEAD
+    _arrow(slide, s(x1, "x"), s(y1, "y"), s(x2, "x"), s(y2, "y"), AMBER, 2.0, dashed=True)
+    text_box(
+        slide,
+        s(RETURN_X + 0.05, "x"),
+        s(ROW2 + ROW_H + 0.05, "y"),
+        s(0.6),
+        s(0.4),
+        ("result", "結果"),
+        Style(max(7.0, s.font() - 2), AMBER, True),
+    )
 
 
 def _bus_label(slide, s: _Scale) -> None:

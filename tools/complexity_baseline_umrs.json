@@ -95,8 +95,8 @@
     {
       "file": "umrs/src/client_umrs.py",
       "function": "_action_workflow",
-      "complexity": 25,
-      "fingerprint": "9398572b02fb42e1f13d949a01bccf722e9bca6a26ba4015f30d179af4046cd4"
+      "complexity": 23,
+      "fingerprint": "d1a4304c8f5ccb07f050f2657df828149d46d05bb172cbcc92b0d47da4f42796"
     },
     {
       "file": "umrs/src/client_umrs.py",

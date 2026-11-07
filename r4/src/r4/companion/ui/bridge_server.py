@@ -3193,6 +3193,16 @@ class CompanionBridgeServer(
             raise ValueError("workflow_name is required")
         return self.session.client.workflows.definition_package(workflow_name)
 
+    def workflow_export(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Save one visible workflow as a verified zip (2026-11-07).
+
+        Folder and never-overwrite name: ``ui/workflow_export.py``; the
+        download and checksum check: ``WorkflowClient.export``.
+        """
+        from .workflow_export import export_workflow
+
+        return export_workflow(self.session.client.workflows, params)
+
     def permission_rules_list(self, _params: dict[str, Any]) -> dict[str, Any]:
         """``/settings rules``: every G14 rule this session runs with, with its
         source (ADR-104 D-3); only the project's user rules are removable."""
@@ -5197,6 +5207,7 @@ def _bridge_rpc_bindings(server: "CompanionBridgeServer") -> dict[str, Any]:
         "knowledge_graph_content": server.knowledge_graph_content,
         "workflow_describe": server.workflow_describe,
         "workflow.package": server.workflow_package,
+        "workflow.export": server.workflow_export,
         "permission_rules.list": server.permission_rules_list,
         "permission_rules.remove": server.permission_rules_remove,
         "set_knowledge_acquisition": server.set_knowledge_acquisition,
@@ -5463,6 +5474,7 @@ BRIDGE_RPC_NAMES: frozenset[str] = frozenset(
         "workflow.cancel",
         "workflow.detail",
         "workflow.list",
+        "workflow.export",
         "workflow.package",
         "workflow.results",
         "workflow.run",

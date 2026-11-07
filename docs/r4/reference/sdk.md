@@ -4,8 +4,14 @@ Complete Python API reference for the `r4` SDK.
 
 ## Installation
 
+The packages are not on PyPI (`pip install r4` fetches an unrelated
+package). Use the one-shot installer, or an editable install from a clone
+([quickstart](../../user-manual/02-quickstart.md)):
+
 ```bash
-pip install r4
+curl -fsSL https://raw.githubusercontent.com/R-CCS-HPBD/r4/main/scripts/install-r4.sh | bash
+# or, from a clone of https://github.com/R-CCS-HPBD/r4:
+pip install -e ./r4-contracts -e ./r4
 ```
 
 ## Quick Start
@@ -647,7 +653,7 @@ for r in results:
 ### Transport Notes
 
 - **ZeroMQ** (preferred): Used when the `umrs` extra is installed
-  (`pip install r4[umrs]`). Provides chunked streaming for large files.
+  (`pip install -e "./r4[umrs]"` from a clone). Provides chunked streaming for large files.
 - **HTTP multipart**: Automatic fallback when ZeroMQ is not available.
   Suitable for files up to the gateway upload limit.
 

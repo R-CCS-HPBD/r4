@@ -380,7 +380,12 @@ run_validator "knowledge_plane_fence"       tools/knowledge_plane_fence.py
 run_validator "adr_index_uniqueness"        tools/adr_index_uniqueness_validator.py
 # WP-13 round 2 promotion #1: traceability promoted advisory ⇒ hard-fail
 # (ADR-035 rollout order; warnings stay warnings, violations fail).
-run_validator "traceability_validator"      tools/traceability_validator.py
+# The public export leaves docs/verification/ out, so the registry is absent
+# there; a development checkout (private-patterns.txt present) still fails
+# when the registry is missing.
+if [ -f docs/verification/traceability.yaml ] || [ -f scripts/public_export/private-patterns.txt ]; then
+    run_validator "traceability_validator"      tools/traceability_validator.py
+fi
 # WP-13 round 2 promotion #2: exemption governance promoted advisory ⇒
 # hard-fail (0-error baseline; warnings/info stay soft tiers).
 run_validator "exemption_governance"        tools/exemption_governance_validator.py

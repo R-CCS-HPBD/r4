@@ -247,8 +247,9 @@ postgres_password: "{{ vault_postgres_password }}"
 **Run with vault:**
 ```bash
 ./bootstrap.sh --ask-vault-pass
-# or
-echo "vault-password" > .vault_pass
+# or store it in a file without putting it on the command line
+# (read -s keeps it out of shell history and the terminal):
+read -rs VAULT_PASS && printf '%s' "$VAULT_PASS" > .vault_pass && unset VAULT_PASS
 chmod 600 .vault_pass
 ./bootstrap.sh --vault-password-file .vault_pass
 ```

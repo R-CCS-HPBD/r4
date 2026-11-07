@@ -31,6 +31,7 @@ from deck_kit import (
     WHITE,
     Deck,
     Style,
+    arrow,
     badge,
     bar_chart,
     bullets,
@@ -51,7 +52,7 @@ from deck_kit import (
 )
 from lxml import etree
 from pptx.enum.shapes import MSO_CONNECTOR
-from pptx.enum.text import MSO_ANCHOR
+from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.oxml.ns import qn
 from pptx.util import Inches, Pt
 
@@ -61,33 +62,37 @@ KICK_A = (
 )
 KICK_K = ("Part 1 · Under the hood — knowledge", "第 1 部 · 中身を見る — ナレッジ")
 
-REQUEST = """POST /v1/chat/completions
-{"model": "qwen2.5:7b", "temperature": 0.4,
- "messages": [{"role": "system", ...},
-   {"role": "user",
-    "content": "Which station is farthest from the epicentre?"}],
+REQUEST = """POST <gateway>/gw/llm/v1/chat/completions
+{"model": "qwen2.5:7b", "temperature": 0.4, "stream": true,
+ "messages": [{"role": "system", "content": "..."},
+   {"role": "user", "content": "Which station is farthest?
+     ...<turn_context>...</turn_context>"}],
  "tools": [{"type": "function", "function": {
-   "name": "python_exec",
-   "parameters": {"properties": {"code": {"type": "string"},
-     "timeout": {"type": "integer", "default": 180}},
-     "required": ["code"]}}}, ...]}"""
+   "name": "python_exec", "description": "Run Python ...",
+   "parameters": {"type": "object", "properties": {
+     "code": {"type": "string"}, "timeout": {"type": "integer",
+     "default": 180}}, "required": ["code"]}}}, ...]}"""
 
-REPLY = """{"role": "assistant", "tool_calls": [{"id": "call_1",
+REPLY = """{"role": "assistant", "content": null,
+ "tool_calls": [{"id": "call_1", "type": "function",
   "function": {"name": "python_exec",
-   "arguments": "{\\"code\\": \\"df = pd.read_csv(...); ...\\"}"}}]}"""
+   "arguments": "{\"code\": \"df = pd.read_csv(...); ...\"}"}}]}"""
 
 RESULT = """{"role": "tool", "tool_call_id": "call_1",
  "content": "25 stations; farthest JHT 267.6 km"}"""
 
 # Keep every '# comment' byte-identical: code_comments_ja.py keys on them.
 LOOP = """messages = [system, *history, user]  # rules, past turns, your request
-for round in range(MAX_ROUNDS):      # every harness sets a limit
+for round in range(MAX_ROUNDS):      # stop 3: a round limit
     reply = model(messages, tools)   # one call = one round
     if not reply.tool_calls:
-        return reply.text            # plain answer: done
+        return reply.text            # stop 1: a plain answer
     for call in reply.tool_calls:
         result = gate_then_run(call) # the permission gate decides
-        messages += [call, result]   # the model reads it next round"""
+        messages += [call, result]   # the model reads it next round
+    if stuck(messages):
+        break                        # stop 2: the same failure again
+return wrap_up(messages)             # one last answer, without tools"""
 
 
 # ── Layout helpers ───────────────────────────────────────────────────────────
@@ -169,7 +174,7 @@ _PANEL_W = Inches(6.7)
 _PANELS = (
     (
         REQUEST,
-        Inches(2.25),
+        Inches(2.6),
         (
             "①  harness → model: TEXT — one JSON with messages + tool schemas",
             "①  ハーネス → モデル:テキスト(メッセージ+ツール定義の JSON 1 通)",
@@ -177,15 +182,15 @@ _PANELS = (
     ),
     (
         REPLY,
-        Inches(1.05),
+        Inches(1.2),
         (
-            "②  model → harness: still TEXT — a request to use a tool, nothing run yet",
-            "②  モデル → ハーネス:これもテキスト。ツール使用の要求で、まだ何も実行されない",
+            "②  model → harness: a request to use a tool, nothing run yet",
+            "②  モデル → ハーネス:ツールの要求。まだ何も実行しない",
         ),
     ),
     (
         RESULT,
-        Inches(0.92),
+        Inches(0.85),
         (
             "③  harness EXECUTES it (the only action), turns the result back into text",
             "③  ハーネスが実行する(現実に何かが起きるのはここだけ)。結果はテキストで返す",
@@ -195,40 +200,41 @@ _PANELS = (
 
 _KEY_IDEA = [
     (
-        "The model **never runs anything**: it only writes JSON naming a tool "
+        "The model **never runs anything**: it only writes a request naming a tool "
         "(a tool call, also “function calling”).",
-        "モデルは**何も実行しない**。ツール名を書いた JSON(ツール呼び出し、英語では "
+        "モデルは**何も実行しない**。ツール名を書いた要求(ツール呼び出し、英語では "
         "function calling)を出すだけ。",
     ),
     (
-        "The harness decides whether to run it, runs it, and shows the model the result.",
-        "実行するかを決め、実行し、結果をモデルに見せるのはハーネス。",
+        "The harness decides whether to run it, runs it, and shows the model the result. "
+        "(Hosted tools of a cloud API run on the provider's servers instead.)",
+        "実行の判断・実行・結果の提示はハーネス(クラウドの API が用意するツールは事業者側で動く)。",
     ),
     (
-        "Tool “definitions” are just more text in the request.",
-        "ツールの「定義」もリクエスト内のテキストにすぎない。",
+        "Tool definitions travel as a JSON field; the model server writes them into the "
+        "prompt text (they cost input tokens).",
+        "ツールの定義は JSON の欄で送り、モデルサーバがプロンプトの文章に書き込む"
+        "(入力トークンを使う)。",
     ),
 ]
 
 _TEXT_FALLBACK = (
-    "The harness reads tool-call tags out of the reply text (<tool_call>{json}</tool_call>, "
-    "<invoke name=…>, Kimi's dialects) and turns them into the same JSON. The idea goes back "
-    "to ReAct (prompting a model to write thought and action as text): common across agent "
-    "implementations, not an R4 invention.",
-    "ハーネスが返答本文からツール呼び出しのタグ(<tool_call>{json}</tool_call>、"
-    "<invoke name=…> など)を読み取り、同じ JSON に変換する。考え方は ReAct(思考と行動を"
-    "テキストで交互に書かせる手法)にさかのぼる一般的な方式で、R4 独自ではない。",
+    "The model writes the call as tags in its text (<tool_call>{json}</tool_call>, "
+    "<invoke name=…>, Kimi's dialects). A model server with a tool parser turns them into "
+    "JSON; R4 does it when the server does not. The idea goes back to ReAct.",
+    "モデルは呼び出しを本文中のタグ(<tool_call>{json}</tool_call> など)として書く。ツール用"
+    "パーサを有効にしたモデルサーバが JSON に変え、しないときは R4 が変える。考え方は ReAct "
+    "にさかのぼり、R4 独自ではない。",
 )
 
 _SMALL_MODEL = (
-    "Repairing broken JSON before rejecting it is a known pattern (OpenHands, opencode). "
-    "R4's own addition: it drops the nulls small models put in optional arguments, so the "
-    "tool's default applies. Still unreadable, or an unknown tool → an error to the model "
-    "before any approval.",
-    "壊れた JSON を拒否の前に直すのは既にある方式(OpenHands、opencode)。R4 独自なのは、"
-    "小さなモデルが省略してよい引数に入れる null(値なし)を取り除き、ツールの既定値を"
-    "使うこと。読めない呼び出しや存在しないツールは、実行の許可を確かめる前にエラーとして"
-    "モデルに返す。",
+    "Patching small, unambiguous mistakes first (control characters, lists sent as "
+    "strings) is a known pattern (OpenHands, opencode). R4 also drops nulls in optional "
+    "arguments, so defaults apply. Unreadable, or an unknown tool → an error back to the "
+    "model before any approval.",
+    "小さく明らかな誤り(制御文字、文字列にされた配列)を直してから諦めるのは既存の方式"
+    "(OpenHands、opencode)。R4 はさらに省略可能な引数の null を除き、既定値を使う。直せない"
+    "呼び出しや未知のツールは、許可の確認前にエラーとして返す(どのハーネスも同じ)。",
 )
 
 
@@ -241,18 +247,18 @@ def _tool_call_panels(slide) -> None:
 
 
 _TOOL_CARDS = (
-    (("The key idea", "要点"), _KEY_IDEA, "general", Inches(1.7)),
+    (("The key idea", "要点"), _KEY_IDEA, "general", Inches(2.05)),
     (
         ("Models without native tool calling", "専用のツール呼び出し形式を持たないモデル"),
         _TEXT_FALLBACK,
         "r4tuned",
-        Inches(1.6),
+        Inches(1.45),
     ),
     (
         ("Safety nets for small models", "小さなモデルへの備え"),
         _SMALL_MODEL,
         "r4tuned",
-        Inches(1.6),
+        Inches(1.45),
     ),
 )
 
@@ -276,45 +282,87 @@ def tool_call_slide(deck: Deck) -> None:
     notes(
         slide,
         (
-            "GENERAL PATTERN: tool calling works the same everywhere — Claude's "
-            "tool_use / tool_result blocks, OpenAI function calling (Agents SDK "
-            "@function_tool), opencode tools, LangChain bind_tools; in each the harness alone "
-            "executes. R4's request: OpenAI-compatible /v1/chat/completions; agent rounds go "
-            "upstream as a stream and are assembled (r4/src/r4/client.py:1428-1450). "
-            "python_exec schema: companion/tools.py:1731-1746. One assistant message with "
-            "tool_calls, then one role:tool message per call: agent.py:3075 "
-            "(_record_tool_round). Default temperature 0.4: agent.py:248. "
-            "TEXT FALLBACK (general idea, R4 settings): parse order native tool_calls → "
-            "<tool_calls_section_begin> sections → <|open|> (Kimi) → <tool_call>/<invoke> "
-            "XML, agent.py:4991-5013. vLLM and Ollama usually do this server-side with their "
-            "tool parsers; R4 does it client-side so any served model works. "
-            "GENERAL · R4 SETTINGS: repair-before-reject, the OpenHands pattern that "
-            "_repair_tool_arguments cites (agent.py:1721-1751: control characters, GLM "
-            "stringified containers, trailing text, balanced truncation); opencode repairs "
-            "tool calls through the AI SDK's repair hook. R4-SPECIFIC: null optionals "
-            "dropped (agent.py:980-990; llama3.2:3b broke file_read that way); "
-            "unrepairable JSON or an unknown tool → error before the gate "
-            "(agent.py:5206-5222). Claude Code and the OpenAI Agents SDK validate against "
-            "the schema and return the error instead. The example result is the real event "
-            "of Lab 1.1 (25 stations, farthest JHT 267.6 km).",
-            "一般的な仕組み:ツール呼び出しはどの実装でも同じ形。Claude の tool_use / "
-            "tool_result、OpenAI の function calling(Agents SDK の @function_tool)、opencode "
-            "のツール、LangChain の bind_tools。どれも実行するのはハーネスだけ。R4 のリクエスト"
-            "は OpenAI 互換の /v1/chat/completions。エージェントのラウンドはストリームで送り、"
-            "受け取りながら組み立てる(r4/src/r4/client.py:1428-1450)。python_exec の定義は "
-            "companion/tools.py:1731-1746。tool_calls を持つ assistant メッセージの後に、呼び"
-            "出しごとに role:tool メッセージ 1 件(agent.py:3075、_record_tool_round)。既定"
-            "温度 0.4(agent.py:248)。本文からの読み取り(一般的な仕組み・R4 の設定):"
+            "GENERAL PATTERN (checked 2026-11-07 against R4 bbf30d53 and the provider docs): "
+            "the loop is the same everywhere, the JSON shapes differ — OpenAI Chat Completions "
+            "tool_calls[{id, type: function, function{name, arguments: a JSON string}}] with "
+            "finish_reason 'tool_calls', answered by {role: tool, tool_call_id}; the OpenAI "
+            "Responses API function_call / function_call_output with call_id; Anthropic "
+            "tool_use{id, name, input: an object} answered by a tool_result block in a user "
+            "message; Ollama's native API gives arguments as an object. Client tools run in "
+            "the harness; hosted tools (OpenAI web/file search and code interpreter, Anthropic "
+            "web search and code execution) run on the provider's servers. Tool definitions are "
+            "rendered into the prompt (OpenAI: injected into the system message; Anthropic adds "
+            "a tool-use system prompt; Qwen2.5's template puts them in <tools> in the system "
+            "turn) and billed as input tokens; strict mode / vLLM's required tool_choice can "
+            "also constrain decoding. R4's request (r4/src/r4/client.py:1444-1474, "
+            "_post_streamed 1495-1535): POST {base}/v1/chat/completions, base = "
+            "R4_ENDPOINT_URL when set, else <gateway>/gw/llm (config.py:733-762); fields "
+            "model, messages, temperature 0.4 (companion/agent.py:248), stream: true with "
+            "stream_options.include_usage, max_tokens when the output limit applies, top_p only "
+            "when set, tools unless tool calling is disabled (companion/agent.py:4808-4845); no "
+            "tool_choice or parallel_tool_calls per round (tool_choice 'none' only for "
+            "compaction). The user message carries the <turn_context> block "
+            "(companion/agent.py:4666-4671). Stream deltas are joined by index "
+            "(stream_assembly.py:187-221). python_exec schema: companion/tools.py:1782-1798 "
+            "(description and per-property descriptions shortened on the slide). One assistant "
+            "message (content or null, tool_calls, reasoning_content when present), then one "
+            "{role: tool, tool_call_id, content} per call (_record_tool_round, "
+            "companion/agent.py:3109-3159). TEXT FALLBACK (general idea, R4 settings): "
+            "_extract_tool_calls (companion/agent.py:5062-5085): native tool_calls → "
+            "<tool_calls_section_begin> → <|open|> (Kimi) → <invoke>/<tool_call> XML. vLLM "
+            "(--enable-auto-tool-choice --tool-call-parser hermes, kimi_k2 …) and Ollama parse "
+            "these server-side when started with a tool parser; R4 does it client-side so any "
+            "served model works. A 400 that names the server's tool parser ('auto tool choice "
+            "requires', 'tool-call-parser') turns tools off for the session and retries "
+            "without them (companion/agent.py:657-676, 4886-4902). Repairs: "
+            "_repair_tool_arguments (companion/agent.py:1682-1760; control characters, GLM "
+            "stringified containers, trailing text), the OpenHands pattern it cites; opencode "
+            "coerces inputs to the schema; the AI SDK's repairToolCall hook. R4-SPECIFIC: null "
+            "optionals dropped (_without_null_optionals, companion/agent.py:1000-1010; "
+            "llama3.2:3b broke file_read that way). Unrepairable JSON or an unknown tool → "
+            "error before the hooks and the gate (companion/agent.py:5276-5293). Everyone sends "
+            "the failure back to the model: OpenAI Agents SDK default_tool_error_function, "
+            "Anthropic is_error tool results; strict mode prevents most bad calls. The example "
+            "result is the real event of Lab 1.1 (25 stations, farthest JHT 267.6 km).",
+            "一般的な仕組み(2026-11-07 に R4 bbf30d53 と各社の文書で確認):ループはどこでも同じで、"
+            "JSON の形が違う。OpenAI Chat Completions は tool_calls[{id, type: function, "
+            "function{name, arguments:JSON 文字列}}] と finish_reason 'tool_calls'、返事は {role: "
+            "tool, tool_call_id}。OpenAI Responses API は call_id つきの function_call / "
+            "function_call_output。Anthropic は tool_use{id, name, input:オブジェクト} に、user "
+            "メッセージ内の tool_result ブロックで返す。Ollama の独自 API では arguments がオブジェクト。"
+            "手元のツールはハーネスが実行し、事業者が用意するツール(OpenAI の Web・ファイル検索や"
+            "コード実行、Anthropic の Web 検索やコード実行)は事業者のサーバで動く。ツールの定義は"
+            "プロンプトに書き込まれ(OpenAI はシステムメッセージに挿入、Anthropic はツール用の"
+            "システムプロンプトを追加、Qwen2.5 のテンプレートはシステムの <tools> に置く)、入力"
+            "トークンとして数えられる。strict モードや vLLM の required な tool_choice は生成その"
+            "ものも制約する。R4 のリクエスト(r4/src/r4/client.py:1444-1474、_post_streamed "
+            "1495-1535):POST {base}/v1/chat/completions。base は R4_ENDPOINT_URL があればそれ、"
+            "なければ <gateway>/gw/llm(config.py:733-762)。送る項目は model、messages、temperature "
+            "0.4(companion/agent.py:248)、stream: true と stream_options.include_usage、出力の"
+            "上限があるときの max_tokens、設定したときだけ top_p、ツール呼び出しを止めていなければ "
+            "tools(companion/agent.py:4808-4845)。ラウンドごとの tool_choice や parallel_tool_calls "
+            "は送らない(tool_choice 'none' は要約のときだけ)。依頼文には <turn_context> ブロックが"
+            "付く(companion/agent.py:4666-4671)。ストリームの断片は index ごとにつなぐ"
+            "(stream_assembly.py:187-221)。python_exec の定義は companion/tools.py:1782-1798"
+            "(スライドでは説明文を省略)。assistant メッセージ 1 件(content か null、tool_calls、"
+            "あれば reasoning_content)の後に、呼び出しごとに {role: tool, tool_call_id, content} "
+            "が 1 件(_record_tool_round、companion/agent.py:3109-3159)。本文からの読み取り"
+            "(一般的な仕組み・R4 の設定):_extract_tool_calls(companion/agent.py:5062-5085)で、"
             "ネイティブの tool_calls → <tool_calls_section_begin> → <|open|>(Kimi)→ "
-            "<tool_call>/<invoke> の XML の順(agent.py:4991-5013)。vLLM や Ollama は通常"
-            "サーバ側のパーサで同じことをするが、R4 はクライアント側で行うので、どのモデル"
-            "サーバでも動く。一般的な仕組み・R4 の設定:拒否の前に直す(OpenHands の方式で、"
-            "_repair_tool_arguments にもそう書かれている。agent.py:1721-1751:制御文字、GLM の"
-            "文字列化された配列、末尾の余計な文、括弧の対応での切り詰め)。opencode は AI SDK "
-            "の修復機能で直す。R4 独自:省略してよい引数の null を取り除く(agent.py:980-990。"
-            "llama3.2:3b で file_read が壊れた)。直せない JSON や存在しないツールは許可ゲートの前にエラー(agent.py:5206-5222)。"
-            "Claude Code や OpenAI Agents SDK はスキーマで検証してエラーを返す方式。結果の例は "
-            "Lab 1.1 の実際の地震(25 観測点、最遠は JHT の 267.6 km)。",
+            "<invoke>/<tool_call> の XML の順。vLLM(--enable-auto-tool-choice --tool-call-parser "
+            "hermes、kimi_k2 など)や Ollama は、ツール用のパーサを有効にして起動したときサーバ側で"
+            "これを行う。R4 はクライアント側で行うので、どのモデルサーバでも動く。サーバのツール用"
+            "パーサに触れる 400 エラー(「auto tool choice requires」「tool-call-parser」)が返ると、"
+            "そのセッションではツールを止めて送り直す(companion/agent.py:657-676、4886-4902)。"
+            "修復:_repair_tool_arguments(companion/agent.py:1682-1760。制御文字、GLM の文字列化"
+            "された配列、末尾の余計な文)。docstring が挙げる OpenHands の方式。opencode は入力を"
+            "スキーマに合わせて変換し、AI SDK には repairToolCall がある。R4 独自:省略してよい"
+            "引数の null を取り除く(_without_null_optionals、companion/agent.py:1000-1010。"
+            "llama3.2:3b で file_read が壊れた)。直せない JSON や存在しないツールは、フックと許可"
+            "ゲートの前にエラー(companion/agent.py:5276-5293)。どの実装も失敗はモデルに返す:"
+            "OpenAI Agents SDK の default_tool_error_function、Anthropic の is_error。strict "
+            "モードで不正な呼び出しの多くは防げる。結果の例は Lab 1.1 の実際の地震(25 観測点、"
+            "最遠は JHT の 267.6 km)。",
         ),
     )
 
@@ -330,26 +378,42 @@ _LOOP_GROUPS = (
                 "モデルを呼ぶ → 要求されたツールを実行 → 結果を追加 → もう一度呼ぶ、の繰り返し。",
             ),
             (
-                "Done when a reply asks for no tool: that text is the answer.",
-                "ツールを求めない返答が来たら終わり。その文章が回答。",
-            ),
-            (
-                "Every harness also stops runaway loops: a maximum number of rounds, and "
-                "checks for the same failing call repeated.",
-                "どのハーネスも暴走を止める仕組みを持つ:ラウンド数の上限と、同じ失敗の繰り返しの"
-                "検出。",
-            ),
-            (
                 "The model never sees this loop; it only sees the growing list of messages.",
                 "モデルはこのループを知らない。見えるのは、増えていくメッセージの一覧だけ。",
             ),
         ],
     ),
 )
+# Review 2026-11-07: the stop (break) conditions, numbered as in the code.
+_STOPS = [
+    (
+        "**1 A plain answer:** the reply asks for no tool — that text is the answer (the "
+        "normal end).",
+        "**1 普通の回答:**ツールを求めない返答が来たら、その文章が回答(通常の終わり方)。",
+    ),
+    (
+        "**2 Stuck:** the same call fails again and again → tools are withdrawn and the "
+        "model must answer.",
+        "**2 行き詰まり:**同じ呼び出しが何度も失敗 → ツールを外し、回答だけさせる。",
+    ),
+    (
+        "**3 Round limit:** a maximum number of rounds → one last answer without tools.",
+        "**3 ラウンドの上限:**上限に達したら、ツールなしで最後の回答を 1 回。",
+    ),
+    (
+        "**4 You:** Ctrl+C in the console interrupts the turn.",
+        "**4 利用者:**コンソールで Ctrl+C を押すと、そのターンを中断する。",
+    ),
+]
 
 _LOOP_NOTES = (
     "Review 2026-11-05: the slide shows only the loop every harness shares; R4's own "
-    "numbers and extras are here. "
+    "numbers and extras are here. Review 2026-11-07 added the stop conditions: 1 no tool "
+    "call (or the final_output tool); 2 loop guards (same tool fails 4× in a row → one "
+    "nudge, then answer mode; the same call with the same result 3×, or the same failure "
+    "3× with changed arguments → answer mode at once); 3 DEFAULT_TOTAL_TOOL_ROUNDS 1000, "
+    "then one wrap-up round without tools; 4 Ctrl+C interrupts the turn "
+    "(packages/r4-tui-v3/src/keymap/index.ts:416). "
     "GENERAL PATTERN: the same core loop runs in Claude Code / the Claude Agent SDK (query "
     "loop), the OpenAI Agents SDK (Runner.run), opencode (session loop) and LangGraph "
     "(create_react_agent). R4: _run_agentic_turn, r4/src/r4/companion/agent.py:3131-3240; "
@@ -382,7 +446,11 @@ _LOOP_NOTES = (
     "8 workers (5097-5117, R4_COMPANION_TOOL_CONCURRENCY), as Claude Code does with "
     "isConcurrencySafe.",
     "2026-11-05 のレビュー:スライドにはどのハーネスにも共通のループだけを載せ、R4 独自の数値や"
-    "仕組みはここに書く。"
+    "仕組みはここに書く。2026-11-07 のレビューで終了条件を加えた:1 ツール呼び出しがない"
+    "(または final_output ツール)。2 空回り対策(同じツールが 4 回続けて失敗 → 注意を 1 回、"
+    "その後は回答モード。同じ呼び出しで同じ結果が 3 回、または引数を変えても同じ失敗が 3 回 → "
+    "すぐに回答モード)。3 DEFAULT_TOTAL_TOOL_ROUNDS 1000、その後ツールなしのまとめを 1 回。"
+    "4 Ctrl+C でターンを中断(packages/r4-tui-v3/src/keymap/index.ts:416)。"
     "一般的な仕組み:同じ中核ループは Claude Code / Claude Agent SDK(query ループ)、"
     "OpenAI Agents SDK(Runner.run)、opencode(セッションループ)、LangGraph"
     "(create_react_agent)にもある。R4 では _run_agentic_turn(r4/src/r4/companion/"
@@ -452,6 +520,18 @@ def loop_code_slide(deck: Deck) -> None:
     y = BODY_TOP
     for kind, items in _LOOP_GROUPS:
         y = _scope_group(slide, x, y, w, kind, items)
+    _box(
+        slide,
+        x,
+        y + Inches(0.1),
+        w,
+        Inches(2.65),
+        ("When does it stop?", "いつ止まるか(終了条件)"),
+        _STOPS,
+        "general",
+        fill=TINT_AMBER,
+        size=12,
+    )
     notes(slide, _LOOP_NOTES)
 
 
@@ -472,7 +552,7 @@ _OVERFLOW_STEPS = (
         + [
             ("history", 4_000, None),
             ("message", 1_500, None),
-            ("over", 14_268, ("one huge result", "巨大な結果 1 件")),
+            ("over", 20_000, ("one huge result", "巨大な結果 1 件")),
         ],
         _BASE
         + [
@@ -532,7 +612,7 @@ _OVERFLOW_STEPS = (
         + [
             ("history", 9_000, None),
             ("message", 6_000, ("big message", "大きな依頼")),
-            ("over", 4_768, ("too big", "超過")),
+            ("over", 8_000, ("too big", "超過")),
         ],
         [
             ("system", 2_500, None),
@@ -545,6 +625,7 @@ _OVERFLOW_STEPS = (
 )
 
 _STEP_LABEL_W = Inches(2.35)
+_OVER_AXIS = 40_000  # past the window, so "before" rows can stick out beyond the limit
 _STEP_PITCH = Inches(1.2)
 _MINI_BAR_H = Inches(0.24)
 
@@ -577,7 +658,7 @@ def _overflow_step(slide, y, i: int, step, w) -> None:
         text_box(
             slide, bx, by - Inches(0.17), Inches(1.0), Inches(0.17), tag, Style(8, MUTED, True)
         )
-        context_bar.bar(slide, bx, by, bw, _MINI_BAR_H, segs, size=8)
+        context_bar.bar(slide, bx, by, bw, _MINI_BAR_H, segs, total=_OVER_AXIS, size=8)
 
 
 def _overflow_table(slide, w) -> None:
@@ -596,6 +677,16 @@ def _overflow_table(slide, w) -> None:
     )
     for i, step in enumerate(_OVERFLOW_STEPS):
         _overflow_step(slide, BODY_TOP + Inches(0.42) + i * _STEP_PITCH, i, step, w)
+    top = BODY_TOP + Inches(0.42)
+    bottom = top + (len(_OVERFLOW_STEPS) - 1) * _STEP_PITCH + Inches(0.08) + 2 * _MINI_BAR_H
+    context_bar.limit_line(
+        slide,
+        MARGIN + _STEP_LABEL_W,
+        top + Inches(0.12),
+        bottom + Inches(0.3),
+        w - _STEP_LABEL_W,
+        total=_OVER_AXIS,
+    )
 
 
 _WORKED_EXAMPLE = (
@@ -724,96 +815,120 @@ def overflow_slide(deck: Deck) -> None:
 # ── 18 · Guardrails ──────────────────────────────────────────────────────────
 
 # ADR-104 (2026-10-31): PermissionManager.decide walks 13 rungs (_LADDER).
-# Review 2026-11-05 ("complex entirely"): four rows — never, always ask (the
-# floor), runs without asking, otherwise ask. The rung mapping is in the notes.
-_ASK_ONCE = ("ask (this call)", "確認(今回のみ)")
-_RUNGS = (
+# Review 2026-11-07: drawn as a flowchart — three questions top to bottom, a
+# "yes" branch to the right for each, "ask you" at the end. The rung mapping is
+# in the notes.
+_Q_W = Inches(4.2)
+_OUT_X = MARGIN + _Q_W + Inches(0.65)
+_OUT_W = Inches(2.3)
+_FLOW_TOP = BODY_TOP + Inches(0.42)
+
+# (question, its height, outcome text, outcome fill, outcome ink, scope pill)
+_QUESTIONS = (
     (
-        (
-            "**Never:** deny mode, or a deny rule you wrote",
-            "**実行しない:**拒否モード、または自分で書いた拒否ルール",
-        ),
+        ("**Deny rule** you wrote, or deny mode?", "自分で書いた**拒否ルール**、または拒否モード?"),
+        Inches(0.46),
         ("block", "拒否"),
-        AMBER,
+        ALERT,
+        WHITE,
         None,
     ),
     (
         (
-            "**Always asks:** credential files (~/.ssh …) · force-push · knowledge "
-            "decisions · your ask rules; in chat / plan also arguments copied from text "
-            "someone else wrote (documents, web pages, MCP results) and protected paths",
-            "**必ず確認:**認証情報のファイル(~/.ssh など)・force-push・知識の判断・"
-            "自分で書いた ask ルール。chat・plan ではさらに、他人が書いた文字列(文書・"
-            "Web ページ・MCP の結果)から写した引数と保護パス",
+            "**A credential file** (~/.ssh …), **your ask rule**, or a knowledge decision?",
+            "**認証情報のファイル**(~/.ssh など)、**自分の ask ルール**、ナレッジの判断?",
         ),
-        _ASK_ONCE,
+        Inches(0.55),
+        ("ask you, this call only\n(every mode)", "確認(今回のみ)\n(どのモードでも)"),
         AMBER,
+        INK,
         "r4",
     ),
     (
         (
-            "**Runs without asking:** you already said “always”, an allow rule, a read-only "
-            "tool, or autopilot (a delete it cannot back up still asks)",
-            "**確認なしで実行:**以前に「常に」と答えた・allow ルール・読み取り専用のツール・"
-            "autopilot(バックアップできない削除は確認する)",
+            "**Copied** from documents, web pages or MCP results, or a **protected path**?",
+            "文書・Web ページ・MCP の結果から**写した**引数、または**保護パス**?",
         ),
-        ("run", "自動実行"),
-        OCEAN,
-        None,
+        Inches(0.55),
+        (
+            "chat / plan: ask, this call only\nautopilot: runs, logged",
+            "chat・plan:確認(今回のみ)\nautopilot:実行して記録",
+        ),
+        AMBER,
+        INK,
+        "r4",
     ),
     (
         (
-            "**Otherwise:** a write or a command not yet approved",
-            "**それ以外:**まだ承認していない書き込みやコマンド",
+            "**Already allowed?** “always” this session · an allow rule · a read-only tool · "
+            "autopilot",
+            "**許可済み?** このセッションの「常に」・allow ルール・読み取り専用のツール・autopilot",
         ),
-        ("ask you", "確認"),
-        AMBER,
+        Inches(0.62),
+        (
+            "run\n(autopilot: a delete it cannot back up still asks)",
+            "実行\n(autopilot でも、元に戻せない削除は確認)",
+        ),
+        OCEAN,
+        WHITE,
         None,
     ),
 )
-_FLOOR_ROWS = 2
-
-_RUNG_TOP = BODY_TOP + Inches(0.45)
-_RUNG_PITCH = Inches(0.92)
-_RUNG_H = Inches(0.82)
-_RUNG_W = Inches(4.5)
-_BAND_H = Inches(0.34)
+_FLOW_GAP = Inches(0.24)
 
 
-def _rung_y(i: int) -> int:
-    """Top of row ``i``; rows below the floor sit under the floor band."""
-    return int(_RUNG_TOP + i * _RUNG_PITCH + (_BAND_H if i >= _FLOOR_ROWS else 0))
-
-
-def _rung(slide, i: int, rung) -> None:
-    q, verdict, color, kind = rung
-    y = _rung_y(i)
-    badge(slide, MARGIN, y + (_RUNG_H - Inches(0.34)) // 2, str(i + 1), size=Inches(0.34), font=11)
-    rect(slide, MARGIN + Inches(0.45), y, _RUNG_W, _RUNG_H, fill=TINT, rounded=True)
+def _flow_box(slide, x, y, w, h, text, fill, ink, size=12, line=None) -> None:
+    rect(slide, x, y, w, h, fill=fill, line=line, rounded=True)
     text_box(
         slide,
-        MARGIN + Inches(0.58),
+        x + Inches(0.12),
         y,
-        _RUNG_W - Inches(0.2),
-        _RUNG_H,
-        q,
-        Style(12, INK),
+        w - Inches(0.24),
+        h,
+        text,
+        Style(size, ink),
+        align=PP_ALIGN.CENTER,
         anchor=MSO_ANCHOR.MIDDLE,
     )
-    chip_x = MARGIN + Inches(0.55) + _RUNG_W
-    chip(
-        slide,
-        chip_x,
-        y + (_RUNG_H - Inches(0.32)) // 2,
-        verdict,
-        fill=color,
-        color=WHITE if color == OCEAN else INK,
-        w=Inches(1.4),
-        h=Inches(0.32),
-        size=11,
+
+
+def _down(slide, y, label=("no", "いいえ")) -> None:
+    """Arrow from one step down to the next, labelled “no”."""
+    cx = MARGIN + _Q_W // 2
+    down_arrow(
+        slide, cx - Inches(0.14), y + Inches(0.03), w=Inches(0.28), h=_FLOW_GAP - Inches(0.06)
     )
+    text_box(
+        slide,
+        cx + Inches(0.2),
+        y,
+        Inches(0.8),
+        _FLOW_GAP,
+        label,
+        Style(10, MUTED, True),
+        anchor=MSO_ANCHOR.MIDDLE,
+    )
+
+
+def _question(slide, y, q) -> int:
+    text, h, out, fill, ink, kind = q
+    _flow_box(slide, MARGIN, y, _Q_W, h, text, TINT, INK, size=11, line=OCEAN)
+    ay = y + h // 2 - Inches(0.15)
+    arrow(slide, MARGIN + _Q_W + Inches(0.05), ay, Inches(0.55), Inches(0.3))
+    text_box(
+        slide,
+        MARGIN + _Q_W + Inches(0.05),
+        ay - Inches(0.24),
+        Inches(0.55),
+        Inches(0.24),
+        ("yes", "はい"),
+        Style(10, MUTED, True),
+        align=PP_ALIGN.CENTER,
+    )
+    _flow_box(slide, _OUT_X, y, _OUT_W, h, out, fill, ink, size=10)
     if kind:
-        scope_tag(slide, chip_x + Inches(1.47), y + (_RUNG_H - Inches(0.28)) // 2, kind)
+        _tab(slide, MARGIN, y, _Q_W, kind)
+    return int(y + h)
 
 
 def _ladder(slide) -> None:
@@ -822,41 +937,59 @@ def _ladder(slide) -> None:
         slide,
         MARGIN + _pill_w("r4tuned") + Inches(0.12),
         BODY_TOP,
-        Inches(5.0),
+        Inches(5.6),
         Inches(0.32),
-        ("Permission ladder, every tool call", "許可の判定(ツール呼び出しのたびに)"),
+        ("Every tool call goes through the gate", "ツール呼び出しはすべて許可ゲートを通る"),
         Style(14, INK, True),
     )
-    for i, rung in enumerate(_RUNGS):
-        _rung(slide, i, rung)
-    band_y = _RUNG_TOP + _FLOOR_ROWS * _RUNG_PITCH - Inches(0.04)
-    rect(slide, MARGIN, band_y + Inches(0.02), _RUNG_W + Inches(1.95), Inches(0.02), fill=ALERT)
-    text_box(
+    y = _FLOW_TOP
+    _flow_box(
         slide,
-        MARGIN + Inches(0.45),
-        band_y + Inches(0.04),
-        _RUNG_W + Inches(1.5),
-        _BAND_H,
+        MARGIN,
+        y,
+        _Q_W,
+        Inches(0.3),
+        ("the model asks for a tool", "モデルがツールを求める"),
+        NAVY,
+        WHITE,
+        size=11,
+    )
+    y += Inches(0.3)
+    for q in _QUESTIONS:
+        _down(slide, y)
+        y = _question(slide, y + _FLOW_GAP, q)
+    _down(slide, y)
+    y += _FLOW_GAP
+    _flow_box(
+        slide,
+        MARGIN,
+        y,
+        _Q_W + Inches(0.65) + _OUT_W,
+        Inches(0.48),
         (
-            "↑ checked first: no rule or earlier “always” gets past rows 1–2 (autopilot: see †)",
-            "↑ ここまでを先に判定:ルールや以前の「常に」でも 1〜2 は越えられない(autopilot は † を参照)",
+            "**ask you** — y: run once · a: run, and always this session · n: refused (the "
+            "model is told why)",
+            "**確認** — y:1 回だけ実行・a:実行し、このセッション中は常に許可・n:実行しない"
+            "(理由をモデルに伝える)",
         ),
-        Style(10, ALERT, True),
-        anchor=MSO_ANCHOR.MIDDLE,
+        AMBER,
+        INK,
+        size=11,
     )
     text_box(
         slide,
         MARGIN,
-        _rung_y(len(_RUNGS)) + Inches(0.02),
+        y + Inches(0.52),
         Inches(7.4),
-        Inches(0.62),
+        Inches(0.4),
         (
-            "Top to bottom; the first row that answers decides. Claude Code orders its rules "
-            "the same way (deny → ask → allow; a saved “always” cannot override an ask).",
-            "上から順に判定し、最初に答えが出た行で決まる。Claude Code も同じ順(拒否 → 確認 → "
-            "許可。保存した「常に」は確認のルールを越えない)。",
+            "Checked top to bottom; the first “yes” decides. Your earlier “always” is checked "
+            "only after the checks above it. Claude Code orders its rules the same way (deny → ask "
+            "→ allow).",
+            "上から順に確かめ、最初の「はい」で決まる。以前の「常に」は、その上の確認より後で見る。"
+            "Claude Code も同じ順(拒否 → 確認 → 許可)。",
         ),
-        Style(11, MUTED),
+        Style(10, MUTED),
     )
 
 
@@ -955,18 +1088,28 @@ def guardrail_slide(deck: Deck) -> None:
             "/ autopilot (companion/agent_mode.py:58-140); the permission mode is derived "
             "(chat and plan auto_safe, autopilot trust) and never stored; /trust = /mode "
             "autopilot; accepting a plan switches to autopilot (a) or chat (m, or typing "
-            "yes). ONE DECISION: PermissionManager.decide walks _LADDER (permissions.py:622, "
-            "823-830; the 13 _rung_* methods 882-972) and returns a Decision; check = decide "
-            "+ resolve (832-846). Review 2026-11-05 ('complex entirely'): four rows. Slide rows → "
-            "code rungs: row 1 = rungs 1-2 (deny mode, deny rule); row 2 = 3-7 (never-auto "
-            "tools, 185; taint fence; credential fence, 307-534; ask rule; protected path); "
-            "row 3 = 9-12 (allow rule; read-only SAFE_TOOLS, 75; session 'always'; autopilot); "
-            "row 4 = 13 (ask); rung 8 (a template crew's plan card) is left out. Web: web_fetch "
+            "yes). ONE DECISION: PermissionManager.decide walks _LADDER (permissions.py:713-726, "
+            "decide 931; check = decide + resolve 940-944; the _rung_* methods 1016-1130). "
+            "Review 2026-11-07: drawn as a flowchart, faithful to the code after ADR-104 "
+            "amendment 2 (144a6851, 'true autopilot'). Question 1 = rungs deny_mode, deny_rule. "
+            "Question 2 (asks in every mode, fenced) = the credential fence (_rung_fence; a "
+            "plain git push is the one fence autopilot runs), ask rules, and never-auto tools "
+            "(the knowledge decisions; autopilot answers team_plan_run and the plan gate, "
+            "_AUTOPILOT_DECIDES 693). Question 3 = the taint fence (copied from documents / "
+            "web / MCP) and protected paths: they ask in chat and plan, and in autopilot the "
+            "call runs and is logged (note_permission; 1045-1047, 1081-1083). Question 4 = "
+            "rungs allow_rule, safe (read-only, chat / plan / autopilot), session 'always', "
+            "trust (autopilot; narrowed only by an opt-in server allowlist, ADR-035). The "
+            "final box = the default ask. Separately, in autopilot a delete that cannot be "
+            "backed up asks; others are copied to ~/.local/share/r4/trash first "
+            "(companion/delete_guard.py, check at 983). The template crew's plan card (rung 8) "
+            "is left out. Web: web_fetch "
             "/ web_search results taint as 'web' (r4_contracts/taint.py:45-47); the tools are "
             "off until /web picks allowlist (web_fetch) or public (both) (companion/"
             "web_access.py:29, 58-80; tool_availability.py:249-268); in chat a web call asks "
             "(not read-only), in autopilot it runs, and prose copied from a web result asks in "
-            "every mode (permissions.py:982-995). Claude Code checks deny → ask → allow and a "
+            "chat and plan (in autopilot it runs and is logged). Claude Code checks deny → ask "
+            "→ allow and a "
             "saved 'always' cannot override an ask rule (code.claude.com/docs/en/permissions, "
             "2026-11-05). Code order of the allowances (ADR-104 amendment 1, "
             "2026-11-03): allow rule → read-only → session 'always' → autopilot. Before it, "
@@ -1033,17 +1176,25 @@ def guardrail_slide(deck: Deck) -> None:
             "(chat と plan は auto_safe、autopilot は trust)、単独では保存しない。/trust は "
             "/mode autopilot と同じ。計画を承認すると autopilot(a)か chat(m、または yes と"
             "入力)に切り替わる。判定は一つ:PermissionManager.decide が _LADDER をたどり"
-            "(permissions.py:622、823-830。13 の _rung_* メソッドは 882-972)、Decision を返す。"
-            "check は decide と resolve(832-846)。2026-11-05 のレビュー(「全体に複雑」):4 行に"
-            "まとめた。スライドの行とコードの段:1 行 = 1〜2 段(拒否モード、deny ルール)、"
-            "2 行 = 3〜7 段(常に確認が必要なツール 185、汚染フェンス、認証情報フェンス 307-534、"
-            "ask ルール、保護パス)、3 行 = 9〜12 段(allow ルール、読み取り専用の SAFE_TOOLS 75、"
-            "セッションの「常に」、autopilot)、4 行 = 13 段(確認)。8 段(テンプレートのチームの"
+            "(permissions.py:713-726、decide 931。check は decide と resolve 940-944。_rung_* "
+            "メソッドは 1016-1130)、Decision を返す。2026-11-07 のレビュー:ADR-104 改訂 2"
+            "(144a6851、「本当の autopilot」)後のコードどおりにフローチャートで描いた。問い 1 = "
+            "deny_mode・deny_rule。問い 2(どのモードでも確認、フェンス付き)= 認証情報フェンス"
+            "(_rung_fence。autopilot が実行するのは通常の git push だけ)、ask ルール、常に確認が"
+            "必要なツール(ナレッジの判断。autopilot は team_plan_run と計画ゲートには答える、"
+            "_AUTOPILOT_DECIDES 693)。問い 3 = 汚染フェンス(文書・Web・MCP から写したもの)と"
+            "保護パス:chat と plan では確認、autopilot では実行して記録(note_permission。"
+            "1045-1047、1081-1083)。問い 4 = allow_rule、safe(読み取り専用。chat・plan・"
+            "autopilot)、セッションの「常に」、trust(autopilot。任意のサーバ許可リストでだけ"
+            "絞られる、ADR-035)。最後の箱 = 既定の確認。別に、autopilot でも元に戻せない削除は"
+            "確認し、それ以外は先に ~/.local/share/r4/trash に複製する(companion/delete_guard.py、"
+            "983 で確認)。8 段(テンプレートのチームの"
             "計画カード)は省略。Web:web_fetch / web_search の結果は「web」として汚染に記録される"
             "(r4_contracts/taint.py:45-47)。ツールは /web で allowlist(web_fetch)か public"
             "(両方)を選ぶまでオフ(companion/web_access.py:29、58-80、tool_availability.py:"
             "249-268)。chat では Web の呼び出しは確認になり(読み取り専用ではない)、autopilot では"
-            "実行される。Web の結果から写した文章はどのモードでも確認(permissions.py:982-995)。"
+            "実行される。Web の結果から写した文章は chat と plan では確認(autopilot では実行して"
+            "記録)。"
             "Claude Code も deny → ask → allow の順で判定し、保存した「常に」は ask のルールを"
             "越えない(code.claude.com/docs/en/permissions、2026-11-05 確認)。許可の段のコード上の順は "
             "allow ルール → 読み取り専用 → セッションの「常に」→ autopilot(ADR-104 の改訂 1、"
@@ -1358,7 +1509,8 @@ MCP_REQUEST = """{"role": "user", "content": "Which of my jobs ran last?"}
    "parameters": {"properties": {"limit": {"type": "integer",
      "default": 20}}}}}]"""
 
-MCP_REPLY = """{"role": "assistant", "tool_calls": [{"id": "call_1",
+MCP_REPLY = """{"role": "assistant", "content": null,
+ "tool_calls": [{"id": "call_1", "type": "function",
   "function": {"name": "mcp.platform-tools.list_jobs",
    "arguments": "{\\"limit\\": 5}"}}]}"""
 
@@ -1373,24 +1525,24 @@ _MCP_PANELS = (
         MCP_REQUEST,
         Inches(1.5),
         (
-            "①  harness → model: the server's tools sit in the tool list like any other",
-            "①  ハーネス → モデル:サーバのツールも、ほかのツールと同じく一覧に入る",
+            "①  agent → model: the server's tools sit in the tool list like any other",
+            "①  エージェント → モデル:サーバのツールも、ほかのツールと同じく一覧に入る",
         ),
     ),
     (
         MCP_REPLY,
-        Inches(1.08),
+        Inches(1.25),
         (
-            "②  model → harness: an ordinary tool call; the name says which server",
-            "②  モデル → ハーネス:普通のツール呼び出し。名前でサーバが分かる",
+            "②  model → agent: an ordinary tool call; the name says which server",
+            "②  モデル → エージェント:普通のツール呼び出し。名前でサーバが分かる",
         ),
     ),
     (
         MCP_FORWARD,
         Inches(0.82),
         (
-            "③  gate first, then the harness FORWARDS it: UMRS finds the server, the server runs it",
-            "③  まず許可ゲート。次にハーネスが転送:UMRS がサーバを探し、サーバが実行する",
+            "③  gate first, then the agent FORWARDS it: UMRS finds the server, the server runs it",
+            "③  まず許可ゲート。次にエージェントが転送:UMRS がサーバを探し、サーバが実行する",
         ),
     ),
     (
@@ -1417,7 +1569,7 @@ _MCP_CARDS = (
                 "モデル側は何も変わらない。ツール呼び出しを書くだけ(ツール呼び出しのスライド)。",
             ),
             (
-                "Only step ③ differs: the call leaves the harness for the server.",
+                "Only step ③ differs: the call leaves the agent for the server.",
                 "違うのは ③ だけ:呼び出しがサーバへ出ていく。",
             ),
         ],
@@ -1918,10 +2070,12 @@ def embeddings_slide(deck: Deck, emb: dict) -> None:
                 "区別できるが、計算量も増える。",
             ),
             (
-                "Similar meaning → vectors pointing the same way (cosine near 1); the "
-                "direction between two words carries meaning too (bottom left).",
-                "意味が近い → ベクトルの向きが近い(コサイン類似度が 1 に近い)。2 つの語の間の"
-                "向きにも意味がある(左下の例)。",
+                "Similar meaning → vectors pointing the same way. Compared by **cosine "
+                "similarity** = a·b / (|a||b|), near 1 when they point alike; e5 vectors have "
+                "length 1, so it is just the dot product. UMRS ranks with it in pgvector.",
+                "意味が近い → ベクトルの向きが近い。比べ方は**コサイン類似度** = a·b /(|a||b|)。"
+                "向きがそろうと 1 に近い。e5 のベクトルは長さ 1 なので、内積そのもの。UMRS は "
+                "pgvector でこれを使って順位を付ける。",
             ),
             (
                 "Measured (left): the answer ranks first; the same fact in other words comes "
@@ -2185,71 +2339,81 @@ def rag_pipeline_slide(deck: Deck) -> None:
 
 
 _PROMPT_W = Inches(7.8)
+# Review 2026-11-07: compare a clear passage (one fact, one number) with the
+# table-like one (it also names 18 km), next to the question alone.
+_CASES = (
+    ("lab_", ("A · question only", "A · 質問だけ"), MUTED),
+    ("lab_rag_clear_", ("B · clear passage", "B · はっきりした記述"), OCEAN),
+    ("lab_rag_", ("C · table-like passage", "C · 表のような記述"), AMBER),
+)
+
+
+def _passage(probe: dict, key: str, sfx: str) -> str:
+    """The text in front of the question (empty for the question alone)."""
+    plain = probe["prompts"]["lab_" + sfx]["text"]
+    full = probe["prompts"][key + sfx]["text"]
+    return full[: len(full) - len(plain)].strip()
 
 
 def _fed_prompts(slide, probe: dict, sfx: str) -> int:
-    """The two prompts exactly as fed; returns the y below them."""
-    plain = probe["prompts"]["lab_" + sfx]["text"]
-    with_rag = probe["prompts"]["lab_rag_" + sfx]["text"]
-    passage = with_rag[: len(with_rag) - len(plain)].strip()
+    """The three inputs, exactly as fed (the question is shown once); returns the y below."""
+    question = probe["prompts"]["lab_" + sfx]["text"].strip() + " …"
     y = BODY_TOP
-    for head, body, h in (
-        (("A · question only", "A · 質問だけ"), plain.strip() + " …", Inches(0.78)),
-        (
-            (
-                "B · the retrieved passage, a blank line, the same question",
-                "B · 検索で見つかった記述、空行、同じ質問",
-            ),
-            f"**{passage}**\n\n{plain.strip()} …",
-            Inches(1.62),
-        ),
-    ):
-        rect(slide, MARGIN, y, _PROMPT_W, h, fill=NAVY, rounded=True)
+    rect(slide, MARGIN, y, _PROMPT_W, Inches(0.5), fill=NAVY, rounded=True)
+    text_box(
+        slide,
+        MARGIN + Inches(0.2),
+        y,
+        _PROMPT_W - Inches(0.4),
+        Inches(0.5),
+        (f"question (all three end with it): {question}", f"質問(3 つとも最後はこれ):{question}"),
+        Style(10, WHITE, mono=True),
+        anchor=MSO_ANCHOR.MIDDLE,
+    )
+    y += Inches(0.58)
+    for key, label, colour in _CASES[1:]:
+        text = _passage(probe, key, sfx)
+        h = Inches(0.5) if len(text) < 120 else Inches(0.78)
+        rect(slide, MARGIN, y, _PROMPT_W, h, fill=TINT, line=colour, rounded=True)
         text_box(
             slide,
-            MARGIN + Inches(0.2),
-            y + Inches(0.08),
-            _PROMPT_W - Inches(0.4),
-            Inches(0.25),
-            head,
-            Style(11, AMBER, True),
+            MARGIN + Inches(0.15),
+            y,
+            Inches(1.9),
+            h,
+            label,
+            Style(11, INK, True),
+            anchor=MSO_ANCHOR.MIDDLE,
         )
         text_box(
             slide,
-            MARGIN + Inches(0.2),
-            y + Inches(0.33),
-            _PROMPT_W - Inches(0.4),
-            h - Inches(0.38),
-            (body, body),
-            Style(10, WHITE, mono=True),
+            MARGIN + Inches(2.05),
+            y,
+            _PROMPT_W - Inches(2.2),
+            h,
+            (text, text),
+            Style(10, INK, mono=True),
+            anchor=MSO_ANCHOR.MIDDLE,
         )
         y += h + Inches(0.08)
     return int(y)
 
 
 def _answer_card(slide, x, w, ans: dict, sfx: str) -> None:
-    a, b = ans["lab_" + sfx], ans["lab_rag_" + sfx]
-    pa, pb = a["0.4"], b["0.4"]
+    greedy = " / ".join(ans[k + sfx]["greedy"] for k, _l, _c in _CASES)
     card(
         slide,
         x,
         BODY_TOP,
         w,
-        Inches(2.75),
-        ("Two outcomes: “28 km” or not", "「28 km」か、それ以外か"),
+        Inches(2.45),
+        ("Most likely answer", "最も確率の高い答え"),
         body_size=13,
         items=[
+            (f"A / B / C: {greedy}.", f"A / B / C:{greedy}。"),
             (
-                f"Most likely answer — A: “{a['greedy']}”; B: “{b['greedy']}”.",
-                f"最も確率の高い答え — A:「{a['greedy']}」、B:「{b['greedy']}」。",
-            ),
-            (
-                f"Chance of exactly “28 km” at R4's temperature 0.4 — A: {pa:.1%}; B: {pb:.0%}.",
-                f"R4 の温度 0.4 で「28 km」と答える確率 — A:{pa:.1%}、B:{pb:.0%}。",
-            ),
-            (
-                "Same model, same question: only the context changed.",
-                "モデルも質問も同じ。変えたのはコンテキストだけ。",
+                "Same model, same question: only the text in front changed.",
+                "モデルも質問も同じ。変えたのは前に置いた文章だけ。",
             ),
         ],
     )
@@ -2264,42 +2428,42 @@ def rag_effect_slide(deck: Deck, probe: dict) -> None:
     sfx = "en" if lang() == "en" else "ja"
     ans = probe["answer_28"]
     y = _fed_prompts(slide, probe, sfx)
-    names = (
-        ("A · question only", "B · with the passage")
-        if lang() == "en"
-        else ("A · 質問だけ", "B · 記述あり")
-    )
-    pa, pb = ans["lab_" + sfx]["0.4"], ans["lab_rag_" + sfx]["0.4"]
+    values = [ans[k + sfx]["0.4"] for k, _l, _c in _CASES]
     bar_chart(
         slide,
         MARGIN,
         y,
         _PROMPT_W,
         BODY_TOP + Inches(5.25) - y,
-        [tr(("answers “28 km”", "「28 km」と答える")), tr(("anything else", "それ以外の答え"))],
-        {names[0]: [pa, 1 - pa], names[1]: [pb, 1 - pb]},
-        [MUTED, OCEAN],
+        [tr(label) for _k, label, _c in _CASES],
+        {
+            tr(
+                ("answers exactly “28 km” (temperature 0.4)", "「28 km」と答える確率(温度 0.4)")
+            ): values
+        },
+        [OCEAN],
+        number_format="0.0%",
         horizontal=True,
         max_value=1.0,
     )
     x = MARGIN + _PROMPT_W + Inches(0.4)
     w = CONTENT_W - _PROMPT_W - Inches(0.4)
     _answer_card(slide, x, w, ans, sfx)
-    rect(slide, x, BODY_TOP + Inches(2.95), w, Inches(2.3), fill=TINT_AMBER, rounded=True)
+    rect(slide, x, BODY_TOP + Inches(2.65), w, Inches(2.6), fill=TINT_AMBER, rounded=True)
     text_box(
         slide,
         x + Inches(0.2),
-        BODY_TOP + Inches(3.1),
+        BODY_TOP + Inches(2.8),
         w - Inches(0.4),
-        Inches(2.05),
+        Inches(2.35),
         (
-            "RAG **moves the odds the right way — it does not guarantee correctness** "
-            f"({1 - pb:.0%} of answers are still something else). The cited source ([S1] on "
-            "the previous slide) is the passage the answer leans on: read it yourself before "
-            "trusting the answer.",
-            "RAG は確率を正しい方へ動かすが、**正解は保証しない**(それでも "
-            f"{1 - pb:.0%} は別の答え)。引用元([S1] など)は回答の根拠となる記述。答えを信じる前に"
-            "原文を自分で読む。",
+            "RAG works **when the retrieved text states the fact clearly** (B). A passage with "
+            f"several similar numbers (C: 18 and 28 km) leaves room for the wrong one — "
+            f"{1 - values[2]:.0%} of answers are still something else. Check the cited "
+            "source; the next slide shows what makes answers reliable.",
+            "RAG が効くのは、**検索した文章が事実をはっきり書いているとき**(B)。似た数値が"
+            f"いくつもある記述(C:18 km と 28 km)では間違える余地が残り、{1 - values[2]:.0%} は"
+            "別の答えになる。引用元を確かめる。答えを信頼できるものにする方法は次のスライド。",
         ),
         Style(13, INK),
     )
@@ -2307,32 +2471,37 @@ def rag_effect_slide(deck: Deck, probe: dict) -> None:
         slide,
         (
             "GENERAL PATTERN: putting evidence in the context shifts the next-token "
-            "probabilities for any model behind any harness. Review 2026-11-01: two outcomes "
-            "only, and the exact text fed to the model on the slide. Measured on Qwen2.5-VL 3B "
-            "with plain-text prompts — no chat template, no R4 instructions — exactly the two "
-            "texts shown (next_token_probe.py PROMPTS lab_* / lab_rag_*; the slide adds the "
-            "trailing '…'). 'Exactly 28 km' = p('2') × p('8' | '2') × p(no further digit | "
-            "'28'), at temperature 0.4, R4's default (companion/agent.py _initial_temperature); "
-            "next_token_probe.json answer_28 also records temperature 1 "
-            f"(EN {ans['lab_en']['1.0']:.1%} → {ans['lab_rag_en']['1.0']:.1%}, JA "
-            f"{ans['lab_ja']['1.0']:.1%} → {ans['lab_rag_ja']['1.0']:.1%}). 'Most likely "
-            "answer' = the top token at every step, without the repetition penalty Hugging "
-            "Face's generate() would add. The Japanese prompt gains less (a model trained "
-            "mostly on English); the 7B chat model in the lab, with R4's instructions and the "
-            "skill, does better — Lab 1.4 lets attendees measure it themselves.",
+            "probabilities for any model behind any harness. Review 2026-11-07: compare a "
+            "clear passage with an ambiguous one to show when RAG works. Measured on "
+            "Qwen2.5-VL 3B with plain-text prompts — no chat template, no R4 instructions — "
+            "exactly the texts shown (next_token_probe.py PROMPTS lab_*, lab_rag_clear_*, "
+            "lab_rag_*; the slide adds the trailing '…'). 'Exactly 28 km' = p('2') × p('8' | "
+            "'2') × p(no further digit | '28'), at temperature 0.4, R4's default "
+            "(companion/agent.py _initial_temperature). EN A / B / C = "
+            f"{ans['lab_en']['0.4']:.1%} / {ans['lab_rag_clear_en']['0.4']:.1%} / "
+            f"{ans['lab_rag_en']['0.4']:.1%}; JA {ans['lab_ja']['0.4']:.1%} / "
+            f"{ans['lab_rag_clear_ja']['0.4']:.1%} / {ans['lab_rag_ja']['0.4']:.1%}. At "
+            f"temperature 1: EN {ans['lab_en']['1.0']:.1%} / {ans['lab_rag_clear_en']['1.0']:.1%}"
+            f" / {ans['lab_rag_en']['1.0']:.1%}. 'Most likely answer' = the top token at every "
+            "step, without the repetition penalty Hugging Face's generate() would add. The "
+            "table-like passage is how a reference model is usually written (layers with "
+            "depth ranges), so chunking and retrieval that return the sentence that states "
+            "the fact matter as much as having the document at all.",
             "一般的な仕組み:根拠をコンテキストに入れると、どのハーネスのどのモデルでも次の"
-            "トークンの確率が動く。2026-11-01 のレビュー:答えを 2 通りに絞り、モデルに渡した文章を"
-            "そのままスライドに載せた。Qwen2.5-VL 3B、プレーンテキスト(チャットテンプレートも R4 の"
-            "指示もなし)で、表示の 2 つの文章をそのまま入力(next_token_probe.py の PROMPTS の "
-            "lab_* と lab_rag_*。末尾の「…」はスライドでの追加)。「ちょうど 28 km」= p(「2」)× "
-            "p(「8」|「2」)× p(「28」の後に数字が続かない)、温度は R4 の既定の 0.4"
-            "(companion/agent.py の _initial_temperature)。next_token_probe.json の answer_28 には"
-            "温度 1 の値もある(英語 "
-            f"{ans['lab_en']['1.0']:.1%} → {ans['lab_rag_en']['1.0']:.1%}、日本語 "
-            f"{ans['lab_ja']['1.0']:.1%} → {ans['lab_rag_ja']['1.0']:.1%})。「最も確率の高い答え」"
-            "= 各段で確率最大のトークンを選んだもの(Hugging Face の generate() が加える繰り返し"
-            "ペナルティはなし)。日本語の方が効果は小さい(主に英語で学習したモデル)。ラボの 7B "
-            "チャットモデルに R4 の指示とスキルを加えると、さらに良くなる。Lab 1.4 で各自が測る。",
+            "トークンの確率が動く。2026-11-07 のレビュー:はっきりした記述と曖昧な記述を比べ、RAG が"
+            "効く条件を示す。Qwen2.5-VL 3B、プレーンテキスト(チャットテンプレートも R4 の指示も"
+            "なし)で、表示の文章をそのまま入力(next_token_probe.py の PROMPTS の lab_*、"
+            "lab_rag_clear_*、lab_rag_*。末尾の「…」はスライドでの追加)。「ちょうど 28 km」= "
+            "p(「2」)× p(「8」|「2」)× p(「28」の後に数字が続かない)、温度は R4 の既定の 0.4"
+            "(companion/agent.py の _initial_temperature)。英語 A / B / C = "
+            f"{ans['lab_en']['0.4']:.1%} / {ans['lab_rag_clear_en']['0.4']:.1%} / "
+            f"{ans['lab_rag_en']['0.4']:.1%}、日本語 {ans['lab_ja']['0.4']:.1%} / "
+            f"{ans['lab_rag_clear_ja']['0.4']:.1%} / {ans['lab_rag_ja']['0.4']:.1%}。温度 1 では英語 "
+            f"{ans['lab_en']['1.0']:.1%} / {ans['lab_rag_clear_en']['1.0']:.1%} / "
+            f"{ans['lab_rag_en']['1.0']:.1%}。「最も確率の高い答え」= 各段で確率最大のトークンを"
+            "選んだもの(Hugging Face の generate() が加える繰り返しペナルティはなし)。表のような"
+            "記述は参照モデルの普通の書き方(層ごとの深さの範囲)なので、事実を書いた文を返す分割と"
+            "検索が、文書があることと同じくらい大事。",
         ),
     )
 
@@ -2356,8 +2525,10 @@ _CHECKS = [
         "**思い出させず、計算させる。**値はツールでファイルから読ませる。結果はテストで確かめる。",
     ),
     (
-        "**Raise the odds:** better retrieval, a larger model, a low temperature for lookups.",
-        "**確率を上げる:**検索の改善、大きなモデル、調べものには低い温度。",
+        "**Raise the odds:** retrieve the sentence that states the fact (previous slide), a "
+        "larger model, a low temperature for lookups.",
+        "**確率を上げる:**事実をはっきり書いた文を検索で返す(前のスライド)、大きなモデル、"
+        "調べものには低い温度。",
     ),
 ]
 
@@ -2374,8 +2545,8 @@ def guarantee_slide(deck: Deck, probe: dict) -> None:
     keys = ("lab_", "lab_rag_", "lab_rag_strict_")
     cats = [
         tr(("A · question", "A · 質問だけ")),
-        tr(("B · + passage", "B · +記述")),
-        tr(("C · + passage + “answer only from it”", "C · +記述+「資料だけで答えよ」")),
+        tr(("B · + table-like passage", "B · +表のような記述")),
+        tr(("C · B + “answer only from it”", "C · B+「資料だけで答えよ」")),
     ]
     bar_chart(
         slide,

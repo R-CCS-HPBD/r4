@@ -12,7 +12,8 @@ and originate from the running UMRS server — no Python Gateway is involved
 ```
 URL:       http://<front-host>:<grafana-port>
 Username:  <admin-user>
-Password:  (set via umrs_front_grafana_admin_password in group_vars)
+Password:  (set by your deployment: GRAFANA_ADMIN_PASSWORD for
+           observability/compose.yaml, the grafana-secrets Secret on Kubernetes)
 ```
 
 All dashboards are under the **RiVault** folder.
@@ -47,12 +48,14 @@ indicates the need for more GPUs or shorter context windows.
 
 - **UID**: `umrs-overview`
 - **Refresh**: 30s
-- **Purpose**: At-a-glance health of both UMRS clusters and key subsystems.
+- **Purpose**: At-a-glance health of every UMRS server and key subsystems.
+- **Variable**: `$job` (multi-select, default All) lists the Prometheus jobs
+  matching `umrs.*` (`label_values(up{job=~"umrs.*"}, job)`), so the dashboard
+  works with any scrape-job naming that starts with `umrs`.
 
 | Section | Panel | Query | What it tells you |
 |---------|-------|-------|-------------------|
-| **System Health** | UMRS RCCS | `up{job="umrs-rccs"}` | Is the RCCS Cloud UMRS server alive? (1 = up, 0 = down) |
-| | UMRS AI4S | `up{job="umrs-ai4s"}` | Is the AI4S UMRS server alive? |
+| **System Health** | UMRS servers up | `up{job=~"$job"}` | Is each selected UMRS server job alive? One value per job (1 = up, 0 = down) |
 | | Reconciler Runs | `sum(umrs_reconciler_runs_total)` | How many reconciler passes have executed? |
 | | Scheduler Cycles | `sum(umrs_scheduler_cycles_total)` | How many scheduler poll cycles? |
 | | Retry Attempts | `sum(umrs_retry_attempts_total)` | Total job retries — rising = infrastructure trouble |
@@ -62,7 +65,7 @@ indicates the need for more GPUs or shorter context windows.
 | **Bridge & Transport** | Bridge Events Rate | `umrs_bridge_events_total` by bridge & event | Start/stop/failure events on DurableJobRuntime bridge |
 | | Bridge Commands Rate | `umrs_bridge_commands_total` by bridge & command_class | JOB_SUBMIT, JOB_LIST etc. dispatched through ZMQ bridge |
 
-**When to look**: Daily. Check that RCCS and AI4S are green (= 1). A non-zero
+**When to look**: Daily. Check that each UMRS server job is green (= 1). A non-zero
 backlog or rising retry count signals problems.
 
 ---

@@ -21,9 +21,11 @@ COMMENTS = {
     "# the local model": "# ローカルモデル",
     # Part 1 harness (loop pseudocode, slide 16)
     "# rules, past turns, your request": "# システムプロンプト・履歴・今回の依頼",
-    "# plain answer: done": "# ツールなしの返答で終了",
-    "# every harness sets a limit": "# どのハーネスにも上限がある",
     "# one call = one round": "# 呼び出し 1 回 = 1 ラウンド",
+    "# stop 3: a round limit": "# 終了 3:ラウンドの上限",
+    "# stop 1: a plain answer": "# 終了 1:普通の回答",
+    "# stop 2: the same failure again": "# 終了 2:同じ失敗の繰り返し",
+    "# one last answer, without tools": "# ツールなしで最後の回答",
     "# the permission gate decides": "# 許可ゲートが判断する",
     "# the model reads it next round": "# 次のラウンドでモデルが読む",
     # Part 1 labs

@@ -28,6 +28,7 @@ import { buildMcpReportLines } from "../lib/mcp-report";
 import { handleSettingsRules, settingsMatrixNotice } from "../lib/settings-rules";
 import { umrsWorkflowActions, type UmrsWorkflowCatalogItem } from "../stores/umrs-workflow";
 import { workflowGraphCommand } from "./workflow-graph";
+import { workflowExportCommand } from "./workflow-export";
 import { trackActiveProjectJob, wireProjectJobEventsOnce } from "./project-job-events";
 import { trackSlashInFlight } from "../lib/slash-in-flight";
 import { rpc } from "../bridge/rpc";
@@ -1713,6 +1714,7 @@ const WF_CARD_VERBS: Record<string, WfCardHandler> = {
   status: wfStatusCard,
   results: wfResultsCard,
   graph: workflowGraphCommand,
+  export: workflowExportCommand,
 };
 
 async function dispatchWorkflowManagement(args: string): Promise<SlashDispatchResult | null> {

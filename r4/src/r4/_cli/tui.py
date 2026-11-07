@@ -60,9 +60,12 @@ BIN_PATH_ENV = "R4_TUI_BIN"
 #: ``.minisig`` cannot be checked and the install says so.
 MINISIGN_PUBLIC_KEY = ""
 
+#: Before 2026-11-07 an Intel Mac got the arm64 build ("Rosetta runs it"):
+#: Rosetta translates x86_64 to arm64, not the reverse, so that binary could
+#: never start there. Releases now carry a darwin-x64 build.
 _BINARY_SUFFIXES = {
     ("darwin", "arm64"): "darwin-arm64",
-    ("darwin", "x86_64"): "darwin-arm64",  # Rosetta runs the arm64 build
+    ("darwin", "x86_64"): "darwin-x64",
     ("linux", "x86_64"): "linux-x64",
     ("linux", "aarch64"): "linux-arm64",
 }
@@ -71,6 +74,17 @@ _BINARY_SUFFIXES = {
 def platform_key() -> str | None:
     """Return the release asset suffix for this host, or None if unsupported."""
     return _BINARY_SUFFIXES.get((sys.platform, platform.machine()))
+
+
+def unsupported_platform_message() -> str:
+    """Why ``r4 tui install`` has no binary for this host, and what to do."""
+    msg = f"No prebuilt TUI binary for {sys.platform}/{platform.machine()} yet."
+    if sys.platform in ("win32", "cygwin", "msys"):
+        msg += (
+            "\nOn Windows, run R4 inside WSL2 (https://learn.microsoft.com/windows/wsl/install):"
+            "\nthe Linux install, including this console, works there."
+        )
+    return msg
 
 
 def tui_asset_name() -> str | None:
@@ -280,10 +294,7 @@ def _download_failure_hint(exc: OSError, name: str) -> str:
 def install_binary() -> int:
     name = tui_asset_name()
     if name is None:
-        print(
-            f"No prebuilt TUI binary for {sys.platform}/{platform.machine()} yet.",
-            file=sys.stderr,
-        )
+        print(unsupported_platform_message(), file=sys.stderr)
         return 1
     dest_dir = user_bin_dir()
     dest_dir.mkdir(parents=True, exist_ok=True)

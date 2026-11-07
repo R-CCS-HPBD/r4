@@ -290,6 +290,7 @@ EXPECTED_BRIDGE_METHODS = {
     "workflow_describe",
     # 2026-10-01: definition+codes package for the work-pane card.
     "workflow.package",
+    "workflow.export",
     # T5 (2026-09-19): teamup multi-agent session manager (verbs live on the
     # bridge; rows/secrets stay server-only; no surprise surface).
     "teamup.hardware",

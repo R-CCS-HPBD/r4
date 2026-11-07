@@ -38,6 +38,17 @@ PROMPTS = {
         "下部地殻 18〜28 km は 6.7 km/s、深さ 28 km のモホ面より下のマントルは 7.9 km/s。\n\n"
         "私たちの観測所の参照モデルでは、紀伊水道の下のモホ面の深さは "
     ),
+    # Review 2026-11-07: a clear passage (one fact, one number) against the table-like
+    # passage above, which also names 18 km — does retrieval quality matter?
+    "lab_rag_clear_en": (
+        "KRSO-1D v2 (Kinki Regional Seismic Observatory reference model): the Moho under "
+        "the Kii Channel lies at 28 km depth.\n\n"
+        "Our observatory's reference model puts the Moho under the Kii Channel at a depth of "
+    ),
+    "lab_rag_clear_ja": (
+        "KRSO-1D v2(近畿地域地震観測所の参照モデル):紀伊水道の下のモホ面の深さは 28 km。\n\n"
+        "私たちの観測所の参照モデルでは、紀伊水道の下のモホ面の深さは "
+    ),
     # Review 2026-11-05 ("how do we make RAG answer right?"): the same passage with
     # an instruction to answer from it only — one lever a harness can pull.
     "lab_rag_strict_en": (
@@ -67,9 +78,11 @@ ANSWER_PROMPTS = (
     "lab_en",
     "lab_rag_en",
     "lab_rag_strict_en",
+    "lab_rag_clear_en",
     "lab_ja",
     "lab_rag_ja",
     "lab_rag_strict_ja",
+    "lab_rag_clear_ja",
 )
 ANSWER = "28"
 R4_TEMPERATURE = 0.4  # the R4 agent's default (companion/agent.py _initial_temperature)

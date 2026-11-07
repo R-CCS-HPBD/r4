@@ -229,28 +229,34 @@ LangChain）。サーバ側に状態を持たせる方式でも、送り直し�
 
 **【一般的な仕組み】** Claude の `tool_use` / `tool_result`、OpenAI の
 function calling（Agents SDK の `@function_tool`）、opencode のツール、
-LangChain の `bind_tools`。どれもモデルが依頼し、実行するのはハーネスだけです。
+LangChain の `bind_tools`。どれもモデルが依頼し、ハーネスが実行します。ループは
+どこでも同じで、JSON の形が違います(Anthropic の `tool_use` は `input` が
+オブジェクトで、結果は user メッセージ内の `tool_result` ブロックで返す。OpenAI の
+Responses API は `function_call` / `function_call_output`)。クラウドの API が用意する
+ツール(Web 検索、コード実行)は、事業者のサーバで動きます。
 
-モデルは**何も実行しません**。ツール名を書いた JSON を出すだけです。実行するか
+モデルは**何も実行しません**。ツール名を書いた要求を出すだけです。実行するか
 どうかを決め、実行し、結果をモデルに見せるのはハーネスです。実際の形は次の
-とおりです（OpenAI 互換の `/v1/chat/completions`。エージェントのラウンドは
-ストリーム（少しずつ届く形式）で受け取って組み立てます。`client.py:1426-1450`。
-内容は短縮）：
+とおりです（OpenAI 互換の `/v1/chat/completions`。既定ではゲートウェイ
+`<gateway>/gw/llm` 経由。エージェントのラウンドはストリーム（少しずつ届く形式）で
+受け取って組み立てます。`client.py:1444-1535`。内容は短縮。2026-11-07 確認）：
 
 ```text
 ① ハーネス → モデル
-POST /v1/chat/completions
-{"model": "qwen2.5:7b", "temperature": 0.4,
- "messages": [{"role": "system", ...},
-   {"role": "user", "content": "How many stations are in p_picks.csv, and which is farthest?"}],
+POST <gateway>/gw/llm/v1/chat/completions
+{"model": "qwen2.5:7b", "temperature": 0.4, "stream": true,
+ "messages": [{"role": "system", "content": "..."},
+   {"role": "user", "content": "How many stations are in p_picks.csv, and which is farthest?\n\n<turn_context>...</turn_context>"}],
  "tools": [{"type": "function", "function": {
-   "name": "python_exec",
-   "parameters": {"properties": {"code": {"type": "string"},
-     "timeout": {"type": "integer", "default": 180}},
+   "name": "python_exec", "description": "Run Python ...",
+   "parameters": {"type": "object", "properties": {
+     "code": {"type": "string", ...},
+     "timeout": {"type": "integer", "default": 180, ...}},
      "required": ["code"]}}}, ...]}
 
-② モデル → ハーネス：要求で、まだ何も実行していない
-{"role": "assistant", "tool_calls": [{"id": "call_1",
+② モデル → ハーネス：要求で、まだ何も実行していない（少しずつ届き、R4 が組み立てる）
+{"role": "assistant", "content": null,
+ "tool_calls": [{"id": "call_1", "type": "function",
   "function": {"name": "python_exec",
    "arguments": "{\"code\": \"df = pd.read_csv(...); ...\"}"}}]}
 
@@ -259,10 +265,12 @@ POST /v1/chat/completions
  "content": "25 stations; farthest JHT 267.6 km"}
 ```
 
-ツールの「定義」も、リクエストに含まれるテキストにすぎません（`python_exec` の
-定義：`companion/tools.py:1731-1746`）。`tool_calls` を持つ assistant の
-メッセージの後に、呼び出し 1 つにつき `role: tool` のメッセージが 1 つ続きます
-（`_record_tool_round`、`companion/agent.py:3075`）。
+ツールの定義は別の JSON の欄で送り、モデルサーバがプロンプトの文章に書き込み
+ます（Qwen ではシステムの部分）。そのため入力トークンを使います（`python_exec` の
+定義：`companion/tools.py:1782-1798`）。`tool_calls` を持つ assistant の
+メッセージ（モデルが送れば `reasoning_content` も）の後に、呼び出し 1 つにつき
+`role: tool` のメッセージが 1 つ続きます（`_record_tool_round`、
+`companion/agent.py:3109-3159`）。
 
 R4 がこの周りに加えているもの：
 
@@ -271,7 +279,7 @@ R4 がこの周りに加えているもの：
   （`<tool_call>{json}</tool_call>`、`<invoke name=…>`、Kimi 独自の書式）を
   読み取ります。順番は、ネイティブの `tool_calls` → `<tool_calls_section_begin>`
   → Kimi の `<|open|>` → `<tool_call>` / `<invoke>` です（`_extract_tool_calls`、
-  `companion/agent.py:4991-5013`）。考え方は ReAct（思考と行動をテキストで
+  `companion/agent.py:5062-5085`）。考え方は ReAct（思考と行動をテキストで
   交互に書かせる手法）にさかのぼります。現在はこの読み取りを vLLM や Ollama の
   サーバ側で行うことが多く、Claude Code と OpenAI Agents SDK はネイティブの
   ツール呼び出ししか受け付けません。R4 はどのモデルでも動くよう、クライアント側
@@ -625,7 +633,11 @@ glob でファイルを探します。
 なら 768 個の数値です。意味が近い文章は、ベクトルが同じ方向を向きます（コサイン
 類似度が 1 に近い）。向きにも意味があります。単語ベクトルの古典的な例が
 **king − man + woman ≈ queen**（王 − 男性 + 女性 ≈ 女王。word2vec、Mikolov ほか、
-2013）で、スライドでは説明用の例として示し、e5 では測っていません。スライド 27
+2013）で、スライドでは説明用の例として示し、e5 では測っていません。2 つの
+ベクトルの比べ方は**コサイン類似度** = a·b /（|a||b|）で、向きがそろうと 1 です。e5 の
+ベクトルは長さ 1 なので、内積そのものです。UMRS は pgvector でこれを使って順位を
+付けます（`<=>` はコサイン距離 1 − コサイン、全件を厳密に計算。
+`umrs/src/umrs/knowledge/retrieval/dense.py:3, 157-165`）。スライド 27
 では、質問 1 つ(「紀伊水道の下のモホ面の深さは?」)と 4 つの文の類似度も示します。
 英語の例は `e5-base-v2` で、答え 0.81、言い換え 0.76、同じ話題の別の問い 0.68、
 無関係な文 0.64。日本語の例では、英語専用の `e5-base-v2` が無関係な文を 2 位
@@ -703,21 +715,27 @@ Lab 1.4 の質問について、英語のナレッジパックを節ごとに 1 
 Anthropic の API には文書の引用機能があります。どちらも構造化された項目で、本文中
 のラベルではありません。
 
-**効くのか？（スライド 29）**：同じ 3B モデルに、次の 2 つのプレーンテキストを
-そのまま入れて測りました（`next_token_probe.py` の `lab_ja` / `lab_rag_ja`）。
+**効くのか？（スライド 29）**：同じ 3B モデルに、次のプレーンテキストをそのまま
+入れて測りました（`next_token_probe.py` の `lab_ja` / `lab_rag_clear_ja` /
+`lab_rag_ja`）。2026-11-07 のレビューで、RAG が効く条件を示すため、はっきりした
+記述を加えました。
 
 - A：`私たちの観測所の参照モデルでは、紀伊水道の下のモホ面の深さは `
-- B：`KRSO-1D v2(近畿地域地震観測所の参照モデル):上部地殻 0〜18 km は 5.9 km/s、
+- B（はっきりした記述）：`KRSO-1D v2(近畿地域地震観測所の参照モデル):紀伊水道の下の
+  モホ面の深さは 28 km。` ＋空行＋A
+- C（表のような記述。18 km も含む）：`KRSO-1D v2(…):上部地殻 0〜18 km は 5.9 km/s、
   下部地殻 18〜28 km は 6.7 km/s、深さ 28 km のモホ面より下のマントルは 7.9 km/s。`
   ＋空行＋A
 
-| | A・質問だけ | B・記述あり |
-|---|---|---|
-| 最も確率の高い答え | 100 km | **28 km** |
-| ちょうど「28 km」の確率、温度 0.4（R4 の既定） | 0.1 % | **42 %** |
-| ちょうど「28 km」の確率、温度 1 | 0.5 % | 9 % |
+| | A・質問だけ | B・はっきりした記述 | C・表のような記述 |
+|---|---|---|---|
+| 最も確率の高い答え | 100 km | **28 km** | **28 km** |
+| ちょうど「28 km」の確率、温度 0.4（R4 の既定） | 0.1 % | **98 %** | 42 % |
+| ちょうど「28 km」の確率、温度 1 | 0.5 % | 62 % | 9 % |
 
-英語のプロンプトでは 100 km → 28 km、温度 0.4 で 0.5 % → 75 %。「ちょうど 28 km」
+英語のプロンプトでは温度 0.4 で 0.5 % / 99.96 % / 75 %。RAG が効くのは、検索した
+文章が事実をはっきり書いているとき。似た数値がいくつもある記述では、間違える
+余地が残ります。「ちょうど 28 km」
 = p(「2」) × p(「8」|「2」) × p(その後に数字が続かない)で、値は
 `next_token_probe.json` の `answer_28` にあります。RAG は確率を正しい方へ動かし
 ますが、答えを保証はしません。引用元を自分で読みます。

@@ -64,6 +64,8 @@ draft of step 7 are being built. The precise state of every capability is in
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/R-CCS-HPBD/r4/main/scripts/install-r4.sh | bash
+                                     # r4 and umrs from the newest release
+                                     #   (macOS, Linux, Windows inside WSL2)
 export PATH="$HOME/.local/bin:$PATH"
 r4 auth login --api-key <TOKEN>      # token from your administrator
                                      #   …also adopts your server-visible

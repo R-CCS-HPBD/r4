@@ -310,10 +310,13 @@ def _temperature_panel(slide, x, w) -> None:
                 "答えが多様になり、発想向きだが数値には不向き。",
             ),
             (
-                "Same prompt, different answer? Often just sampling (picking a token at "
-                "random by its probability).",
-                "同じ依頼でも答えが毎回違う? 多くの場合、確率に従ってトークンを選ぶ仕組み"
-                "(サンプリング)が原因。",
+                "**How one token is picked:** T > 0 → drawn at random in proportion to these "
+                "probabilities (sampling; servers may first keep only the top candidates, "
+                "top-k / top-p). T = 0 → always the top token. So the same prompt can give a "
+                "different answer.",
+                "**1 つのトークンの選び方:**T > 0 なら、この確率に比例してランダムに選ぶ"
+                "(サンプリング。サーバは先に上位の候補だけに絞ることがある:top-k・top-p)。"
+                "T = 0 なら常に最上位。だから同じ依頼でも答えが変わることがある。",
             ),
             (
                 "**In R4:** T = 0.4 by default; for repeatable analysis start r4 with the "
@@ -363,7 +366,15 @@ def _next_token_notes(slide, top: float) -> None:
             "and a spawned sub-agent gets its parent's temperature (agent.py:4445, 4538). "
             "For comparison: Claude Code does not expose temperature (the API default "
             "applies); the OpenAI Agents SDK sets it per agent with "
-            "ModelSettings(temperature=…).",
+            "ModelSettings(temperature=…).\n"
+            "Sampling vs maximum (review 2026-11-07): with T > 0 the server SAMPLES — it draws "
+            "the next token at random with probability softmax(z / T); it does not take the "
+            "maximum. T = 0 (or T → 0) is greedy: always the top token. Servers usually apply "
+            "top-k / top-p first (keep only the highest candidates, then renormalise): vLLM "
+            "defaults to no cut (top_p 1, top_k off); Ollama uses the model's own defaults "
+            "unless the request sets them; R4 sends top_p only when set. The probabilities on "
+            "the RAG slides are exactly these sampling probabilities at T = 0.4 without a "
+            "top-k/top-p cut; 'most likely answer' is the greedy (T = 0) answer.",
             "測定値:Qwen2.5 3B、プレーンテキスト。棒は 3 つの温度での上位トークンの確率。"
             "温度は知識を増やさない。学習で何度も見た物理の知識なら、分布はもともと鋭い"
             f"(T = 1.0 でも最上位が {top:.0%})。\n"
@@ -376,7 +387,14 @@ def _next_token_notes(slide, top: float) -> None:
             "(agent.py:2518-2521、_sampling 4737-4742)。サブエージェントも同じ設定を読み、"
             "起動時に親の温度を受け取る(agent.py:4445、4538)。比較:Claude Code は温度を"
             "設定させない(API の既定値)。OpenAI Agents SDK はエージェントごとに "
-            "ModelSettings(temperature=…) で指定する。",
+            "ModelSettings(temperature=…) で指定する。\n"
+            "サンプリングか最大値か(2026-11-07 のレビュー):T > 0 ではサーバは【サンプリング】"
+            "する。次のトークンを確率 softmax(z / T) でランダムに引き、最大値を取るのではない。"
+            "T = 0(T → 0)なら常に最上位(グリーディ)。サーバは多くの場合、先に top-k・top-p"
+            "(上位の候補だけを残して確率を合計 1 に直す)をかける。vLLM の既定は絞らない(top_p 1、"
+            "top_k なし)。Ollama はリクエストで指定しなければモデルごとの既定値を使う。R4 は "
+            "top_p を設定したときだけ送る。RAG のスライドの確率は、T = 0.4 で top-k・top-p を"
+            "かけないときのこのサンプリング確率。「最も確率の高い答え」は T = 0 の答え。",
         ),
     )
 
@@ -693,9 +711,9 @@ _FILL_LEGEND = [
     (
         "history",
         (
-            "3 Earlier turns: questions and answers as text only (their tool calls are not "
-            "re-sent)",
-            "3 過去のターン:質問と回答のテキストだけ(ツールのやり取りは送り直さない)",
+            "3 Earlier turns: your questions and the model's answers, as text (their tool "
+            "calls are not re-sent)",
+            "3 過去のターン:自分の質問とモデルの回答のテキスト(ツールのやり取りは送り直さない)",
         ),
     ),
     (
@@ -708,13 +726,16 @@ _FILL_LEGEND = [
     (
         "rounds",
         (
-            "5 This turn's tool calls and results — grows with every round",
-            "5 このターンのツール呼び出しと結果。ラウンドごとに増える",
+            "5 This turn so far: the model's own tool calls and their results — grows every round",
+            "5 このターンの途中経過:モデル自身のツール呼び出しとその結果。ラウンドごとに増える",
         ),
     ),
     (
         "reply",
-        ("Kept free for the model's reply (4,096 tokens)", "モデルの返答のために空けておく(4,096)"),
+        (
+            "The model writes its reply here, in the same window (≥ 4,096 tokens kept free)",
+            "モデルはここ(同じウィンドウ)に返答を書く(最低 4,096 トークンを空けておく)",
+        ),
     ),
 ]
 _ORIGIN = [
@@ -732,8 +753,8 @@ def _origin_row(slide) -> None:
     """Which part of the JSON request each stretch of the bar comes from."""
     y = _BAR_TOP - Inches(0.3)
     for start, end, label in _ORIGIN:
-        x0 = MARGIN + int(_LEFT_COL_W * start / 32_768)
-        x1 = MARGIN + int(_LEFT_COL_W * end / 32_768)
+        x0 = MARGIN + int(_LEFT_COL_W * start / context_bar.AXIS)
+        x1 = MARGIN + int(_LEFT_COL_W * end / context_bar.AXIS)
         rect(
             slide,
             x0 + Inches(0.02),
@@ -772,10 +793,14 @@ def _context_bands(slide) -> None:
         Style(12, MUTED),
     )
     _origin_row(slide)
-    context_bar.bar(slide, MARGIN, _BAR_TOP, _LEFT_COL_W, _BAR_H, _FILL)
-    context_bar.scale(slide, MARGIN, _BAR_TOP + _BAR_H + Inches(0.02), _LEFT_COL_W)
+    axis = context_bar.AXIS
+    context_bar.bar(slide, MARGIN, _BAR_TOP, _LEFT_COL_W, _BAR_H, _FILL, total=axis)
+    context_bar.scale(slide, MARGIN, _BAR_TOP + _BAR_H + Inches(0.02), _LEFT_COL_W, total=axis)
+    context_bar.limit_line(
+        slide, MARGIN, _BAR_TOP - Inches(0.08), _BAR_TOP + _BAR_H + Inches(0.08), _LEFT_COL_W
+    )
     col_w = (_LEFT_COL_W - Inches(0.2)) // 2
-    top = _BAR_TOP + _BAR_H + Inches(0.36)
+    top = _BAR_TOP + _BAR_H + Inches(0.5)
     for j in range(2):
         context_bar.swatch_legend(
             slide,
@@ -786,10 +811,10 @@ def _context_bands(slide) -> None:
             size=10,
             row_h=Inches(0.52),
         )
-    _tag_on_edge(slide, MARGIN + _LEFT_COL_W, _BAR_TOP, "r4tuned")
+    _tag_on_edge(slide, MARGIN + _LEFT_COL_W, top - Inches(0.12), "r4tuned")
 
 
-_BANDS_END = _BAR_TOP + _BAR_H + Inches(0.36) + 3 * Inches(0.52)
+_BANDS_END = _BAR_TOP + _BAR_H + Inches(0.5) + 3 * Inches(0.52)
 
 
 def _context_footers(slide) -> None:
@@ -817,10 +842,10 @@ def _context_footers(slide) -> None:
         _LEFT_COL_W,
         Inches(0.3),
         (
-            "Even a 1M-token window (≈ 750,000 English words) does not swallow a whole "
-            "dataset: compute, don't read.",
-            "100 万トークンのウィンドウでも英語で約 75 万語。データセット全体は入らない。"
-            "「読ませるより計算させる」。",
+            "The reply is not a separate channel: it is written into the same window, and "
+            "the next round reads it back as part of the messages.",
+            "返答は別の場所に出るのではない。同じウィンドウに書かれ、次のラウンドではメッセージの"
+            "一部として読み直される。",
         ),
         Style(11, MUTED, italic=True),
     )
@@ -902,6 +927,13 @@ _CONTEXT_NOTES = (
     "text only. Prompt caching itself is general (Anthropic cache_control, OpenAI automatic "
     "caching, vLLM automatic prefix caching); R4 orders the request for a self-hosted "
     "server with no cache breakpoints.\n"
+    "Review 2026-11-07 ('is the model's reply in the same window?'): yes. The model "
+    "writes after the prompt one token at a time, each token reading everything before it "
+    "(prompt + what it has written), so prompt + reply (thinking included) must fit the "
+    "window; R4 keeps at least 4,096 tokens free. Within a turn the reply is sent back next "
+    "round as an assistant message (tool calls and reasoning_content included); at the end "
+    "of the turn the answer text stays in the history. The 1M-token line moved here: even a "
+    "1M-token window (≈ 750,000 English words) does not hold a whole dataset.\n"
     "Review 2026-11-05: the bands became one bar, to scale, in the order the model reads "
     "it. Where the tools go: R4 sends them in the separate tools field "
     "(companion/agent.py:640-654, sorted by name); the model server's chat template "
@@ -953,6 +985,12 @@ _CONTEXT_NOTES = (
     "再送する。プロンプトのキャッシュ自体は一般的(Anthropic の cache_control、OpenAI の自動"
     "キャッシュ、vLLM の自動プレフィックスキャッシュ)。R4 はキャッシュ位置を指定できない自前の"
     "サーバ向けに並べ方を決めている。\n"
+    "2026-11-07 のレビュー(「返答は同じウィンドウに入るのか」):入る。モデルはプロンプトの"
+    "直後から 1 トークンずつ書き、各トークンはそれまでのすべて(プロンプト+書いた分)を読んで"
+    "決まる。だからプロンプト+返答(思考を含む)がウィンドウに収まる必要があり、R4 は最低 "
+    "4,096 トークンを空けておく。返答は次のラウンドで assistant メッセージとして送り直され"
+    "(このターンのツール呼び出しと reasoning_content も)、ターンが終わると回答のテキストが"
+    "履歴に残る。「100 万トークンのウィンドウでもデータセット全体は入らない」はこのノートに移した。\n"
     "2026-11-05 のレビュー:帯を、モデルが読む順の 1 本の棒(長さは実際の比率)に変えた。"
     "ツール定義の位置:R4 は別の tools 欄で送り(companion/agent.py:640-654、名前順)、文章の"
     "どこに置くかはモデルサーバのチャットテンプレートが決める。Ollama の Qwen 系のテンプレートは"

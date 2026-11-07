@@ -4,11 +4,10 @@ Sources are named backends (UMRS platform instances or public providers)
 that can be selected at runtime via ``--source`` or ``R4_SOURCE``.
 
 Examples:
-    r4 source add rccs-cloud --url http://umrs-front:8000 --kind platform
-    r4 source add ai4s --url http://umrs-front:8002 --kind platform
+    r4 source add mysite --url https://gateway.example.org/mysite --kind platform
     r4 source add claude --url https://api.anthropic.com --kind public
     r4 source list
-    r4 source use ai4s
+    r4 source use mysite
     r4 source remove claude
 """
 
@@ -452,12 +451,12 @@ class SourceCommand(CommandHandler):
             ),
             epilog=(
                 "Examples:\n"
-                "  r4 source add rccs --url http://umrs-front:8000 --kind platform\n"
+                "  r4 source add mysite --url https://gateway.example.org/mysite --kind platform\n"
                 "  r4 source add claude --url https://api.anthropic.com --kind public\n"
                 "  r4 source add-ollama --use\n"
                 "  r4 source list\n"
-                "  r4 source use rccs\n"
-                "  r4 endpoint up --source ai4s --model Qwen/Qwen2.5-7B\n"
+                "  r4 source use mysite\n"
+                "  r4 endpoint up --source mysite --model Qwen/Qwen2.5-7B\n"
             ),
             formatter_class=RawDescriptionHelpFormatter,
         )
@@ -502,7 +501,7 @@ class SourceCommand(CommandHandler):
 
         # source add
         add_p = sub.add_parser("add", help="Add or update a source")
-        add_p.add_argument("name", help="Source name (e.g. 'rccs-cloud', 'ai4s', 'claude')")
+        add_p.add_argument("name", help="Source name (e.g. 'mysite', 'claude')")
         add_p.add_argument("--url", required=True, help="Base URL of the source")
         add_p.add_argument(
             "--kind",

@@ -1,14 +1,7 @@
 # Frontend-Venue Sessions (Remote Companion Sessions)
 
-**Status 2026-09-10 (venue system leg complete on umrs-front):** the venue system is
-live on `umrs-front`: migrations 0085-0087 + 0087grants applied; keys sealed;
-`umrs-infer` healthy on the egress-net bridge; gateway lanes serve
-`/gw/user-sources` + `/gw/secrets`; provisioned sessions run through the
-sidecar (nginx + squid on the egress pod, CPU-only worker, GPU/vLLM absent);
-the full I-series (§1-§14 of the verification grid) is live-verified —
-isolation, injection, streaming, web class, off-host redirect policy,
-unpush → deny-next-request, job-driven teardown, isolation self-test (exit 78).
-See the repository's development notes for live evidence.
+**Status:** available since 2026-09-10. Needs a UMRS front-end with the
+venue system enabled (`UMRS_VENUE_ENABLED`, migrations 0085-0087 applied).
 
 Frontend-venue ("remote") sessions run the companion agent on the platform
 host instead of on your laptop. The agent keeps working after you
@@ -63,8 +56,7 @@ lists). Credentialed `http://` sources are refused unless added with
 
 ## Starting a remote session
 
-**Since 2026-09-21 (repo-side — the live receipt on umrs-front lands with
-the next deployment converge).**
+**Since 2026-09-21.**
 
 TUI:
 

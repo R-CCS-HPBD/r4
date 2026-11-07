@@ -3315,6 +3315,14 @@
       "auth": "verified"
     },
     {
+      "path": "/umrs/workflows/{workflow_name}/export",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
       "path": "/umrs/workflows/{workflow_name}/package",
       "methods": [
         "GET"
@@ -3389,7 +3397,7 @@
   ],
   "summary": {
     "open(white)": 6,
-    "verified": 244,
+    "verified": 245,
     "edge-auth(nginx)": 140,
     "open(probe)": 1,
     "admin(jwt|verified-admin)": 8,

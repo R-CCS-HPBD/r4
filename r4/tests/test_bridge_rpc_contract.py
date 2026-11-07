@@ -12,6 +12,8 @@ in ``tests/test_bridge_rpc_schema_drift.py`` (repo root).
 
 from __future__ import annotations
 
+import json
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -75,6 +77,20 @@ def _venue_answers(h: Harness) -> None:
     # ADR-099 D-8: remote ask_user questions.
     h.client.answers["/questions"] = {"questions": [{"question_id": "q1", "status": "pending"}]}
     h.client.answers["/answer"] = {"question": {"question_id": "q1", "status": "answered"}}
+
+
+def _workflow_export(h: Harness) -> dict[str, Any]:
+    """workflow.export into the harness tmp dir; the fake SDK writes a real zip."""
+
+    def export(name: str, dest: Path, *, overwrite: bool = False) -> Path:
+        assert not overwrite and not Path(dest).exists()
+        manifest = {"workflow": name, "files": [{"path": "a.py"}], "excluded": [".env"]}
+        with zipfile.ZipFile(dest, "w") as archive:
+            archive.writestr("EXPORT.json", json.dumps(manifest))
+        return Path(dest)
+
+    h.client.workflows.export = export
+    return {"workflow_name": "wf", "dest_dir": str(Path(h.store.db_path).parent)}
 
 
 def _umrs_answers(h: Harness) -> None:
@@ -333,6 +349,7 @@ CASES: list[Case] = [
     ("workflow.detail", "detail", plain({"execution_id": "ex-1"})),
     ("workflow.approve_gate", "approve", plain({"execution_id": "ex-1", "step_name": "gate"})),
     ("workflow.package", "package", plain({"workflow_name": "wf"})),
+    ("workflow.export", "saved", _workflow_export),
     ("workflow_describe", "describe", plain({"workflow_name": "wf"})),
     ("assets.snapshot", "snapshot", plain({})),
     ("assets.patch", "patch", plain({"base": {"dataset:d1": "x"}})),

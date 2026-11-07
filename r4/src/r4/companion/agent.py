@@ -809,23 +809,75 @@ def _fingerprint_tool_result(result: str, *, max_chars: int = 400) -> str:
     return normalized
 
 
+# Aliases that count as a stall target on any mention (the original lane). Any
+# other host counts only when the step's result shows the ssh connection itself
+# failing, so exploratory probing of a reachable host stays open.
 _KNOWN_SSH_ALIASES = ("rccs-cloud", "ai4s", "umrs-front", "bdrt")
+_SSH_CONNECT_FAILURE = re.compile(
+    r"\bssh: |could not resolve hostname|connection closed by|connection reset by"
+    r"|kex_exchange_identification|host key verification failed|permission denied \("
+)
+
+
+def _ssh_host(command: str) -> str:
+    """Host of the first ``ssh`` invocation in *command* (``user@`` dropped, lowercased)."""
+    import shlex
+
+    try:
+        tokens = shlex.split(command)
+    except ValueError:
+        tokens = command.split()
+    names = [token.rsplit("/", 1)[-1] for token in tokens]
+    if "ssh" not in names:
+        return ""
+    index = names.index("ssh") + 1
+    while index < len(tokens) and tokens[index].startswith("-"):
+        index += 2 if tokens[index] in _SSH_VALUE_FLAGS else 1
+    if index >= len(tokens):
+        return ""
+    return tokens[index].rsplit("@", 1)[-1].lower()
+
+
+def _ssh_step_targets(step: dict[str, str]) -> set[str] | None:
+    """Stall targets of one step; None when the step is not an ssh shell call."""
+    if step.get("name") != "shell_exec":
+        return None
+    command = (step.get("arguments") or "").lower()
+    if "ssh" not in command:
+        return None
+    hits = _ssh_alias_hits(command)
+    return hits if hits else _failed_ssh_host(step)
+
+
+def _ssh_alias_hits(command: str) -> set[str]:
+    """Built-in aliases mentioned anywhere in the (lowercased) command."""
+    return {alias for alias in _KNOWN_SSH_ALIASES if alias in command}
+
+
+def _failed_ssh_host(step: dict[str, str]) -> set[str]:
+    """The step's ssh host when its result shows the connection failing."""
+    if not _SSH_CONNECT_FAILURE.search((step.get("result") or "").lower()):
+        return set()
+    host = _ssh_host(_step_command(step))
+    return {host} if host else set()
 
 
 def _stalling_ssh_target(tail: list[dict[str, str]]) -> str:
-    """Alias of the repeated ssh target when EVERY step targets the same host."""
-    targets: set[str] = set()
-    for step in tail:
-        if step.get("name") != "shell_exec":
-            return ""
-        command = (step.get("arguments") or "").lower()
-        if "ssh" not in command:
-            return ""
-        hit = {a for a in _KNOWN_SSH_ALIASES if a in command or f"@{a}" in command}
-        targets |= hit
-    if len(targets) != 1:
+    """The repeated ssh target when EVERY step is an ssh call to the same host.
+
+    A known alias trips on any mention (unchanged); any other host trips only
+    when every step in the tail failed to connect to it.
+    """
+    per_step = [_ssh_step_targets(step) for step in tail]
+    if any(targets is None for targets in per_step):
         return ""
-    return next(iter(targets))
+    merged: set[str] = set().union(*(t for t in per_step if t))
+    if len(merged) != 1:
+        return ""
+    target = next(iter(merged))
+    if target not in _KNOWN_SSH_ALIASES and not all(per_step):
+        return ""
+    return target
 
 
 def _switch_reason_text(

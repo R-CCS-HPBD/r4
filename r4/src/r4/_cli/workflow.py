@@ -37,6 +37,7 @@ class WorkflowCommand(CommandHandler):
                 "Examples:\n"
                 "  r4 workflow list\n"
                 "  r4 workflow upload ./workflow.zip\n"
+                "  r4 workflow export my-workflow -o ./exports/ --extract ./my-workflow-src\n"
                 "  r4 workflow trigger my-workflow --param foo=bar\n"
                 "  r4 workflow trigger my-workflow --params-file params.json\n"
                 "  r4 workflow run ./workflow_dir --params-json '{\"threshold\": 0.8}' --wait"
@@ -196,6 +197,22 @@ class WorkflowCommand(CommandHandler):
             help="Clear the list: only the owner may run the workflow",
         )
 
+        sub_export = sub.add_parser(
+            "export",
+            help="Download a workflow you can see (own, system, shared) as a verified zip",
+        )
+        sub_export.add_argument("workflow_name")
+        sub_export.add_argument(
+            "--output", "-o", metavar="PATH", help="File or directory (default: ./NAME.zip)"
+        )
+        sub_export.add_argument(
+            "--force", action="store_true", help="Overwrite an existing file (and extracted files)"
+        )
+        sub_export.add_argument(
+            "--extract", metavar="DIR", help="Also unpack the verified zip into DIR"
+        )
+        sub_export.add_argument("--json", "-j", action="store_true", dest="as_json")
+
         sub_show = sub.add_parser("show", help="Describe a workflow; --graph renders the step DAG")
         sub_show.add_argument("workflow_name")
         sub_show.add_argument(
@@ -281,7 +298,7 @@ class WorkflowCommand(CommandHandler):
         if not sub:
             print(
                 "Usage: r4 workflow "
-                "<list|show|triggers|access|trigger|run|upload|delete|definition|status|watch|approve|reject|cancel|lint>",
+                "<list|show|triggers|access|export|trigger|run|upload|delete|definition|status|watch|approve|reject|cancel|lint>",
                 file=sys.stderr,
             )
             return 1
@@ -317,6 +334,7 @@ def _subcommands() -> dict:
         "reject": _cmd_reject,
         "triggers": _cmd_triggers,
         "access": _cmd_access,
+        "export": _cmd_export,
         "show": _cmd_show,
         "watch": _cmd_watch,
         "lint": lambda _wf, args: _cmd_lint(args),
@@ -517,6 +535,36 @@ def _cmd_access(wf, args: Namespace) -> int:
     owner = data.get("owner") or "?"
     print(f"{args.workflow_name}  owner: {owner}")
     print("  access: " + (", ".join(scopes) if scopes else "owner only"))
+    return 0
+
+
+def _cmd_export(wf: WorkflowClient, args: Namespace) -> int:
+    """Download (and optionally unpack) a workflow export zip."""
+    from ..workflows import extract_export, read_export_manifest
+
+    try:
+        path = wf.export(args.workflow_name, args.output, overwrite=args.force)
+        manifest = read_export_manifest(path)
+        extracted = (
+            extract_export(path, args.extract, overwrite=args.force) if args.extract else None
+        )
+    except Exception as exc:  # noqa: BLE001
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    summary = {
+        "workflow": args.workflow_name,
+        "path": str(path),
+        "files": len(manifest.get("files") or []),
+        "excluded": len(manifest.get("excluded") or []),
+        "extracted_to": str(extracted) if extracted else None,
+    }
+    if args.as_json:
+        print(json.dumps(summary, indent=2))
+        return 0
+    print(f"exported {args.workflow_name} -> {path}")
+    print(f"  files: {summary['files']}  excluded: {summary['excluded']}  (images not included)")
+    if extracted:
+        print(f"  extracted to: {extracted}")
     return 0
 
 

@@ -176,7 +176,7 @@ proxy timeouts) — not via environment variables. Edit the config in
 `deploy/` and redeploy via Ansible to change them.
 
 On the gateway edge, these are set in `gateway/nginx/conf.d/server.conf`.
-The umrs-front converge rebuilds this image (`umrs_front_gateway_rebuild`).
+Rebuild the gateway image after changing this file.
 Since 2026-10-05, `/gw/llm/` and `/gw/companion/` allow upstream reads of up
 to `7200s`, matching the proxies' total limit; the other routes keep their own
 limits (for example, `/gw/chat/` stays at `600s`). The Apache TLS front on 443

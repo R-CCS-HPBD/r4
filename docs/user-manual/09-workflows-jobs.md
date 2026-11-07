@@ -37,7 +37,56 @@ Run resolution is: your own copy first, then a `system` one, then one
 shared with you. A colleague's run of your shared workflow executes as
 *their* run against buckets **they** may use — share the bucket too
 (`r4 bucket access`) if the run should read/write shared data. `system`
-entries are admin-only; re-scoping a `system`-scope workflow is admin-only.### Uploading a Workflow
+entries are admin-only; re-scoping a `system`-scope workflow is admin-only.
+
+To share with everyone in a project, name the project; its members see the
+workflow while that project is their active one (`r4 project switch`):
+
+```bash
+r4 workflow access my-pipeline --set project:proj-a
+```
+
+### Exporting a workflow (2026-11-07)
+
+Anyone who can see a workflow can take its code home as a zip: the owner,
+everyone for a `system` workflow, colleagues its access list admits (a
+`project:` share counts for members whose active project is that project),
+and admins. For anyone else the workflow does not exist (the same 404 as an
+unknown name).
+
+```bash
+r4 workflow export my-pipeline                     # ./my-pipeline.zip
+r4 workflow export my-pipeline -o ~/exports/       # ~/exports/my-pipeline.zip
+r4 workflow export my-pipeline -o old.zip --force  # overwrite an existing file
+r4 workflow export my-pipeline --extract ./my-pipeline-src   # also unpack it
+```
+
+The zip holds:
+
+- the workflow's **registered source tree**, with relative paths;
+- `workflow.json`, its `source.path` made relative, so the zip can be
+  uploaded again (`r4 workflow upload my-pipeline.zip --name my-copy`);
+- `EXPORT.json`: workflow name, export time, UMRS version, a sha256 and
+  size for every file, and the list of excluded paths.
+
+Left out, and listed under `excluded` in `EXPORT.json`: symlinks (never
+followed), anything under a `.env*`, `.git*` or `__pycache__` path, and
+key or credential files (`*.pem`, `*.key`, `*.p12`, `*.pfx`, `id_rsa*`,
+`id_ed25519*`, `credentials`, `credentials.json`, `.netrc`, `.pgpass`,
+`secrets.yaml`/`secrets.yml`). **Container images are not included**: the
+export is the code and its manifest, not the runtime. An export above the
+server's 200 MiB cap is refused (413). A registration whose source directory
+is gone exports `workflow.json` and `EXPORT.json` only.
+
+r4 never writes a half-checked file: the zip streams to a temporary file
+beside the target, every `EXPORT.json` checksum is verified, and only then
+is it renamed into place. An existing file is refused without `--force`.
+`--extract DIR` unpacks after the check and refuses any path that would
+land outside `DIR`. The command prints the path, the file count and the
+excluded count (`--json` for a machine-readable summary). From Python:
+`client.workflows.export("my-pipeline", "exports/")` returns the path.
+
+### Uploading a Workflow
 
 Upload takes a workflow **directory or `.zip` bundle** containing
 `workflow.json` plus the step source files:

@@ -5,6 +5,8 @@ applyTo: '**'
 
 # Local CI Harness Rule
 
+> *(2026-11-07)* This file describes the development repository's process. Public contributors follow [CONTRIBUTING.md](../../CONTRIBUTING.md).
+
 Updated 2026-09-22 (design reset): scope, stages and modes re-verified
 against `scripts/ci-lint-local.sh` and `.github/workflows/ci.yaml`
 (ADR-052 "one gate for every tree").

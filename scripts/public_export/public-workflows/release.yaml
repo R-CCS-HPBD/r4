@@ -1,0 +1,284 @@
+# Release of R4 on R-CCS-HPBD/r4. The export (scripts/public_export/export.py
+# in the development repository) installs this file as
+# .github/workflows/release.yaml. The export workflow pushes a v* tag on the
+# public sync commit; that tag push runs this workflow, which publishes the
+# assets the one-command installer and `r4 tui install` download:
+#
+#   r4-client-<tag>.tar.gz   the first-party wheels (r4, r4-contracts,
+#                            r4-teamengine-spi, r4-science, umrs) + SHA256SUMS
+#                            of those wheels, flat (no top-level directory)
+#   r4-tui-<target>          console binaries for linux-x64,
+#                            linux-x64-baseline, linux-arm64, darwin-arm64,
+#                            darwin-x64, each with <name>.sha256 (and
+#                            <name>.minisig when the signing key is set);
+#                            darwin-x64 is optional (TUI_OPTIONAL)
+#   install.sh               a copy of scripts/install-r4.sh
+#   SHA256SUMS               sha256 of every other asset of the release
+#
+# GitHub-hosted runners only: a public repository must never reach a
+# self-hosted runner. Only the publishing job may write (contents: write).
+#
+# Signing: with the repository secret R4_TUI_MINISIGN_SECRET_KEY (and
+# R4_TUI_MINISIGN_PASSWORD) set, every console binary gets a minisign
+# signature whose trusted comment is "r4-tui <tag> <asset>"; `r4 tui install`
+# checks it against its pinned public key. Without the secret the release is
+# sha256-only and the step says so.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  BUN_VERSION: "1.3.14"
+  UV_VERSION: "0.9.5"
+  # The first-party Python projects in the client bundle (umrs/src is the
+  # umrs submodule's package; its [client] extra is what r4 needs).
+  WHEEL_PROJECTS: "r4 r4-contracts packages/r4-teamengine-spi science umrs/src"
+  WHEEL_DISTS: "r4 r4_contracts r4_teamengine_spi r4_science umrs"
+  TUI_TARGETS: "linux-x64 linux-x64-baseline linux-arm64 darwin-arm64 darwin-x64"
+  # Targets a release may ship without (a ::warning:: says so); see `release`.
+  TUI_OPTIONAL: "darwin-x64"
+
+jobs:
+  wheels:
+    name: client bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install uv
+        run: python -m pip install "uv==${UV_VERSION}"
+      - name: Build the first-party wheels
+        run: |
+          out="$RUNNER_TEMP/wheels"
+          for project in $WHEEL_PROJECTS; do
+            uv build --wheel --no-sources --out-dir "$out" "$project"
+          done
+          for dist in $WHEEL_DISTS; do
+            n="$(find "$out" -maxdepth 1 -name "${dist}-*.whl" | wc -l)"
+            [ "$n" -eq 1 ] || { echo "::error::expected one ${dist} wheel, found $n"; exit 1; }
+          done
+      # scripts/release/cut.sh bumps the versions before it tags, so a
+      # mismatch means the tag names a commit the release script did not cut.
+      # Same mapping as cut.sh: v0.2.0-rc2 (or -rc.2) -> 0.2.0rc2.
+      - name: Check the r4 wheel version against the tag
+        run: |
+          version="$(find "$RUNNER_TEMP/wheels" -maxdepth 1 -name 'r4-*.whl' -printf '%f\n' | cut -d- -f2)"
+          want="$(printf '%s' "${GITHUB_REF_NAME#v}" | sed -E 's/-(rc|a|b)\.?([0-9]+)$/\1\2/')"
+          if [ "$version" != "$want" ]; then
+            echo "::error title=Version mismatch::r4 wheel is ${version:-missing}, tag ${GITHUB_REF_NAME} implies ${want}"
+            exit 1
+          fi
+      - name: Pack r4-client-<tag>.tar.gz
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          [[ "$tag" =~ ^v[0-9A-Za-z._-]+$ ]] || { echo "::error::unexpected tag name $tag"; exit 1; }
+          bundle="$RUNNER_TEMP/bundle"
+          mkdir -p "$bundle" "$RUNNER_TEMP/client"
+          cp "$RUNNER_TEMP"/wheels/*.whl "$bundle"/
+          cd "$bundle"
+          sha256sum -- *.whl > SHA256SUMS
+          tar -czf "$RUNNER_TEMP/client/r4-client-${tag}.tar.gz" -- SHA256SUMS *.whl
+          tar -tzf "$RUNNER_TEMP/client/r4-client-${tag}.tar.gz"
+      - uses: actions/upload-artifact@v5
+        with:
+          name: r4-client
+          path: ${{ runner.temp }}/client/
+          if-no-files-found: error
+
+  tui-linux:
+    name: console linux
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - name: Install (all platforms for cross-compile)
+        working-directory: packages/r4-tui-v3
+        run: bun install --os "*" --cpu "*"
+      - name: Build linux targets
+        working-directory: packages/r4-tui-v3
+        run: |
+          bun run scripts/build-bin.mjs \
+            --target=linux-x64 --target=linux-x64-baseline --target=linux-arm64
+      - name: Smoke test linux-x64 binary
+        working-directory: packages/r4-tui-v3
+        run: |
+          cd /tmp
+          "$OLDPWD/dist-bin/r4-tui-linux-x64" --smoke
+      - uses: actions/upload-artifact@v5
+        with:
+          name: r4-tui-linux
+          path: packages/r4-tui-v3/dist-bin/
+          if-no-files-found: error
+
+  # The darwin builds run on macOS (native OpenTUI core, Apple's ad-hoc code
+  # signature, a real smoke test), one runner per architecture.
+  tui-darwin-arm64:
+    name: console darwin-arm64
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - name: Install
+        working-directory: packages/r4-tui-v3
+        run: bun install
+      - name: Build darwin-arm64
+        working-directory: packages/r4-tui-v3
+        run: bun run scripts/build-bin.mjs --target=darwin-arm64
+      - name: Smoke test darwin-arm64 binary
+        working-directory: packages/r4-tui-v3
+        run: |
+          cd /tmp
+          "$OLDPWD/dist-bin/r4-tui-darwin-arm64" --smoke
+      - uses: actions/upload-artifact@v5
+        with:
+          name: r4-tui-darwin-arm64
+          path: packages/r4-tui-v3/dist-bin/
+          if-no-files-found: error
+
+  tui-darwin-x64:
+    name: console darwin-x64
+    runs-on: macos-15-intel
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - name: Install
+        working-directory: packages/r4-tui-v3
+        run: bun install
+      - name: Build darwin-x64
+        working-directory: packages/r4-tui-v3
+        run: bun run scripts/build-bin.mjs --target=darwin-x64
+      - name: Smoke test darwin-x64 binary
+        working-directory: packages/r4-tui-v3
+        run: |
+          cd /tmp
+          "$OLDPWD/dist-bin/r4-tui-darwin-x64" --smoke
+      - uses: actions/upload-artifact@v5
+        with:
+          name: r4-tui-darwin-x64
+          path: packages/r4-tui-v3/dist-bin/
+          if-no-files-found: error
+
+  # The Intel Mac console is optional (2026-11-07): a failed tui-darwin-x64,
+  # or a run cancelled while it waits for a macos-15-intel runner, still
+  # publishes the client bundle and the other consoles, with a warning.
+  # always() is what lets the publish job run after such a cancel.
+  release:
+    name: publish
+    needs: [wheels, tui-linux, tui-darwin-arm64, tui-darwin-x64]
+    if: >-
+      always()
+      && needs.wheels.result == 'success'
+      && needs.tui-linux.result == 'success'
+      && needs.tui-darwin-arm64.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v5
+        with:
+          path: ${{ runner.temp }}/dist
+          merge-multiple: true
+      - name: Add install.sh and check the asset set
+        run: |
+          dist="$RUNNER_TEMP/dist"
+          cp scripts/install-r4.sh "$dist/install.sh"
+          missing=""
+          for f in "r4-client-${GITHUB_REF_NAME}.tar.gz" install.sh; do
+            [ -s "$dist/$f" ] || missing="$missing $f"
+          done
+          for t in $TUI_TARGETS; do
+            if [ ! -e "$dist/r4-tui-$t" ] && [[ " $TUI_OPTIONAL " == *" $t "* ]]; then
+              echo "::warning title=Console r4-tui-$t missing::its build did not finish; this release ships without r4-tui-$t (r4 tui install fails on that platform until a later release has it)"
+              continue
+            fi
+            for f in "r4-tui-$t" "r4-tui-$t.sha256"; do
+              [ -s "$dist/$f" ] || missing="$missing $f"
+            done
+          done
+          [ -z "$missing" ] || { echo "::error::missing release assets:$missing"; exit 1; }
+          ls -l "$dist"
+      - name: Sign console binaries (minisign; skipped without the secret)
+        env:
+          MINISIGN_SECRET_KEY: ${{ secrets.R4_TUI_MINISIGN_SECRET_KEY }}
+          MINISIGN_PASSWORD: ${{ secrets.R4_TUI_MINISIGN_PASSWORD }}
+        working-directory: ${{ runner.temp }}/dist
+        run: |
+          if [ -z "$MINISIGN_SECRET_KEY" ]; then
+            echo "::warning title=Console binaries unsigned::R4_TUI_MINISIGN_SECRET_KEY is not set; this release is sha256-only (r4 tui install warns that authenticity is not checked)."
+            exit 0
+          fi
+          sudo apt-get update -qq && sudo apt-get install -y -qq minisign
+          key="$RUNNER_TEMP/r4-tui-minisign.key"
+          trap 'rm -f "$key"' EXIT
+          (umask 077 && printf '%s\n' "$MINISIGN_SECRET_KEY" > "$key")
+          for t in $TUI_TARGETS; do
+            f="r4-tui-$t"
+            [ -f "$f" ] || continue  # an optional console that did not build
+            printf '%s\n' "$MINISIGN_PASSWORD" \
+              | minisign -S -s "$key" -m "$f" -t "r4-tui ${GITHUB_REF_NAME} $f"
+          done
+      - name: Write SHA256SUMS
+        working-directory: ${{ runner.temp }}/dist
+        run: |
+          rm -f SHA256SUMS
+          sha256sum -- * > "$RUNNER_TEMP/SHA256SUMS"
+          mv "$RUNNER_TEMP/SHA256SUMS" SHA256SUMS
+          cat SHA256SUMS
+      - name: Create or update the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        working-directory: ${{ runner.temp }}/dist
+        # A new release starts as a draft and is published only after every
+        # asset is uploaded: the installer never sees a release without its
+        # bundle. A re-run finds the release and replaces its assets; a draft
+        # an earlier run left behind is published then.
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload --clobber "$tag" -- *
+            if [ "$(gh release view "$tag" --json isDraft --jq .isDraft)" = true ]; then
+              gh release edit "$tag" --draft=false
+            fi
+          else
+            flags=(--draft --verify-tag --title "$tag" --notes-from-tag)
+            if [[ "$tag" == *-* ]]; then flags+=(--prerelease); fi
+            gh release create "$tag" "${flags[@]}"
+            gh release upload --clobber "$tag" -- *
+            gh release edit "$tag" --draft=false
+          fi
+          echo "released $tag: $(find . -maxdepth 1 -type f | wc -l) assets" >> "$GITHUB_STEP_SUMMARY"

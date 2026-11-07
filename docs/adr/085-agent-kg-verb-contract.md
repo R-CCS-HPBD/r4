@@ -206,7 +206,7 @@ for a smaller site model: Haiku 4.5 gained accuracy while tool calls rose
 
 - Gold set: 54 questions over three demo projects (two video, one CT
   imaging) in nine categories, independently re-derived (48 agree, 3 corrected, 3 reworded):
-  `~/tmp/kg-multimodal-bench-2026-10-03/gold/`. Arms: A files + shell;
+  the maintainers' benchmark workspace (gold set, not published). Arms: A files + shell;
   B files + today's tools reproduced locally (real umrs `d28978ad` ingest
   chain and K3/catalogue routes; 32/32 fidelity cases byte-identical to the
   real R4 tool closures; LLM extraction emulated as a best case); C files +
@@ -230,7 +230,7 @@ for a smaller site model: Haiku 4.5 gained accuracy while tool calls rose
   (its one non-generic component); because the gain comes from structured
   and media questions and prose shows none, that confound does not explain
   it. Behaviour: Haiku ffprobe 7 → 1 and grep 45 → 18; Opus ffprobe/ffmpeg
-  26 → 14. Results: `~/tmp/kg-multimodal-bench-2026-10-03/results/ANALYSIS_NOTES.md`.
+  26 → 14. Results: the maintainers' benchmark workspace (analysis notes, not published).
 - Verbs (verifier): 59 commands × 4 renders, 0 cap violations in 236;
   in-verb median 4–57 ms; ~70–720 tokens per call.
 - Real R4 companion: a smoke test with `qwen3.8-27b` via the rikyu public

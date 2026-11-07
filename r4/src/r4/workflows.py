@@ -11,12 +11,15 @@ Separation of concerns:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import shutil
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, BinaryIO, Dict, List, Optional
+from urllib.parse import quote
 
 from r4_contracts.workflows import (
     WorkflowCatalogItem as WorkflowDefinition,
@@ -94,6 +97,135 @@ def _zip_directory(path: Path) -> str:
                 arc_name = os.path.relpath(abs_path, path)
                 zf.write(abs_path, arc_name)
     return archive_path
+
+
+# ── Workflow export (2026-11-07) ──────────────────────────────────────────
+#: The manifest UMRS writes into every ``GET /workflows/{name}/export`` zip.
+EXPORT_MANIFEST = "EXPORT.json"
+#: Archive members EXPORT.json may leave out of its own ``files`` list.
+_EXPORT_UNLISTED = frozenset({EXPORT_MANIFEST, "workflow.json"})
+_EXPORT_TIMEOUT_S = 600.0
+
+
+def _names_directory(dest: str | Path) -> bool:
+    """*dest* ends with a separator (``exports/``): a directory is meant even
+    when none exists yet. Checked on ``str(dest)`` because ``Path`` drops the
+    trailing separator (2026-11-07)."""
+    seps = tuple(sep for sep in ("/", os.sep, os.altsep) if sep)
+    return str(dest).endswith(seps)
+
+
+def _export_target(workflow_name: str, dest: str | Path | None) -> Path:
+    """Where an export lands: ``./<name>.zip`` by default, ``<dir>/<name>.zip``
+    for an existing directory or a *dest* ending in a separator (the caller
+    creates it, parents included), else *dest* itself."""
+    filename = f"{workflow_name.replace('/', '_')}.zip"
+    if dest is None:
+        return Path.cwd() / filename
+    target = Path(dest).expanduser()
+    if _names_directory(dest) or target.is_dir():
+        return target / filename
+    return target
+
+
+def read_export_manifest(path: str | Path) -> Dict[str, Any]:
+    """EXPORT.json of a workflow export archive (unverified); R4Error when
+    the file is no export archive."""
+    try:
+        with zipfile.ZipFile(path) as zf:
+            raw = zf.read(EXPORT_MANIFEST)
+        manifest = json.loads(raw)
+    except (zipfile.BadZipFile, KeyError, OSError, ValueError) as exc:
+        raise R4Error(f"{path}: not a readable workflow export archive ({exc})") from exc
+    if not isinstance(manifest, dict) or not isinstance(manifest.get("files"), list):
+        raise R4Error(f"{path}: {EXPORT_MANIFEST} carries no file list")
+    return manifest
+
+
+def _member_digest(zf: zipfile.ZipFile, name: str) -> tuple[str, int]:
+    """sha256 hex and byte size of one archive member, read in chunks."""
+    digest = hashlib.sha256()
+    size = 0
+    with zf.open(name) as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+            size += len(chunk)
+    return digest.hexdigest(), size
+
+
+def _entry_problems(zf: zipfile.ZipFile, members: set[str], entry: Any) -> List[str]:
+    """What is wrong with one EXPORT.json ``files`` entry (empty: it matches)."""
+    if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
+        return [f"malformed {EXPORT_MANIFEST} entry {entry!r}"]
+    rel = entry["path"]
+    if rel not in members:
+        return [f"{rel}: listed but missing from the archive"]
+    sha, size = _member_digest(zf, rel)
+    if sha != entry.get("sha256"):
+        return [f"{rel}: sha256 mismatch"]
+    if entry.get("size") is not None and entry.get("size") != size:
+        return [f"{rel}: size mismatch ({size} bytes, listed {entry.get('size')})"]
+    return []
+
+
+def _export_problems(path: Path, files: List[Any]) -> List[str]:
+    """Every mismatch between an archive and its EXPORT.json file list."""
+    problems: List[str] = []
+    with zipfile.ZipFile(path) as zf:
+        members = {info.filename for info in zf.infolist() if not info.is_dir()}
+        for entry in files:
+            problems.extend(_entry_problems(zf, members, entry))
+    listed = {str(e.get("path")) for e in files if isinstance(e, dict)}
+    unlisted = sorted(members - listed - _EXPORT_UNLISTED)
+    problems.extend(f"{name}: in the archive but not listed" for name in unlisted)
+    return problems
+
+
+def verify_export(path: str | Path, *, label: str | None = None) -> Dict[str, Any]:
+    """Check an export archive against its EXPORT.json (sha256 + size of
+    every listed file, no unlisted extras); return the manifest or raise
+    R4Error naming the first problems. *label* names the file in errors."""
+    shown = label or str(path)
+    try:
+        manifest = read_export_manifest(path)
+    except R4Error as exc:
+        raise R4Error(str(exc).replace(str(path), shown)) from exc
+    problems = _export_problems(Path(path), manifest["files"])
+    if problems:
+        more = f" (+{len(problems) - 5} more)" if len(problems) > 5 else ""
+        raise R4Error(f"{shown}: export verification failed: " + "; ".join(problems[:5]) + more)
+    return manifest
+
+
+def _safe_member_target(root: Path, name: str) -> Path:
+    """Destination of archive member *name* under *root*; R4Error when the
+    name is absolute or climbs out of *root* (zip-slip)."""
+    pure = Path(name)
+    target = (root / pure).resolve()
+    if pure.is_absolute() or ".." in pure.parts or not target.is_relative_to(root):
+        raise R4Error(f"refusing archive member {name!r}: it escapes {root}")
+    return target
+
+
+def extract_export(path: str | Path, dest_dir: str | Path, *, overwrite: bool = False) -> Path:
+    """Unpack a (verified) export archive into *dest_dir*.
+
+    Every member path is checked before anything is written, so an archive
+    with one escaping path writes nothing. Existing files are kept unless
+    *overwrite*. Returns the resolved directory.
+    """
+    root = Path(dest_dir).expanduser().resolve()
+    with zipfile.ZipFile(path) as zf:
+        infos = [info for info in zf.infolist() if not info.is_dir()]
+        planned = [(_safe_member_target(root, info.filename), info) for info in infos]
+        clashes = [str(t) for t, _ in planned if t.exists()]
+        if clashes and not overwrite:
+            raise R4Error(f"{clashes[0]} already exists; pass overwrite (CLI: --force)")
+        for target, info in planned:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with zf.open(info) as src, target.open("wb") as dst:
+                shutil.copyfileobj(src, dst)
+    return root
 
 
 class WorkflowClient:
@@ -308,6 +440,72 @@ class WorkflowClient:
             raise
         except Exception as e:
             raise R4Error(f"Failed to fetch workflow package: {e}")
+
+    def export(
+        self,
+        workflow_name: str,
+        dest: str | Path | None = None,
+        *,
+        overwrite: bool = False,
+    ) -> Path:
+        """Download a workflow you can see as a zip (2026-11-07).
+
+        ``GET {workflows}/{name}/export`` answers for every workflow the
+        caller may describe — own, ``system`` and shared ones (a project
+        share follows the active project, sent as ``X-Project-ID``). The zip
+        holds the registered source tree, ``workflow.json`` and
+        ``EXPORT.json`` (checksums, excluded paths); container images are not
+        included.
+
+        *dest* defaults to ``./<name>.zip``; an existing directory, or a
+        *dest* ending in a separator (created, parents included), receives
+        ``<dir>/<name>.zip``. An existing file is refused unless *overwrite*.
+        The body streams to a temp file beside the target, is verified
+        against EXPORT.json and only then renamed into place — a failed
+        download or checksum mismatch leaves no file behind (R4Error).
+        """
+        target = _export_target(workflow_name, dest)
+        if target.exists() and not overwrite:
+            raise R4Error(f"{target} already exists; pass overwrite=True (CLI: --force)")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        fd, tmp_name = tempfile.mkstemp(
+            prefix=f".{target.name}.", suffix=".part", dir=target.parent
+        )
+        partial = Path(tmp_name)
+        try:
+            with os.fdopen(fd, "wb") as handle:
+                self._stream_export(workflow_name, handle)
+            verify_export(partial, label=str(target))
+            os.replace(partial, target)
+        except BaseException:
+            partial.unlink(missing_ok=True)
+            raise
+        return target
+
+    def _stream_export(self, workflow_name: str, handle: BinaryIO) -> None:
+        """Stream the export zip into *handle* (gateway auth + project headers)."""
+        import httpx
+
+        from ._http import map_httpx_error, raise_for_status, raise_if_web_login
+
+        core = getattr(self._parent, "platform_http", None) or self._parent.http
+        headers = core.build_headers()
+        headers.pop("Content-Type", None)
+        # JSON listed too: an expired credential then gets a JSON 401, not a
+        # 302 to the HTML login page saved as the zip.
+        headers["Accept"] = "application/zip, application/json"
+        url = self._wf_url(f"/{quote(workflow_name, safe='')}/export")
+        try:
+            with core._client(_EXPORT_TIMEOUT_S) as client:  # noqa: SLF001 - shared HTTP config
+                with client.stream("GET", url, headers=headers) as response:
+                    if response.is_error:
+                        response.read()
+                    raise_for_status(response)
+                    raise_if_web_login(response)
+                    for chunk in response.iter_bytes(chunk_size=8 * 1024 * 1024):
+                        handle.write(chunk)
+        except httpx.RequestError as exc:
+            raise map_httpx_error(exc, gateway_url=self._config.gateway_url) from exc
 
     def delete(self, workflow_name: str) -> Dict[str, Any]:
         """Delete a registered workflow (owner or admin only).

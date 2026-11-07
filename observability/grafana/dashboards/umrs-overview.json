@@ -24,28 +24,11 @@
           "unit": "short"
         }
       },
-      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 1 },
       "id": 2,
-      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
-      "targets": [{ "expr": "up{job=\"umrs-rccs\"}", "legendFormat": "RCCS", "refId": "A" }],
-      "title": "UMRS RCCS",
-      "type": "stat"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] },
-          "unit": "short"
-        }
-      },
-      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
-      "id": 3,
-      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
-      "targets": [{ "expr": "up{job=\"umrs-ai4s\"}", "legendFormat": "AI4S", "refId": "A" }],
-      "title": "UMRS AI4S",
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value_and_name" },
+      "targets": [{ "expr": "up{job=~\"$job\"}", "legendFormat": "{{job}}", "refId": "A" }],
+      "title": "UMRS servers up",
       "type": "stat"
     },
     {
@@ -216,7 +199,28 @@
   "refresh": "30s",
   "schemaVersion": 39,
   "tags": ["rivault", "overview"],
-  "templating": { "list": [] },
+  "templating": {
+    "list": [
+      {
+        "name": "job",
+        "label": "UMRS job",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": { "query": "label_values(up{job=~\"umrs.*\"}, job)", "refId": "PrometheusVariableQueryEditor-VariableQuery" },
+        "definition": "label_values(up{job=~\"umrs.*\"}, job)",
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": "umrs.*",
+        "current": { "selected": true, "text": ["All"], "value": ["$__all"] },
+        "hide": 0,
+        "options": [],
+        "skipUrlSync": false
+      }
+    ]
+  },
   "time": { "from": "now-1h", "to": "now" },
   "timepicker": {},
   "timezone": "browser",

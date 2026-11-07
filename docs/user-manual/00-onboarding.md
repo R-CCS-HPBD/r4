@@ -145,7 +145,9 @@ export PATH="$HOME/.local/bin:$PATH"
 
 The client is not on PyPI, so `pip install r4` would fetch an unrelated
 package (corrected 2026-11-07); use the installer above, or a clone (see
-[the quickstart](02-quickstart.md)). To upgrade, re-run the installer.
+[the quickstart](02-quickstart.md)). It works on macOS and Linux, and on
+Windows inside WSL2. To upgrade, re-run the installer; to uninstall,
+`uv tool uninstall r4`.
 
 For a richer experience install extras from a clone, into the active
 virtual environment:

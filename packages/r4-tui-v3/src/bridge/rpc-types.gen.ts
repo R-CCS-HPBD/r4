@@ -2068,6 +2068,15 @@ export type WorkflowExecutionRecord = {
   results?: Record<string, unknown>;
 };
 
+/** workflow.export: where the verified zip was saved, and its EXPORT.json counts. */
+export type WorkflowExportResult = {
+  ok: boolean;
+  workflow_name: string;
+  path: string;
+  files: number | null;
+  excluded: number | null;
+};
+
 /** workflow.list: the caller's workflow catalog. */
 export type WorkflowListResult = {
   workflows: WorkflowCatalogRow[];
@@ -2387,6 +2396,7 @@ export interface RpcResultMap {
   "workflow.approve_gate": WorkflowStatusAck;
   "workflow.cancel": WorkflowStatusAck;
   "workflow.detail": WorkflowDetailResult;
+  "workflow.export": WorkflowExportResult;
   "workflow.list": WorkflowListResult;
   "workflow.package": WorkflowPackage;
   "workflow.results": WorkflowRunResult;

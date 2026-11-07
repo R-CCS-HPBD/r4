@@ -18,10 +18,8 @@ Usage:
         --registry-dsn umrs_ai4s=postgresql://user:pw@127.0.0.1:5432/umrs_ai4s
     python tools/check_jobs_schema_placement.py --json <same args>
 
-Runbook (umrs-front): run inside umrs-server-rccs (has psycopg2):
-    podman exec umrs-server-rccs python3 /tmp/check_jobs_schema_placement.py \
-        --jobs-dsn postgresql://umrs:$POSTGRES_PASSWORD@127.0.0.1:5432/umrs_db \
-        --registry-dsn umrs_ai4s=postgresql://umrs:$POSTGRES_PASSWORD@127.0.0.1:5432/umrs_ai4s
+Run it from a host or container that can reach the databases and has
+psycopg2 installed (for example, inside a UMRS server container).
 
 Exit 0 when placement matches the decision.
 """

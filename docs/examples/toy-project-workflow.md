@@ -381,8 +381,9 @@ r4 project status
 ### "No verify_claim support"
 ```bash
 # This means the backend doesn't have the LLM verification engine
-# Check UMRS logs:
-ssh umrs-front 'tail -50 ~/deploy/.../logs/server.log'
+# Check the UMRS server log on your deployment, for example on the
+# stand-alone stack (from deploy/standalone/):
+./standalone.sh logs umrs
 
 # Or run locally on compose:
 python -m pytest tests/test_research_journey_e2e.py -v
@@ -422,6 +423,6 @@ docker compose -f docker-compose.e2e.yaml down
 
 ## Next Steps
 
-- **Deploy to umrs-front**: Use Ansible only (`deploy/ansible/bootstrap.sh --profile umrs-front`)
+- **Deploy**: see [deploy/standalone/README.md](../../deploy/standalone/README.md) or [docs/user-manual/16-deployment.md](../user-manual/16-deployment.md)
 - **Run E2E tests**: `python tests/run_e2e_tests.py` or `.venv/bin/python -m pytest tests/test_research_journey_e2e.py -v`
-- **HPC journey E2E**: `tests/run_hpc_tests.sh` (requires rccs/ai4s deployment)
+- **HPC journey E2E**: `tests/run_hpc_tests.sh` (requires an HPC-connected UMRS deployment)

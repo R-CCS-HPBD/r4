@@ -34,7 +34,8 @@ fetch an unrelated package of that name, if one exists). Install with the
 installer script, or from a clone:
 
 ```bash
-# installer: a virtual environment in ~/.r4/venv plus an `r4` on PATH
+# installer (2026-11-07): the newest release's verified wheels as a uv tool,
+# `r4` and `umrs` in ~/.local/bin, plus the console binary
 curl -fsSL https://raw.githubusercontent.com/R-CCS-HPBD/r4/main/scripts/install-r4.sh | bash
 
 # from a clone (run in its r4/ directory)

@@ -69,16 +69,32 @@ own machine.
 
 ### (a) The r4 client, against an existing UMRS server
 
-One-shot installer (installs into `~/.r4/venv` and links `r4` and `umrs`
-into `~/.local/bin`):
+One command, on macOS and Linux (on Windows, inside
+[WSL2](https://learn.microsoft.com/windows/wsl/install); a native Windows
+install comes later):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/R-CCS-HPBD/r4/main/scripts/install-r4.sh | bash
-export PATH="$HOME/.local/bin:$PATH"
 ```
 
-`R4_INSTALL_DIR` (default `~/.r4`) and `R4_BRANCH` (default `main`, a branch
-or tag) change where and what it installs.
+It installs the newest release (release candidates included) as a
+[uv](https://docs.astral.sh/uv/) tool: it uses your `uv`, or installs it with
+the official installer, downloads the release's client bundle, checks every
+package in it against the release's `SHA256SUMS`, installs `r4` and `umrs`
+into `~/.local/bin` (Python 3.12, fetched by uv if your machine has none),
+and fetches the console binary (`r4 tui install`). If `~/.local/bin` is not
+on your `PATH`, it prints the line to add. The same script is attached to
+every release as `install.sh`.
+
+- **Pin a release:** `curl -fsSL ... | R4_VERSION=v0.2.0-rc2 bash`
+- **Upgrade:** run the same command again.
+- **Uninstall:** `uv tool uninstall r4`, and `rm -f ~/.local/share/r4/bin/r4-tui`
+  for the console binary (`$R4_TUI_HOME/bin/r4-tui` when `R4_TUI_HOME` is set).
+  Keep the rest of `~/.local/share/r4`: it holds the trash where R4 puts
+  files it deletes for you.
+
+Other settings (`R4_SKIP_TUI=1`, a mirror through `R4_RELEASE_BASE_URL`, ...)
+are listed at the top of [scripts/install-r4.sh](scripts/install-r4.sh).
 
 Or from source:
 

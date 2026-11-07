@@ -53,11 +53,15 @@ own TUI: the release binary never shadows a set-up checkout (force it with
 and its last TUI commit, and warns when `node_modules/.r4-deps-stamp` no longer
 matches `package.json` + `bun.lock` (run `make tui-deps`). Nothing is compiled into
 `.venv/bin` — a copied binary would go stale on the next pull.
-Release assets are `r4-tui-darwin-arm64`, `r4-tui-linux-x64`, `r4-tui-linux-arm64`;
+Release assets are `r4-tui-linux-x64`, `r4-tui-linux-x64-baseline`, `r4-tui-linux-arm64`,
+`r4-tui-darwin-arm64` and `r4-tui-darwin-x64`, each with a `.sha256`;
 `r4 tui install` resolves the newest release including prereleases (`R4_TUI_VERSION`
-pins a tag; `R4_TUI_DIST_BASE_URL` overrides the base); macOS x86_64 runs the arm64
-build under Rosetta. If no release is published, build locally with `cd
-packages/r4-tui-v3 && bun run scripts/build-bin.mjs` and `mv` (never `cp` over a live
+pins a tag; `R4_TUI_DIST_BASE_URL` overrides the base) and picks the asset for the
+host: Intel Macs (darwin/x86_64) get `r4-tui-darwin-x64`; the baseline build (x86_64
+CPUs without AVX2) is never picked automatically. (2026-11-07: this line said
+macOS x86_64 runs the arm64 build under Rosetta; Rosetta translates x86_64 to arm64,
+never the reverse, so that build could not start there.) If no release is published,
+build locally with `cd packages/r4-tui-v3 && bun run scripts/build-bin.mjs` and `mv` (never `cp` over a live
 binary on macOS) `dist-bin/<asset>` to the user bin path.
 
 **`r4 console` flags** (`r4/src/r4/_cli/console.py`): `--demo` / `--offline`

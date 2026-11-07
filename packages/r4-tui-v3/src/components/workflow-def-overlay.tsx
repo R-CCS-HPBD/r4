@@ -7,7 +7,8 @@
  *   arrows of the steps the runner executes) · steps · code
  * One scrolling body (↑↓ PgUp PgDn Home End, mouse wheel); code files stay
  * collapsed until Enter/click (←→ pick the file). `r` puts the trigger line
- * in the composer and closes the card and pane so the composer has the keys.
+ * in the composer and closes the card and pane so the composer has the keys;
+ * `e` (2026-11-07) saves the workflow as a verified zip (lib/workflow-export.ts).
  * Esc closes via the global overlay sweep. Capability-detected: slots with
  * no data stay hidden; a backend without the route shows the honest error.
  */
@@ -19,6 +20,7 @@ import { workspace, actions } from "../stores";
 import { umrsWorkflowStore } from "../stores/umrs-workflow";
 import { cardTriggerCommand, workflowCardRows, type CardTone } from "../lib/workflow-card-rows";
 import { isSharedInCatalog } from "../lib/workflow-sharing";
+import { exportWorkflowWithNotice } from "../lib/workflow-export";
 import { palette } from "../themes";
 import { Floating } from "../ui/Floating";
 import { KeyTrap } from "./key-trap";
@@ -33,6 +35,13 @@ function toneFg(tone: CardTone): string {
   if (tone === "dim") return palette.fgDim;
   if (tone === "bright") return palette.fgBright;
   return palette.fg;
+}
+
+type KeyActions = Record<string, () => void>;
+
+/** Own-key lookup: a key name never resolves to an Object.prototype member. */
+function ownAction(table: KeyActions, key: string): (() => void) | undefined {
+  return Object.hasOwn(table, key) ? table[key] : undefined;
 }
 
 /** Put a workflow's trigger line in the composer and hand it the keyboard. */
@@ -135,28 +144,44 @@ export function WorkflowDefOverlay() {
     return true;
   };
 
+  /** `e`: save this workflow as a verified zip (cwd, else ~/Downloads); the card stays open. */
+  const exportDefinition = () => {
+    const id = name();
+    if (id) void exportWorkflowWithNotice(id);
+  };
+
+  const moveFile = (step: number) => {
+    const last = Math.max(0, files().length - 1);
+    setCursor(Math.max(0, Math.min(last, safeCursor() + step)));
+    const f = files()[safeCursor()];
+    if (f) revealFile(f.path);
+  };
+
+  const toggleSelectedFile = () => {
+    const f = files()[safeCursor()];
+    if (f) toggle(f.path);
+  };
+
+  /** File keys the card owns besides scrolling (with or without modifiers). */
+  const fileKeys: KeyActions = {
+    left: () => moveFile(-1),
+    right: () => moveFile(1),
+    return: toggleSelectedFile,
+    enter: toggleSelectedFile,
+  };
+  /** Letter keys: only without Ctrl/Meta (those chords belong to the app). */
+  const letterKeys: KeyActions = { r: draftTrigger, e: exportDefinition };
+
+  const keyAction = (event: KeyEvent, key: string): (() => void) | undefined => {
+    const plain = !event.ctrl && !event.meta;
+    return ownAction(fileKeys, key) ?? (plain ? ownAction(letterKeys, key) : undefined);
+  };
+
   const handleKey = (event: KeyEvent) => {
     const key = event.name ?? "";
-    if (key === "left" || key === "right") {
-      const last = Math.max(0, files().length - 1);
-      setCursor(Math.max(0, Math.min(last, safeCursor() + (key === "left" ? -1 : 1))));
-      const f = files()[safeCursor()];
-      if (f) revealFile(f.path);
-      event.preventDefault();
-      return;
-    }
-    if (key === "return" || key === "enter") {
-      const f = files()[safeCursor()];
-      if (f) toggle(f.path);
-      event.preventDefault();
-      return;
-    }
-    if (key === "r" && !event.ctrl && !event.meta) {
-      draftTrigger();
-      event.preventDefault();
-      return;
-    }
-    if (scrollKey(key)) event.preventDefault();
+    const action = keyAction(event, key);
+    if (action) action();
+    if (action || scrollKey(key)) event.preventDefault();
   };
 
   return (
@@ -214,10 +239,10 @@ export function WorkflowDefOverlay() {
         </scrollbox>
         <box height={1} marginTop={1} flexShrink={0} overflow="hidden">
           <text fg={palette.fgDim}>
-            r trigger line → composer · ↑↓ PgUp PgDn scroll · ←→ file · Enter/click code · Esc close
+            r trigger line → composer · e export zip · ↑↓ PgUp PgDn scroll · ←→ file · Enter/click code · Esc close
           </text>
         </box>
-        {/* captureText: letters other than `r` never reach space shortcuts under the card. */}
+        {/* captureText: letters other than `r`/`e` never reach space shortcuts under the card. */}
         <KeyTrap focused={true} captureText={true} onKeyDown={handleKey} />
       </Floating>
     </Show>

@@ -800,6 +800,298 @@
         ]
       }
     },
+    "lab_rag_clear_en": {
+      "text": "KRSO-1D v2 (Kinki Regional Seismic Observatory reference model): the Moho under the Kii Channel lies at 28 km depth.\n\nOur observatory's reference model puts the Moho under the Kii Channel at a depth of ",
+      "tokens": [
+        "K",
+        "RS",
+        "O",
+        "-",
+        "1",
+        "D",
+        " v",
+        "2",
+        " (",
+        "K",
+        "inki",
+        " Regional",
+        " Se",
+        "ismic",
+        " Observatory",
+        " reference",
+        " model",
+        "):",
+        " the",
+        " Moh",
+        "o",
+        " under",
+        " the",
+        " K",
+        "ii",
+        " Channel",
+        " lies",
+        " at",
+        " ",
+        "2",
+        "8",
+        " km",
+        " depth",
+        ".\n\n",
+        "Our",
+        " observ",
+        "atory",
+        "'s",
+        " reference",
+        " model",
+        " puts",
+        " the",
+        " Moh",
+        "o",
+        " under",
+        " the",
+        " K",
+        "ii",
+        " Channel",
+        " at",
+        " a",
+        " depth",
+        " of",
+        " "
+      ],
+      "entropy_bits": 0.48,
+      "top": {
+        "0.2": [
+          {
+            "token": "2",
+            "p": 1.0
+          },
+          {
+            "token": "1",
+            "p": 0.0
+          },
+          {
+            "token": "3",
+            "p": 0.0
+          },
+          {
+            "token": "4",
+            "p": 0.0
+          },
+          {
+            "token": "7",
+            "p": 0.0
+          },
+          {
+            "token": "6",
+            "p": 0.0
+          }
+        ],
+        "1.0": [
+          {
+            "token": "2",
+            "p": 0.935
+          },
+          {
+            "token": "1",
+            "p": 0.032
+          },
+          {
+            "token": "3",
+            "p": 0.022
+          },
+          {
+            "token": "4",
+            "p": 0.0023
+          },
+          {
+            "token": "7",
+            "p": 0.002
+          },
+          {
+            "token": "6",
+            "p": 0.0014
+          }
+        ],
+        "1.5": [
+          {
+            "token": "2",
+            "p": 0.7332
+          },
+          {
+            "token": "1",
+            "p": 0.0773
+          },
+          {
+            "token": "3",
+            "p": 0.0602
+          },
+          {
+            "token": "4",
+            "p": 0.0134
+          },
+          {
+            "token": "7",
+            "p": 0.0124
+          },
+          {
+            "token": "6",
+            "p": 0.0096
+          }
+        ]
+      }
+    },
+    "lab_rag_clear_ja": {
+      "text": "KRSO-1D v2(近畿地域地震観測所の参照モデル):紀伊水道の下のモホ面の深さは 28 km。\n\n私たちの観測所の参照モデルでは、紀伊水道の下のモホ面の深さは ",
+      "tokens": [
+        "K",
+        "RS",
+        "O",
+        "-",
+        "1",
+        "D",
+        " v",
+        "2",
+        "(",
+        "近",
+        "畿",
+        "地域",
+        "地震",
+        "�",
+        "�",
+        "測",
+        "所",
+        "の",
+        "参照",
+        "モデル",
+        "):",
+        "紀",
+        "伊",
+        "水",
+        "道",
+        "の",
+        "下",
+        "の",
+        "モ",
+        "ホ",
+        "面",
+        "の",
+        "深",
+        "さ",
+        "は",
+        " ",
+        "2",
+        "8",
+        " km",
+        "。\n\n",
+        "私たち",
+        "の",
+        "�",
+        "�",
+        "測",
+        "所",
+        "の",
+        "参照",
+        "モデル",
+        "では",
+        "、",
+        "紀",
+        "伊",
+        "水",
+        "道",
+        "の",
+        "下",
+        "の",
+        "モ",
+        "ホ",
+        "面",
+        "の",
+        "深",
+        "さ",
+        "は",
+        " "
+      ],
+      "entropy_bits": 1.59,
+      "top": {
+        "0.2": [
+          {
+            "token": "2",
+            "p": 0.9997
+          },
+          {
+            "token": "1",
+            "p": 0.0003
+          },
+          {
+            "token": "3",
+            "p": 0.0
+          },
+          {
+            "token": "0",
+            "p": 0.0
+          },
+          {
+            "token": "7",
+            "p": 0.0
+          },
+          {
+            "token": "5",
+            "p": 0.0
+          }
+        ],
+        "1.0": [
+          {
+            "token": "2",
+            "p": 0.7338
+          },
+          {
+            "token": "1",
+            "p": 0.1445
+          },
+          {
+            "token": "3",
+            "p": 0.0532
+          },
+          {
+            "token": "0",
+            "p": 0.0111
+          },
+          {
+            "token": "7",
+            "p": 0.0087
+          },
+          {
+            "token": "5",
+            "p": 0.0087
+          }
+        ],
+        "1.5": [
+          {
+            "token": "2",
+            "p": 0.2808
+          },
+          {
+            "token": "1",
+            "p": 0.095
+          },
+          {
+            "token": "3",
+            "p": 0.0488
+          },
+          {
+            "token": "0",
+            "p": 0.0172
+          },
+          {
+            "token": "7",
+            "p": 0.0146
+          },
+          {
+            "token": "5",
+            "p": 0.0146
+          }
+        ]
+      }
+    },
     "lab_rag_strict_en": {
       "text": "KRSO-1D v2 (Kinki Regional Seismic Observatory reference model): upper crust 0-18 km, 5.9 km/s; lower crust 18-28 km, 6.7 km/s; mantle below the Moho at 28 km, 7.9 km/s.\n\nAnswer from the reference above only, and copy its numbers exactly.\n\nOur observatory's reference model puts the Moho under the Kii Channel at a depth of ",
       "tokens": [
@@ -1275,6 +1567,11 @@
       "0.4": 0.7327,
       "greedy": "28 km"
     },
+    "lab_rag_clear_en": {
+      "1.0": 0.8799,
+      "0.4": 0.9996,
+      "greedy": "28 km"
+    },
     "lab_ja": {
       "1.0": 0.0052,
       "0.4": 0.0008,
@@ -1289,6 +1586,11 @@
       "1.0": 0.1204,
       "0.4": 0.3039,
       "greedy": "18 km"
+    },
+    "lab_rag_clear_ja": {
+      "1.0": 0.6179,
+      "0.4": 0.9809,
+      "greedy": "28 km"
     }
   }
 }
