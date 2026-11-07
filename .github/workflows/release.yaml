@@ -275,7 +275,14 @@ jobs:
               gh release edit "$tag" --draft=false
             fi
           else
-            flags=(--draft --verify-tag --title "$tag" --notes-from-tag)
+            # Notes from a file, not from the tag message: this step runs in the
+            # dist directory, outside any git checkout, so the tag is not
+            # local (v0.2.0-rc4's first publish failed on it, 2026-11-07).
+            notes="$RUNNER_TEMP/release-notes.md"
+            printf '%s\n' "R4 + UMRS ${tag}." "" \
+              "Install: curl -fsSL https://raw.githubusercontent.com/${GH_REPO}/main/scripts/install-r4.sh | bash (on Windows, inside WSL2)." \
+              "" "Changes: CHANGELOG.md. Assets: the client wheel bundle, console binaries with .sha256, install.sh, SHA256SUMS." > "$notes"
+            flags=(--draft --verify-tag --title "$tag" --notes-file "$notes")
             if [[ "$tag" == *-* ]]; then flags+=(--prerelease); fi
             gh release create "$tag" "${flags[@]}"
             gh release upload --clobber "$tag" -- *

@@ -1,5 +1,12 @@
 # R4
 
+[![CI](https://github.com/R-CCS-HPBD/r4/actions/workflows/ci.yaml/badge.svg)](https://github.com/R-CCS-HPBD/r4/actions/workflows/ci.yaml)
+[![Release](https://img.shields.io/github/v/release/R-CCS-HPBD/r4?include_prereleases&sort=semver&label=release)](https://github.com/R-CCS-HPBD/r4/releases)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](r4/pyproject.toml)
+[![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20macOS%20%7C%20Windows%20(WSL2)-lightgrey.svg)](#requirements)
+[![UMRS](https://img.shields.io/badge/backbone-UMRS-informational.svg)](https://github.com/UMRS-org/umrs)
+
 **An AI platform for working scientists.** Your tools, your compute, your science.
 
 R4 (pronounced "are for", as in "*___ are for ___*": simulations are for
@@ -16,13 +23,36 @@ Slurm-managed clusters, self-hosted models in sandboxes, object storage,
 vector and graph storage, and an MCP tool registry. R4 never talks to a
 scheduler, a bucket or a database directly; everything goes through UMRS.
 
+```mermaid
+flowchart LR
+  subgraph WS["Your workstation"]
+    R4["<b>r4</b><br/>console · CLI · Python SDK<br/>agent harness · skills"]
+  end
+  subgraph FE["Cluster front-end (or local containers)"]
+    GW["HTTPS gateway<br/>(NGINX + auth sidecar)"]
+    UMRS["<b>UMRS</b><br/>accounts · projects · jobs<br/>model endpoints · MCP registry"]
+    KN[("Knowledge<br/>Postgres + pgvector")]
+    OS[("Object store<br/>S3")]
+    GW --> UMRS
+    UMRS --- KN
+    UMRS --- OS
+  end
+  subgraph CO["Compute"]
+    HPC["GPU / HPC nodes<br/>Slurm · sandboxed containers"]
+  end
+  R4 -- "HTTPS" --> GW
+  R4 <-.->|"ZeroMQ (sessions)"| UMRS
+  UMRS -- "durable jobs,<br/>model serving" --> HPC
 ```
-your workstation                  cluster front-end (or local containers)     compute
-+------------------------+  HTTPS  +------------------------------------+    +-------------------+
-| r4: console, CLI, SDK, | ------> | UMRS: accounts, jobs, models,      | -> | GPU / HPC nodes   |
-| agent harness, skills  | ZeroMQ  | knowledge (Postgres + pgvector),   |    | (Slurm, sandboxed |
-+------------------------+ <-----> | object store (S3), MCP registry    |    |  containers)      |
-                                   +------------------------------------+    +-------------------+
+
+There are two ways to run it: against a UMRS server your institution runs,
+or with everything on your own machine.
+
+```mermaid
+flowchart TB
+  A["<b>r4 client</b><br/>one-line install"] -->|"r4 auth login"| B["UMRS server run by<br/>your institution"]
+  B --> C["HPC / GPU clusters"]
+  D["<b>./r4-local up</b><br/>stand-alone stack"] --> E["UMRS + Postgres + S3 + gateway<br/>+ a local model (ollama)<br/>in containers on one machine"]
 ```
 
 UMRS is developed as its own open-source project,

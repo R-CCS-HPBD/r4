@@ -875,6 +875,8 @@ def _publish(tmp_path: Path, tag: str, **extra: str) -> list[str]:
         "LC_ALL": "C",  # the order `*` expands in
         "GITHUB_REF_NAME": tag,
         "GITHUB_STEP_SUMMARY": str(tmp_path / "summary.md"),
+        "RUNNER_TEMP": str(tmp_path),
+        "GH_REPO": "owner/repo",
         **extra,
     }
     done = _bash(_release_step("release", "Create or update")["run"], dist, env)
@@ -888,7 +890,7 @@ def test_a_new_release_is_a_draft_until_every_asset_is_uploaded(tmp_path: Path) 
     assert calls == [
         "release view v0.2.0-rc2",
         "release create v0.2.0-rc2 --draft --verify-tag --title v0.2.0-rc2"
-        " --notes-from-tag --prerelease",
+        f" --notes-file {tmp_path}/release-notes.md --prerelease",
         "release upload --clobber v0.2.0-rc2 -- SHA256SUMS install.sh",
         "release edit v0.2.0-rc2 --draft=false",
     ]
@@ -896,7 +898,20 @@ def test_a_new_release_is_a_draft_until_every_asset_is_uploaded(tmp_path: Path) 
 
 def test_a_final_tag_is_not_a_prerelease(tmp_path: Path) -> None:
     create = [c for c in _publish(tmp_path, "v1.0.0") if c.startswith("release create")]
-    assert create == ["release create v1.0.0 --draft --verify-tag --title v1.0.0 --notes-from-tag"]
+    assert create == [
+        f"release create v1.0.0 --draft --verify-tag --title v1.0.0 --notes-file {tmp_path}/release-notes.md"
+    ]
+
+
+def test_release_notes_need_no_git_checkout(tmp_path: Path) -> None:
+    # v0.2.0-rc4's first publish failed: --notes-from-tag needs the tag in a
+    # local clone, and this step runs in the dist directory.
+    run = _release_step("release", "Create or update")["run"]
+    assert "--notes-from-tag" not in run
+    _publish(tmp_path, "v1.0.0")
+    notes = (tmp_path / "release-notes.md").read_text()
+    assert "R4 + UMRS v1.0.0." in notes
+    assert "raw.githubusercontent.com/owner/repo/main/scripts/install-r4.sh" in notes
 
 
 @pytest.mark.parametrize(("draft", "published"), [("false", False), ("true", True)])
