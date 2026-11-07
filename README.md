@@ -7,6 +7,12 @@
 [![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20macOS%20%7C%20Windows%20(WSL2)-lightgrey.svg)](#requirements)
 [![UMRS](https://img.shields.io/badge/backbone-UMRS-informational.svg)](https://github.com/UMRS-org/umrs)
 
+Connected R-CCS sites (live health of each site's gateway):
+[![rccs](https://img.shields.io/website?url=https%3A%2F%2Fdata0.ai.r-ccs.riken.jp%2Frccs%2Fhealth&label=rccs&up_message=up&down_message=down)](https://data0.ai.r-ccs.riken.jp/rccs/health)
+[![ai4s](https://img.shields.io/website?url=https%3A%2F%2Fdata0.ai.r-ccs.riken.jp%2Fai4s%2Fhealth&label=ai4s&up_message=up&down_message=down)](https://data0.ai.r-ccs.riken.jp/ai4s/health)
+[![bdrt](https://img.shields.io/website?url=https%3A%2F%2Fdata0.ai.r-ccs.riken.jp%2Fbdrt%2Fhealth&label=bdrt&up_message=up&down_message=down)](https://data0.ai.r-ccs.riken.jp/bdrt/health)
+[![octopus](https://img.shields.io/website?url=https%3A%2F%2Fdata0.ai.r-ccs.riken.jp%2Foctopus%2Fhealth&label=octopus&up_message=up&down_message=down)](https://data0.ai.r-ccs.riken.jp/octopus/health)
+
 **An AI platform for working scientists.** Your tools, your compute, your science.
 
 R4 (pronounced "are for", as in "*___ are for ___*": simulations are for
