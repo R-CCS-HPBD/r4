@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "r4"
-version = "0.2.0rc1"
+version = "0.2.0rc2"
 description = "R4 Platform Client SDK"
 readme = "README.md"
 license = "Apache-2.0"

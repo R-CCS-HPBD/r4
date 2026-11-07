@@ -7,7 +7,7 @@ the TUI binaries. Gap rows `D-nn` refer to
 [docs/R4-UMRS-GAP-ANALYSIS-2026-09-22.md](docs/R4-UMRS-GAP-ANALYSIS-2026-09-22.md);
 the per-wave detail is kept in the maintainers' development records.
 
-## [Unreleased] — v0.2.0-rc2
+## [v0.2.0-rc2] — 2026-11-07
 
 Since `v0.2.0-rc1` (2026-09-15). The platform was re-based on the
 2026-09-22 design ([R4-UMRS-DESIGN.md](docs/R4-UMRS-DESIGN.md)). Gap

@@ -6,7 +6,7 @@ client-side contract for things UMRS owns the durable implementation of.
 
 from __future__ import annotations
 
-__version__ = "0.2.0rc1"
+__version__ = "0.2.0rc2"
 
 # A2L conservation contracts (ADR-034)
 from .a2l import (
