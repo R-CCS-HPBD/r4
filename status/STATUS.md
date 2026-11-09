@@ -1,10 +1,10 @@
 # Service status
 
-Checked **2026-11-09 16:52 JST**. The check runs every 30 minutes and rewrites this page on a change or every 6 hours.
+Checked **2026-11-10 03:41 JST**. The check runs every 30 minutes and rewrites this page on a change or every 6 hours.
 
 | Site | State | Model endpoints ready | Live service roles |
 |---|---|---|---|
-| rccs | **up** | 6 / 8 | `svc-decision`, `svc-embed`, `svc-fast`, `svc-ocr`, `svc-rerank`, `svc-vision` |
+| rccs | **up** | 6 / 6 | `svc-decision`, `svc-embed`, `svc-fast`, `svc-ocr`, `svc-rerank`, `svc-vision` |
 | ai4s | **up** | 0 / 0 | — |
 | bdrt | **up** | 2 / 2 | `svc-chat`, `svc-fast` |
 | octopus | **up** | 0 / 0 | — |
