@@ -33,6 +33,28 @@ def wire(name: str, *, may_be_absent: bool = False) -> Any:
 PermissionModeName = Literal["ask_always", "auto_safe", "deny", "trust"]
 
 
+@dataclass(frozen=True)
+class EventLogRow:
+    """One persisted event (the event_log row; ``data`` is the parsed JSON
+    payload — ``_row_to_dict`` deserializes it on the way out)."""
+
+    id: int = 0
+    session_id: str = ""
+    event_type: str = ""
+    timestamp: str = ""
+    message: str = ""
+    data: Dict[str, Any] = field(default_factory=dict)
+    tool_name: Optional[str] = None
+    tool_status: Optional[str] = None
+    tool_duration_ms: Optional[int] = None
+    agent_id: Optional[str] = None
+    parent_agent_id: Optional[str] = None
+    task_id: Optional[str] = None
+    progress_pct: Optional[int] = None
+    intent: Optional[str] = None
+    rationale: Optional[str] = None
+
+
 # ── get_state: the session snapshot (CompanionBridgeServer.snapshot) ────────
 
 

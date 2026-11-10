@@ -99,6 +99,24 @@ def _skill(h: Harness) -> dict[str, Any]:
     return {"name": "demo-skill"}
 
 
+def _inspection(h: Harness) -> dict[str, Any]:
+    child_id = "contract-child"
+    h.store.save_subagent(
+        session_id=child_id,
+        name="contract child",
+        model="child-model",
+        messages=[{"role": "user", "content": "child task"}],
+        metadata={
+            "session_kind": "subagent",
+            "parent_session_id": h.sid,
+            "parent_agent_id": "parent-agent",
+            "agent_id": "child-agent",
+            "task": "child task",
+        },
+    )
+    return {"session_id": child_id}
+
+
 def _seed_mcp_config(h: Harness, name: str = "demo-mcp") -> None:
     """One declared user-config server under the scratch config home."""
     config = Path.home() / ".config" / "r4" / "mcp-servers.json"
@@ -276,6 +294,7 @@ CASES: list[Case] = [
     ("summarize_session", "empty", plain({})),
     ("list_sessions", "local", plain({})),
     ("list_sessions", "no_remote", plain({"no_remote": True})),
+    ("inspect_subagent", "stored_child", _inspection),
     ("cancel_turn", "no_turn", plain({})),
     ("shutdown", "ok", plain({})),
     ("set_model", "switch", plain({"model": "gpt-y"})),

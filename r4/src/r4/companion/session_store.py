@@ -354,6 +354,31 @@ def _journal_refused(reply: Any) -> bool:
     return isinstance(reply, dict) and reply.get("applied") is False
 
 
+def _validate_session_kind(session_kind: str | None) -> None:
+    if session_kind not in (None, "conversation", "subagent"):
+        raise ValueError("session_kind must be conversation or subagent")
+
+
+def _metadata_text(metadata: dict[str, Any], key: str) -> str:
+    return str(metadata.get(key) or "")
+
+
+def _summary_kind_accepted(is_child: bool, requested: str | None) -> bool:
+    if requested == "subagent":
+        return is_child
+    return not is_child
+
+
+def _summary_lineage_accepted(
+    summary: dict[str, Any], parent_session_id: str | None, agent_id: str | None
+) -> bool:
+    if parent_session_id and summary["parent_session_id"] != parent_session_id:
+        return False
+    if agent_id and summary["agent_id"] != agent_id:
+        return False
+    return True
+
+
 class CompanionSessionStore:
     """Persist and retrieve sessions from sqlite."""
 
@@ -1351,13 +1376,17 @@ class CompanionSessionStore:
         project: str | None = None,
         venue: str | None = None,
         state: str | None = None,
+        session_kind: str | None = None,
+        parent_session_id: str | None = None,
+        agent_id: str | None = None,
     ) -> list[dict[str, Any]]:
         """List sessions: pinned first (newest pin first), then most recently updated.
 
-        venue/state compose with the existing filters: venue matches the
-        recorded venue (local | frontend | cluster:<name>); state matches the
-        computed state (archived wins over recorded; '' matches unrecorded).
+        Ordinary listings still exclude child rows. ``session_kind='subagent'``
+        opts into the read-only child inventory; lineage filters then select
+        its immediate parent or backend agent without loading live sessions.
         """
+        _validate_session_kind(session_kind)
         with self._conn() as conn:
             rows = conn.execute(
                 """SELECT id, name, created_at, updated_at, model, messages, metadata, pinned_at
@@ -1368,7 +1397,15 @@ class CompanionSessionStore:
         for row in rows:
             metadata = self._decode_json_object(row[6])
             summary = self._summary_from_row(row, metadata=metadata)
-            if not self._summary_accepted_summary(summary, include_archived, endpoint, project):
+            if not self._summary_accepted_summary(
+                summary,
+                include_archived,
+                endpoint,
+                project,
+                session_kind=session_kind,
+                parent_session_id=parent_session_id,
+                agent_id=agent_id,
+            ):
                 continue
             if venue is not None and summary["venue"] != venue:
                 continue
@@ -1386,17 +1423,21 @@ class CompanionSessionStore:
         include_archived: bool,
         endpoint: str | None,
         project: str | None,
+        *,
+        session_kind: str | None = None,
+        parent_session_id: str | None = None,
+        agent_id: str | None = None,
     ) -> bool:
-        """One-line predicate drawing the C2+ filter contract out of the loop."""
-        if summary["session_kind"] == "subagent":
-            return False  # child rows are never ordinary writable sessions
-        if not include_archived and summary["archived_at"]:
-            return False
-        if endpoint and not cls._matches_endpoint(summary["endpoints"], endpoint):
-            return False
-        if project and summary["project_id"] != project:
-            return False
-        return True
+        """Compose ordinary and opt-in child predicates without constructing a session."""
+        return all(
+            (
+                _summary_kind_accepted(summary["session_kind"] == "subagent", session_kind),
+                include_archived or not summary["archived_at"],
+                not endpoint or cls._matches_endpoint(summary["endpoints"], endpoint),
+                not project or summary["project_id"] == project,
+                _summary_lineage_accepted(summary, parent_session_id, agent_id),
+            )
+        )
 
     def get_session_record(self, session_id: str) -> dict[str, Any] | None:
         """Return a stored session record without constructing a live session."""
@@ -1830,13 +1871,17 @@ class CompanionSessionStore:
             "project_id": cls._project_id(metadata),
             "endpoints": endpoints,
             "endpoint": ",".join(endpoints),
-            "archived_at": str(metadata.get("archived_at") or ""),
+            "archived_at": _metadata_text(metadata, "archived_at"),
             "pinned": bool(pinned_at),
             "pinned_at": str(pinned_at or ""),
             "venue": str(metadata.get("venue") or DEFAULT_VENUE),
-            "state": str(metadata.get("state") or ""),
+            "state": _metadata_text(metadata, "state"),
             "turn_count": cls._turn_count_of(metadata),
             "session_kind": str(metadata.get("session_kind") or "conversation"),
+            "parent_session_id": _metadata_text(metadata, "parent_session_id"),
+            "parent_agent_id": _metadata_text(metadata, "parent_agent_id"),
+            "agent_id": _metadata_text(metadata, "agent_id"),
+            "subagent_status": _metadata_text(metadata, "subagent_status"),
         }
 
     @staticmethod

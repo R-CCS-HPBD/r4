@@ -1994,29 +1994,42 @@ class CompanionBridgeServer(
         venue = str(params.get("venue") or "")
         state = str(params.get("state") or "")
         include_archived = bool(params.get("include_archived") or False)
+        from .subagent_bridge import child_list_filters
+
+        child_only, child_filters = child_list_filters(params)
         if venue:
             from ..session_store import validate_venue
 
             validate_venue(venue)
-        rows = self._local_session_rows(limit, venue, state, include_archived)
-        sync_probe = getattr(self._store, "sync_status", None)
-        sync_mode = str(sync_probe().get("mode") or "") if callable(sync_probe) else ""
+        rows = self._local_session_rows(
+            limit, venue, state, include_archived, extra_filters=child_filters
+        )
+        sync_mode = _session_sync_mode(self._store)
         response: dict[str, Any] = {
             "sessions": [dict(row, sync="local-only") for row in rows],
             "remote_available": False,
             "remote_reason": "",
             "sync_mode": sync_mode,
         }
+        if child_only:
+            response["remote_reason"] = "remote subagent inventory is not implemented"
+            return response
         if params.get("no_remote"):
             return response
         return self._merge_remote_sessions(response, venue, state, include_archived)
 
     def _local_session_rows(
-        self, limit: int, venue: str, state: str, include_archived: bool
+        self,
+        limit: int,
+        venue: str,
+        state: str,
+        include_archived: bool,
+        *,
+        extra_filters: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
         """Store listing — filter kwargs only when set so pre-venue store
         doubles stay signature-safe (they accept limit only)."""
-        filter_kwargs: dict[str, Any] = {}
+        filter_kwargs: dict[str, Any] = dict(extra_filters or {})
         if include_archived:
             filter_kwargs["include_archived"] = True
         if venue:
@@ -3240,6 +3253,12 @@ class CompanionBridgeServer(
         limit = int(params.get("limit", 100))
         events = self._event_log.tail(session_id, limit=limit)
         return {"events": events, "session_id": session_id}
+
+    def inspect_subagent(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Read a durable child without loading or switching the active session."""
+        from .subagent_bridge import inspect_subagent_record
+
+        return inspect_subagent_record(self._store, self._event_log, params)
 
     # -- background job management -----------------------------------------
 
@@ -5225,6 +5244,7 @@ def _bridge_rpc_bindings(server: "CompanionBridgeServer") -> dict[str, Any]:
         "set_workflow_armed": server.set_workflow_armed,
         "get_usage": server.get_usage,
         "get_event_log": server.get_event_log,
+        "inspect_subagent": server.inspect_subagent,
         "list_jobs": server.list_jobs,
         "get_job": server.get_job,
         "get_job_log": server.get_job_log,
@@ -5357,6 +5377,7 @@ BRIDGE_RPC_NAMES: frozenset[str] = frozenset(
         "get_usage",
         "get_welcome",
         "initialize",
+        "inspect_subagent",
         "knowledge_graph_content",
         "list_active_agents",
         "list_checkpoints",
@@ -5827,6 +5848,11 @@ def _badge_mirrored_rows(response: dict[str, Any], remote_ids: set[str]) -> None
             row["sync"] = "degraded" if degraded else "mirrored"
 
 
+def _session_sync_mode(store: Any) -> str:
+    probe = getattr(store, "sync_status", None)
+    return str(probe().get("mode") or "") if callable(probe) else ""
+
+
 def _remote_only_row(snap: dict[str, Any], local_ids: set[str]) -> dict[str, Any] | None:
     """Listing row for a journal snapshot absent locally; None when mirrored/junk."""
     sid = str(snap.get("session_id") or "")
@@ -5843,6 +5869,11 @@ def _remote_only_row(snap: dict[str, Any], local_ids: set[str]) -> dict[str, Any
         "archived_at": str(snap.get("archived_at") or ""),
         "pinned": False,
         "sync": "remote-only",
+        "session_kind": "conversation",
+        "parent_session_id": "",
+        "parent_agent_id": "",
+        "agent_id": "",
+        "subagent_status": "",
     }
 
 

@@ -68,6 +68,7 @@ READ_RPCS: frozenset[str] = frozenset(
         "get_state",
         "get_usage",
         "get_event_log",
+        "inspect_subagent",
         "get_session_changes",
         "get_session_plan",
         "get_task",

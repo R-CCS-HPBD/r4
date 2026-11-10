@@ -85,7 +85,7 @@ companion/
   session_render.py        — duration / report / markdown rendering
   session_models.py        — message + usage data structures
   session_state.py         — session metadata serialization
-  session_store.py         — SQLite persistence + compatibility path handling
+  session_store.py         — SQLite persistence + compatibility; default listing/loading excludes children, explicit read-only child filters retain lineage (D-70 S3)
   subagent_sessions.py     — existing-store/event-log child recording, stable lineage and terminal lifecycle (2026-11-10, D-70 S1/S2); local-only child writes never use the parent snapshot rail
   session_ops.py           — on-demand session operations shared by the bridge and ACP rails
   persistence.py           — persistence protocol
@@ -107,6 +107,7 @@ companion/
     project_bridge.py      — typed project_* RPCs for the console
     sandbox_bridge.py      — session.sandbox_get / session.sandbox_set, snapshot key session.sandbox (2026-10-30, ADR-101)
     session_bus_bridge.py  — the bridge's active session on the session bus: register/withdraw, heartbeat, `session_inbox` notices (ADR-114)
+    subagent_bridge.py     — D-70 S3 read-only inspect_subagent + opt-in local child inventory; raw store/event-log reads, bounded/redacted event pages, no live child constructor or writer
     repl.py                — Rich REPL fallback (always available)
 ```
 
@@ -225,6 +226,7 @@ Use `CompanionEventType` (`agent.py`) for all agent→UI communication. Never pr
 - `session.py` should stay focused on wiring collaborators and exposing the public session API.
 - New helper logic belongs in the adjacent `session_*` modules unless it truly requires direct session-owned mutation.
 - Keep compatibility imports and `DB_PATH` behavior stable for REPL, console-bridge, ACP and Jupyter callers.
+- Durable subagent inspection (2026-11-10, D-70 S3) goes through `inspect_subagent`, never writable `load_session` / `CompanionSessionStore.load`. Pagination uses the event row `after_id`, not timestamps. Full stored conversation messages are returned; event payloads remain redacted and explicitly bounded. Child inventory requires `session_kind="subagent"`; ordinary lists/load calls keep excluding children, and child lists never merge the remote journal before S5.
 
 ### Skills
 - ALL skills use the general Agent Skills format (https://agentskills.io/specification):

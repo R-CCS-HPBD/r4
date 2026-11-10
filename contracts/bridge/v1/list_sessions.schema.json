@@ -99,6 +99,21 @@
         },
         "sync": {
           "type": "string"
+        },
+        "session_kind": {
+          "type": "string"
+        },
+        "parent_session_id": {
+          "type": "string"
+        },
+        "parent_agent_id": {
+          "type": "string"
+        },
+        "agent_id": {
+          "type": "string"
+        },
+        "subagent_status": {
+          "type": "string"
         }
       },
       "required": [
@@ -117,7 +132,12 @@
         "venue",
         "state",
         "turn_count",
-        "sync"
+        "sync",
+        "session_kind",
+        "parent_session_id",
+        "parent_agent_id",
+        "agent_id",
+        "subagent_status"
       ],
       "additionalProperties": true
     }

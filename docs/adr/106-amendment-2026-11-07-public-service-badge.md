@@ -1,6 +1,6 @@
 # ADR-106 amendment (2026-11-07): a public service-model badge per site
 
-**Status:** Accepted (2026-11-10; merged in #829 at `e7cc6d45`; staged apply and per-site live verification remain open)
+**Status:** Accepted (2026-11-10; merged in #829 and deployed at `34be4f31`; anonymous route and address-free publication verified in ledger 264)
 **Amends:** [ADR-106](106-service-model-tier.md) Consequences (a public view of D-1 role liveness); records an anonymous exception to [CONSTITUTION](../../CONSTITUTION.md) §2 ("the edge validates the JWT on every request")
 **Relates to:** ADR-106 D-9 refinement (`connect-info.default_models` lists only live roles), [ADR-109](109-vision-service-and-routed-endpoints-for-steps.md) D-2 (co-served rows) and D-4 (`service.replicas: 0` is on demand), ADR-076 D-4 (the `keep_alive` walltime relay), issue #634 (`/health/backend`)
 
@@ -194,8 +194,8 @@ site before the README overlay changes.
 The earlier rollout paragraph is superseded on publication only: #796's
 address-free publisher now carries the model badge too (D-7), so shields no
 longer needs the gateway address in the public overlay. The implementation merged
-in #829 at `e7cc6d45`; its bdrt staged check 42747803864 passed, while staged
-apply and per-site live verification remain open:
+in #829 at `e7cc6d45` and deployed at `34be4f31` on all fronts; every staged
+apply and strict canary passed (42762870001/42764935142/42766695394/42770053708):
 `tools/service_status.py` strictly normalizes the gateway answer and writes
 `<site>-models.json`, the public overlay consumes those files, and the public
 status page includes the fixed model message. Fail-first publisher tests
@@ -204,7 +204,8 @@ UMRS/gateway/lane set passed 85/85 and the combined focused set, including the
 R4 bridge environment check, passed 234 / 1 skipped. Independent-review body,
 type, semantic and malformed-JSON regressions all pass, and real nginx runtime
 passed 14/14. Full-gate and live-verification evidence is tracked in wave ledger
-(258). Staged apply and per-site live verification remain open. Scheduled
-Service Status run 42739540577 passed, and all four address-free model files
-are present on the public data-only status branch; the exported README still
-needs its post-apply inspection.
+(258) and deployment/publication receipt (264). Anonymous post-apply run
+42758708289 verified rccs `6/6 up`, bdrt `idle`, ai4s/octopus
+`none configured`. The public README's model badges use only the address-free
+`raw.githubusercontent.com/R-CCS-HPBD/r4/status` documents; no per-site
+gateway address is exposed.

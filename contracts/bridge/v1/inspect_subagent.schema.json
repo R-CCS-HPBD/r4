@@ -1,0 +1,300 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r4.dev/contracts/bridge/v1/inspect_subagent.schema.json",
+  "title": "inspect_subagent",
+  "description": "inspect_subagent: a read-only snapshot and one bounded replay window.",
+  "x-bridge-protocol": 1,
+  "$ref": "#/$defs/InspectSubagentResult",
+  "$defs": {
+    "EventLogRow": {
+      "type": "object",
+      "description": "One persisted event (the event_log row; ``data`` is the parsed JSON",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "event_type": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object"
+        },
+        "tool_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tool_status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tool_duration_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "agent_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parent_agent_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "task_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "progress_pct": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "intent": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rationale": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "session_id",
+        "event_type",
+        "timestamp",
+        "message",
+        "data",
+        "tool_name",
+        "tool_status",
+        "tool_duration_ms",
+        "agent_id",
+        "parent_agent_id",
+        "task_id",
+        "progress_pct",
+        "intent",
+        "rationale"
+      ],
+      "additionalProperties": true
+    },
+    "InspectSubagentResult": {
+      "type": "object",
+      "description": "inspect_subagent: a read-only snapshot and one bounded replay window.",
+      "properties": {
+        "session": {
+          "$ref": "#/$defs/SubagentSessionRecord"
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EventLogRow"
+          }
+        },
+        "next_after_id": {
+          "type": "integer"
+        },
+        "has_more": {
+          "type": "boolean"
+        },
+        "total_events": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "read_only": {
+          "type": "boolean"
+        },
+        "event_payload_cap": {
+          "type": "integer"
+        },
+        "event_payloads_may_be_abridged": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "session",
+        "session_id",
+        "events",
+        "next_after_id",
+        "has_more",
+        "total_events",
+        "limit",
+        "read_only",
+        "event_payload_cap",
+        "event_payloads_may_be_abridged"
+      ],
+      "additionalProperties": true
+    },
+    "SubagentSessionRecord": {
+      "type": "object",
+      "description": "The full stored child conversation plus explicit immediate-parent lineage.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "updated_at": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "session_kind": {
+          "type": "string"
+        },
+        "parent_session_id": {
+          "type": "string"
+        },
+        "parent_agent_id": {
+          "type": "string"
+        },
+        "agent_id": {
+          "type": "string"
+        },
+        "task": {
+          "type": "string"
+        },
+        "system_prompt": {
+          "type": "string"
+        },
+        "declared_tools": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "execution_kind": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "started_at": {
+          "type": "string"
+        },
+        "ended_at": {
+          "type": "string"
+        },
+        "terminal_error": {
+          "type": "string"
+        },
+        "follow_up_count": {
+          "type": "integer"
+        },
+        "venue": {
+          "type": "string"
+        },
+        "event_log_error": {
+          "type": "string"
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "created_at",
+        "updated_at",
+        "model",
+        "session_kind",
+        "parent_session_id",
+        "parent_agent_id",
+        "agent_id",
+        "task",
+        "system_prompt",
+        "declared_tools",
+        "execution_kind",
+        "status",
+        "started_at",
+        "ended_at",
+        "terminal_error",
+        "follow_up_count",
+        "venue",
+        "event_log_error",
+        "messages"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

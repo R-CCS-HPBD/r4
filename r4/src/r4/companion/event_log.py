@@ -218,6 +218,46 @@ class EventLog:
             ).fetchall()
         return [_row_to_dict(row) for row in reversed(rows)]
 
+    def page(
+        self,
+        session_id: str,
+        *,
+        after_id: int | None = None,
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        """Read one bounded, id-ordered replay window without changing the log.
+
+        ``after_id`` is a durable cursor rather than a timestamp: rows written
+        in the same clock tick cannot be skipped. The next page starts strictly
+        after ``next_after_id``. Payload bounding/redaction belongs to the wire
+        boundary; this primitive only bounds database rows.
+        """
+        try:
+            cursor = int(after_id or 0)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("after_id must be a non-negative integer") from exc
+        if isinstance(after_id, bool) or cursor < 0:
+            raise ValueError("after_id must be a non-negative integer")
+        bounded_limit = max(1, min(int(limit), 200))
+        with self._conn() as conn:
+            total = conn.execute(
+                "SELECT COUNT(*) FROM event_log WHERE session_id = ?", (session_id,)
+            ).fetchone()[0]
+            rows = conn.execute(
+                """SELECT * FROM event_log WHERE session_id = ? AND id > ?
+                   ORDER BY id ASC LIMIT ?""",
+                (session_id, cursor, bounded_limit + 1),
+            ).fetchall()
+        has_more = len(rows) > bounded_limit
+        events = [_row_to_dict(row) for row in rows[:bounded_limit]]
+        return {
+            "events": events,
+            "next_after_id": int(events[-1]["id"]) if events else cursor,
+            "has_more": has_more,
+            "total_events": int(total),
+            "limit": bounded_limit,
+        }
+
     def count(self, session_id: str) -> int:
         """Return the total number of events for a session."""
         with self._conn() as conn:

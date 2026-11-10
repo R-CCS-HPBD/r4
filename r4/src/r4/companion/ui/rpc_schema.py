@@ -39,6 +39,7 @@ from .rpc_schema_base import (  # noqa: F401 — re-exported for callers of rpc_
     _ABSENT,
     _WIRE,
     EndpointBudget,
+    EventLogRow,
     KnowledgeAcquisition,
     OutputLine,
     PermissionModeName,
@@ -861,28 +862,6 @@ class GetUsageResult:
     """get_usage: the session's usage report."""
 
     usage: UsageReport = field(default_factory=UsageReport)
-
-
-@dataclass(frozen=True)
-class EventLogRow:
-    """One persisted event (the event_log row; ``data`` is the parsed JSON
-    payload — ``_row_to_dict`` deserializes it on the way out)."""
-
-    id: int = 0
-    session_id: str = ""
-    event_type: str = ""
-    timestamp: str = ""
-    message: str = ""
-    data: Dict[str, Any] = field(default_factory=dict)
-    tool_name: Optional[str] = None
-    tool_status: Optional[str] = None
-    tool_duration_ms: Optional[int] = None
-    agent_id: Optional[str] = None
-    parent_agent_id: Optional[str] = None
-    task_id: Optional[str] = None
-    progress_pct: Optional[int] = None
-    intent: Optional[str] = None
-    rationale: Optional[str] = None
 
 
 @dataclass(frozen=True)

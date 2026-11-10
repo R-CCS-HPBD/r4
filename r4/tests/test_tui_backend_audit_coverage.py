@@ -233,6 +233,8 @@ EXPECTED_BRIDGE_METHODS = {
     "get_usage",
     "get_welcome",
     "initialize",
+    # D-70 S3: read-only durable child inspection (2026-11-10).
+    "inspect_subagent",
     "knowledge_graph_content",
     "list_active_agents",
     "list_checkpoints",

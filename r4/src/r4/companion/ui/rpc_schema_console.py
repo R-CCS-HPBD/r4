@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Literal, Optional, Union
 
 from .rpc_schema_base import (
+    EventLogRow,
     KnowledgeAcquisition,
     OutputLine,
     ResultSchemaRoot,
@@ -108,6 +109,11 @@ class SessionListRow:
     state: str = ""
     turn_count: Optional[int] = None
     sync: str = ""
+    session_kind: str = "conversation"
+    parent_session_id: str = ""
+    parent_agent_id: str = ""
+    agent_id: str = ""
+    subagent_status: str = ""
 
 
 @dataclass(frozen=True)
@@ -118,6 +124,49 @@ class ListSessionsResult:
     remote_available: bool = False
     remote_reason: str = ""
     sync_mode: str = ""
+
+
+@dataclass(frozen=True)
+class SubagentSessionRecord:
+    """The full stored child conversation plus explicit immediate-parent lineage."""
+
+    id: str = ""
+    name: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+    model: str = ""
+    session_kind: str = "subagent"
+    parent_session_id: str = ""
+    parent_agent_id: str = ""
+    agent_id: str = ""
+    task: str = ""
+    system_prompt: str = ""
+    declared_tools: Optional[List[str]] = None
+    execution_kind: str = ""
+    status: str = ""
+    started_at: str = ""
+    ended_at: str = ""
+    terminal_error: str = ""
+    follow_up_count: int = 0
+    venue: str = ""
+    event_log_error: str = ""
+    messages: List[Dict[str, Any]] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class InspectSubagentResult:
+    """inspect_subagent: a read-only snapshot and one bounded replay window."""
+
+    session: SubagentSessionRecord = field(default_factory=SubagentSessionRecord)
+    session_id: str = ""
+    events: List[EventLogRow] = field(default_factory=list)
+    next_after_id: int = 0
+    has_more: bool = False
+    total_events: int = 0
+    limit: int = 100
+    read_only: bool = True
+    event_payload_cap: int = 8000
+    event_payloads_may_be_abridged: bool = True
 
 
 # ── session setters ──────────────────────────────────────────────────────────
@@ -642,6 +691,7 @@ CONSOLE_RESULT_TYPES: Dict[str, ResultSchemaRoot] = {
     "replay_session": ReplaySessionResult,
     "summarize_session": SummarizeSessionResult,
     "list_sessions": ListSessionsResult,
+    "inspect_subagent": InspectSubagentResult,
     "cancel_turn": OkResult,
     "shutdown": OkResult,
     "set_model": StateSnapshot,

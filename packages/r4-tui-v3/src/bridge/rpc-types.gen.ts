@@ -482,6 +482,20 @@ export type InitializeResult = {
   source: Record<string, unknown> | null;
 };
 
+/** inspect_subagent: a read-only snapshot and one bounded replay window. */
+export type InspectSubagentResult = {
+  session: SubagentSessionRecord;
+  session_id: string;
+  events: EventLogRow[];
+  next_after_id: number;
+  has_more: boolean;
+  total_events: number;
+  limit: number;
+  read_only: boolean;
+  event_payload_cap: number;
+  event_payloads_may_be_abridged: boolean;
+};
+
 /** One durable attempt (``_attempt_row``). */
 export type JobAttemptRow = {
   attempt_id: string;
@@ -1177,6 +1191,11 @@ export type SessionListRow = {
   state: string;
   turn_count: number | null;
   sync: string;
+  session_kind: string;
+  parent_session_id: string;
+  parent_agent_id: string;
+  agent_id: string;
+  subagent_status: string;
 };
 
 /** One loop row inside the aggregate session view. */
@@ -1518,6 +1537,31 @@ export type StoppableEndpointRow = {
   id: string;
   label: string;
   status: string;
+};
+
+/** The full stored child conversation plus explicit immediate-parent lineage. */
+export type SubagentSessionRecord = {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+  model: string;
+  session_kind: string;
+  parent_session_id: string;
+  parent_agent_id: string;
+  agent_id: string;
+  task: string;
+  system_prompt: string;
+  declared_tools: string[] | null;
+  execution_kind: string;
+  status: string;
+  started_at: string;
+  ended_at: string;
+  terminal_error: string;
+  follow_up_count: number;
+  venue: string;
+  event_log_error: string;
+  messages: Array<Record<string, unknown>>;
 };
 
 /** summarize_session: the rollup and the id it was computed for. */
@@ -2286,6 +2330,7 @@ export interface RpcResultMap {
   "get_welcome": GetWelcomeResult;
   "grants.mine": GrantsMineResult;
   "initialize": InitializeResult;
+  "inspect_subagent": InspectSubagentResult;
   "knowledge.save": KnowledgeSaveResult;
   "knowledge_graph_content": KnowledgeGraphContentResult;
   "list_active_agents": ListActiveAgentsResult;
