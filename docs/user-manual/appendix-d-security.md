@@ -157,6 +157,7 @@ The full user guide is [Chapter 31](31-own-hpc-accounts.md); the decision is
 | Platform lanes stay on the platform login | Serving endpoints, the service relay, tunnels, the janitor, the reaper and health checks run only under the site's platform login, never under a user's account, because their job environments carry operator secrets |
 | A grant is bounded, and the gate counts it *(added 2026-11-09, waves C and D)* | Unattended work runs only under a **grant** the user signed for one site: exact workflow versions (code and step-graph digests), the images, parameter bounds that refuse code, paths and commands, an input rule (`listed`, `chained` or `any`), limits on jobs, GPU-hours, core-hours and concurrent steps, and at most 30 days. At every step the gate checks the run against the grant and reserves the step's largest cost against counters in the user's HPC home, under a lock; it settles from `sacct` for the actual measured allocation; Slurm over-allocation can exceed the reservation, while a completed job `sacct` cannot report charges its reservation. UMRS cannot widen, extend or pass on a grant. A signed `grant-cancel` ends one; revoking the account ends all of them, and the gate refuses grants issued before a later reconnect. Under a grant UMRS still chooses when runs start, parameter values within bounds, the data by the input rule, and each step's resources within the site profile; every grant summary lists this. The gate's log checkpoint is witnessed by r4, which reports a fork loudly and then refuses to sign anything but a cancel or a revoke |
 | Usage is recorded append-only *(added 2026-11-09, wave D)* | Every job of user work on an HPC site, under a user's account or the platform login, is written to a usage ledger before submit (an estimate) and settled after it (from the gate's `usage` verb or `sacct`). If the ledger cannot be written, nothing is submitted. The database refuses updates and deletes to it; corrections are new rows. A project's GPU-hour budget is enforced before each step's submit (lifetime, across all sites). Members see their own rows and the project totals; owners see other members' rows without their HPC login, job ids or audit columns |
+| A gate release is separately verified *(wave-E implementation repo-side 2026-11-10)* | Configured releases verify the maintainer's pinned FIDO public identity, exact canonical manifest, gate version/bytes, minimum R4 and expiry; `r4 hpc status --live` also checks the live hello hash. There is no production public pin or signed manifest yet. With all release paths unset, the pre-E legacy path remains explicitly unauthenticated; any partial production configuration fails closed |
 
 **Honest scope.** UMRS stores nothing that can act as you without your
 signature. Under a standing permission you give, UMRS chooses the data your
@@ -170,10 +171,11 @@ and `r4 hpc revoke` / `rotate` edit the user's `authorized_keys` over the user's
 own SSH (no UMRS route sends a signed request to the gate yet).
 Running jobs under your account comes with wave B2.
 
-**Status (2026-11-09).** Grants (wave C) and the usage ledger with budgets
-(wave D) are being built; neither is merged or deployed. Until they are, the
-two rows above added on 2026-11-09 describe the design that waves C and D
-implement, not running behaviour. Chapter 31 §31.7 and §31.8 give the details.
+**Status (2026-11-10).** Grants (wave C) and the usage ledger with budgets
+(wave D) are merged and deployed; first non-maintainer grant/cancel/witness
+acceptance is still open. Wave E's verification and double build are repo-side
+only: the real maintainer FIDO-signed release, public pin and first-user
+receipts remain pending. Chapter 31 §31.7 and §31.8 give the details.
 
 ## Custom MCP Server Security
 

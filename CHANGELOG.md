@@ -9,6 +9,13 @@ the per-wave detail is kept in the maintainers' development records.
 
 ## [Unreleased]
 
+- **HPC gate release integrity (ADR-112 wave E, repo-side):** configured gate
+  releases require a separately pinned maintainer FIDO identity and reject bad
+  signatures, downgrade, stale clients, expiry and local/live gate hash
+  mismatches. Live JSON uses the same actual hello check and `live_fork()` rollback verdict as text, combined witness/live is refused, and active checks bind the recorded enrollment domain. A read-only CI double build checks R4-wheel and gate SHA-256.
+  No production release key, signed manifest, operator consent or first
+  non-maintainer acceptance is claimed; unconfigured clients retain a labelled
+  legacy compatibility path.
 - **Literal local autopilot; deletion asks** (ADR-104 amendment 3;
   2026-11-09). Autopilot auto-answers every local non-deletion permission
   prompt, including trust-policy misses, credential/force-push fences, user

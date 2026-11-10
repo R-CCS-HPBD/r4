@@ -323,6 +323,20 @@ def test_status_runs_in_a_companion_shell(monkeypatch, site, capsys):
 # ── add ──────────────────────────────────────────────────────────────────────
 
 
+def test_add_checks_the_signed_release_when_configured(person, site, monkeypatch):
+    from r4 import hpc_release
+
+    seen = {}
+
+    def checked(**kwargs):
+        seen.update(kwargs)
+        return object()
+
+    monkeypatch.setattr(hpc_release, "verify_environment", checked)
+    assert run(["add", SITE, "--manual", "--home", "/home/alice", "--key-type", "ed25519"]) == 0
+    assert seen["domain"] == DOMAIN
+
+
 def test_add_manual_prints_the_files_and_the_line_exactly(person, site, monkeypatch, capsys):
     """A new account (the site reports none): the grant epoch is part of
     the install, so no grant signed before it can act (plan §6 K7)."""
@@ -967,6 +981,141 @@ def test_status_live_shows_the_sites_hello_of_my_gate(site, monkeypatch, capsys)
     assert f"sha256 {hs.gate_sha256()} (this r4's)" in out
     assert "stale: run `r4 hpc profile <site>`" in out
     assert f"7 entries, head {'b' * 64}" in out
+
+
+def test_status_live_passes_the_exact_hello_to_release_verification(site, monkeypatch):
+    from r4 import hpc_release
+
+    live = {
+        "gate_version": hpc_gate.GATE_VERSION,
+        "gate_sha256": hs.gate_sha256(),
+        "log_head": {"n": 0, "h": "0" * 64},
+    }
+    seen = {}
+    monkeypatch.setattr(site, "hpc_gate", lambda: live, raising=False)
+    monkeypatch.setattr(
+        hpc_release,
+        "verify_environment",
+        lambda **kwargs: seen.update(kwargs) or object(),
+    )
+    assert run(["status", SITE, "--live"]) == 0
+    assert seen["hello"] is live
+
+
+def test_status_live_json_calls_release_verification_with_real_hello(site, monkeypatch, capsys):
+    from r4 import hpc_release
+
+    live = {"gate_version": hpc_gate.GATE_VERSION, "gate_sha256": hs.gate_sha256()}
+    seen = {}
+    hs.update_site_record(SITE, domain=DOMAIN)
+    monkeypatch.setattr(site, "hpc_gate", lambda: live, raising=False)
+    monkeypatch.setattr(
+        hpc_release,
+        "verify_environment",
+        lambda **kwargs: seen.update(kwargs) or object(),
+    )
+    assert run(["status", SITE, "--live", "--json"]) == 0
+    assert seen["domain"] == DOMAIN and seen["hello"] is live
+    body = json.loads(capsys.readouterr().out)
+    assert body["release_verified"] is True and body["live_gate"] == live
+
+
+def test_status_live_json_propagates_release_failure(site, monkeypatch, capsys):
+    from r4 import hpc_release
+
+    def refuse(**_kwargs):
+        raise hpc_release.ReleaseError("release_gate_hash_mismatch", "synthetic mismatch")
+
+    hs.update_site_record(SITE, domain=DOMAIN)
+    monkeypatch.setattr(
+        site,
+        "hpc_gate",
+        lambda: {"gate_version": hpc_gate.GATE_VERSION, "gate_sha256": hs.gate_sha256()},
+        raising=False,
+    )
+    monkeypatch.setattr(hpc_release, "verify_environment", refuse)
+    assert run(["status", SITE, "--live", "--json"]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "release_gate_hash_mismatch" in captured.err
+
+
+def test_status_witness_and_live_is_rejected_before_verification(site, monkeypatch, capsys):
+    from r4 import hpc_release
+
+    monkeypatch.setattr(hpc_cli, "_witness", lambda _args: 0)
+    monkeypatch.setattr(
+        hpc_release,
+        "verify_environment",
+        lambda **_kwargs: pytest.fail("combined witness/live must not silently skip verification"),
+    )
+    assert run(["status", SITE, "--witness", "--live"]) == 2
+    assert "--witness and --live cannot be combined" in capsys.readouterr().err
+
+
+def test_status_live_requires_recorded_domain_for_release_mode(site, monkeypatch, capsys):
+    from r4 import hpc_release
+
+    monkeypatch.setenv(hpc_release.MANIFEST_ENV, "release-requested")
+    monkeypatch.setattr(
+        site,
+        "hpc_gate",
+        lambda: {"gate_version": hpc_gate.GATE_VERSION, "gate_sha256": hs.gate_sha256()},
+        raising=False,
+    )
+    assert run(["status", SITE, "--live"]) == 1
+    assert "release_domain_unknown" in capsys.readouterr().err
+
+
+def test_status_live_rejects_a_domain_mismatch_with_matching_gate_hash(site, monkeypatch, capsys):
+    from r4 import hpc_release
+
+    seen = {}
+    hs.update_site_record(SITE, domain="b.example")
+
+    def wrong_domain(**kwargs):
+        seen.update(kwargs)
+        raise hpc_release.ReleaseError("release_domain_mismatch", "synthetic wrong site")
+
+    monkeypatch.setattr(
+        site,
+        "hpc_gate",
+        lambda: {"gate_version": hpc_gate.GATE_VERSION, "gate_sha256": hs.gate_sha256()},
+        raising=False,
+    )
+    monkeypatch.setattr(hpc_release, "verify_environment", wrong_domain)
+    assert run(["status", SITE, "--live"]) == 1
+    assert seen["domain"] == "b.example"
+    assert "release_domain_mismatch" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("json_args", [[], ["--json"]], ids=["text", "json"])
+@pytest.mark.parametrize(
+    "head",
+    [{"n": 6, "h": "a" * 64}, {"n": 7, "h": "b" * 64}],
+    ids=["rollback", "substitution"],
+)
+def test_status_live_text_and_json_have_the_same_fork_verdict(
+    site, monkeypatch, capsys, json_args, head
+):
+    from r4 import hpc_release
+
+    hs.update_site_record(SITE, domain=DOMAIN, witness={"n": 7, "h": "a" * 64})
+    live = {
+        "gate_version": hpc_gate.GATE_VERSION,
+        "gate_sha256": hs.gate_sha256(),
+        "log_head": head,
+    }
+    monkeypatch.setattr(site, "hpc_gate", lambda: live, raising=False)
+    monkeypatch.setattr(hpc_release, "verify_environment", lambda **_kwargs: object())
+    assert run(["status", SITE, "--live", *json_args]) == 1
+    captured = capsys.readouterr()
+    fork = hs.recorded_fork(SITE)
+    assert fork and fork["reason"]
+    if json_args:
+        assert json.loads(captured.out)["witness_fork"]["reason"] == fork["reason"]
+    else:
+        assert fork["reason"] in captured.err
 
 
 def _gate_log(remote_home: Path, *details: str) -> None:

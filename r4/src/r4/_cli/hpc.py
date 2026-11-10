@@ -249,6 +249,14 @@ def _fetch_profile(client: Any, site: str, venue: str, domain: str) -> Any:
     return profile
 
 
+def _release_check(*, domain: Optional[str] = None, hello: Optional[dict[str, Any]] = None) -> Any:
+    """Wave-E verification when configured; None is the legacy envelope."""
+    from ..hpc_release import verify_environment
+    from ..hpc_signing import gate_source
+
+    return verify_environment(gate_source=gate_source(), domain=domain, hello=hello)
+
+
 def _record_install(args: Namespace, offer: Any, profile: Any, key: Any) -> None:
     from ..hpc_signing import record_site_signer, update_site_record
     from ..hpc_site_profile import remember
@@ -292,6 +300,12 @@ def _add(args: Namespace) -> int:
     client = _site_client(args.site)
     epoch = _install_epoch(client, args.site)
     offer = hpc_signing.parse_offer(client.hpc_transport_key(rotate=False))
+    if _release_check(domain=offer.domain) is None:
+        print(
+            "legacy gate compatibility: no signed release is configured; "
+            "maintainer release authenticity was not checked.",
+            file=sys.stderr,
+        )
     hpc_signing.check_venue_free(offer.site, args.site)
     principal = hpc_signing.check_principal((client.site_me() or {}).get("user_id"))
     profile = _fetch_profile(client, args.site, offer.site, offer.domain)
@@ -515,12 +529,37 @@ def _witness(args: Namespace) -> int:
     return 1 if bad else 0
 
 
+def _live_domain(site: Optional[str]) -> Optional[str]:
+    """The enrollment domain to bind a live hello, required in release mode."""
+    from .. import hpc_release
+    from ..hpc_signing import HpcSigningError, check_domain, read_site_record
+
+    domain = read_site_record(site or "").get("domain")
+    if domain is None and not hpc_release.release_requested():
+        return None  # pre-wave-E compatibility: no release verification is active.
+    try:
+        return check_domain(domain)
+    except HpcSigningError as exc:
+        raise hpc_release.ReleaseError(
+            "release_domain_unknown",
+            f"{site or 'home'} has no trustworthy recorded enrollment domain; "
+            "run `r4 hpc add <site>` to enroll it before a verified live status.",
+        ) from exc
+
+
+def _live_hello(site: Optional[str], client: Any) -> tuple[dict[str, Any], Any]:
+    """Fetch the real gate hello once and bind it to the enrollment domain."""
+    live = client.hpc_gate() or {}
+    verified = _release_check(domain=_live_domain(site), hello=live)
+    return live, verified
+
+
 def _live(site: Optional[str], client: Any) -> int:
     """``--live``: the live hello, and a fork when the live head is behind
     or beside the one r4 witnessed."""
     from ..hpc_intents import live_fork
 
-    live = client.hpc_gate() or {}
+    live, _ = _live_hello(site, client)
     print("\n".join(_live_lines(live)))
     reason = live_fork(site, live.get("log_head")) if site else ""
     if reason:
@@ -545,19 +584,48 @@ def _clear_fork_verdict(args: Namespace) -> Optional[int]:
     return None
 
 
-@_account_command("status", person=False)
-def _status(args: Namespace) -> int:
+def _status_json(args: Namespace, client: Any, view: Any, report: Any) -> int:
+    """Cached account JSON normally; live JSON only after the real release check."""
+    if not getattr(args, "live", False):
+        print(json.dumps({**view, **report}, indent=2, default=str))
+        return 0
+    from ..hpc_intents import live_fork
+
+    live, verified = _live_hello(args.site, client)
+    reason = live_fork(args.site, live.get("log_head")) if args.site else ""
+    result = {**view, **report, "live_gate": live, "release_verified": verified is not None}
+    if reason:
+        result["witness_fork"] = {"reason": reason}
+    print(json.dumps(result, indent=2, default=str))
+    return 1 if reason else 0
+
+
+def _status_prelude(args: Namespace) -> Optional[int]:
+    """The unambiguous witness/live verdict before any account or hello call."""
+    if getattr(args, "witness", False) and getattr(args, "live", False):
+        print(
+            "✗ --witness and --live cannot be combined; choose one verification path.",
+            file=sys.stderr,
+        )
+        return 2
     verdict = _clear_fork_verdict(args)
     if verdict is not None:
         return verdict
     if getattr(args, "witness", False):
         return _witness(args)
+    return None
+
+
+@_account_command("status", person=False)
+def _status(args: Namespace) -> int:
+    verdict = _status_prelude(args)
+    if verdict is not None:
+        return verdict
     client = _site_client(args.site)
     view = client.hpc_account() or {}
     report = _gate_report(view)
     if args.as_json:
-        print(json.dumps({**view, **report}, indent=2, default=str))
-        return 0
+        return _status_json(args, client, view, report)
     print("\n".join(_account_lines(view.get("account"))))
     for link in view.get("links") or []:
         print(_link_line(link))
