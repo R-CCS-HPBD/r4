@@ -11,6 +11,7 @@
  * `R4_SESSION_BUS_WAKE=0` turns the wake off (the notice stays).
  */
 import { actions, activeTab, workspace } from "../stores";
+import { applyOnTab } from "../tabs/registry";
 
 export const SESSION_INBOX_NOTICE_KEY = "session-inbox";
 
@@ -41,8 +42,12 @@ function shouldWake(tabId: string, latest: string): boolean {
   return wokenFor.get(tabId) !== latest;
 }
 
-export function handleSessionInbox(payload: unknown, tabId: string): void {
-  const row = (payload ?? {}) as InboxPayload;
+function targetsBoundSession(row: InboxPayload, tabId: string): boolean {
+  const target = workspace.chatTabs.find((tab) => tab.id === tabId);
+  return Boolean(target?.sessionId && row.session_id === target.sessionId);
+}
+
+function deliverToNamedTab(row: InboxPayload, tabId: string): void {
   const unread = typeof row.unread === "number" ? row.unread : 0;
   if (unread <= 0) return;
   const latest = typeof row.latest === "string" ? row.latest : "";
@@ -53,6 +58,14 @@ export function handleSessionInbox(payload: unknown, tabId: string): void {
   if (!shouldWake(tabId, latest)) return;
   wokenFor.set(tabId, latest);
   actions.sendChatMessage(SESSION_INBOX_WAKE_TEXT, { relay: true });
+}
+
+export function handleSessionInbox(payload: unknown, tabId: string): void {
+  const row = (payload ?? {}) as InboxPayload;
+  // Never fall back to the active tab: a stale bridge notice must not wake the
+  // session that replaced its old owner, and background delivery is not a broadcast.
+  if (!targetsBoundSession(row, tabId)) return;
+  applyOnTab(tabId, () => deliverToNamedTab(row, tabId));
 }
 
 /** Tests: forget which arrivals woke a tab. */

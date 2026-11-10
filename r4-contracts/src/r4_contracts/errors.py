@@ -308,6 +308,13 @@ COMPANIONSESSIONS_ERRORS = {
     # F9 owner-scope queue (2026-09-21): action/content validation
     "companionsessions.invalid_action": 400,
     "companionsessions.invalid_value": 400,
+    # ADR-114 S2.1: proven identity, receiver policy and queue replay/read rules
+    "companionsessions.identity_mismatch": 409,
+    "companionsessions.receiver_refused": 409,
+    "companionsessions.invalid_recipient": 409,
+    "companionsessions.replay_conflict": 409,
+    "companionsessions.invalid_reply": 400,
+    "companionsessions.inbox_full": 409,
 }
 
 # Remote-session (frontend venue) runtime routes — start/status/stop for the

@@ -50,6 +50,7 @@ def _entry_for(session: Any, host: str) -> LiveSession:
         model=str((model_of() if callable(model_of) else "") or ""),
         mode=str(session_mode(session) or ""),
         started_at=time.time(),
+        venue=str(metadata.get("venue") or "local"),
     )
 
 
@@ -83,15 +84,39 @@ class BusAttachment:
             if previous is session and getattr(session, "bus_presence", None) is not None:
                 return
             self._withdraw(previous, keep_if=getattr(session, "session_id", None))
+            if str((getattr(session, "metadata", None) or {}).get("venue") or "") == "frontend":
+                session.bus_presence = None
+                self._session = session
+                return
             try:
                 entry = _entry_for(session, self.bus.host)
                 self.bus.register(entry)
+                remote = self._bind_remote(session, entry)
             except (SessionBusError, OSError) as exc:
                 logger.warning("session bus: could not register %s: %s", session, exc)
                 return
-            session.bus_presence = BusPresence(self.bus, entry.session_id, entry.name)
+            session.bus_presence = BusPresence(
+                self.bus, entry.session_id, entry.name, remote=remote
+            )
             self._session = session
             self._last_seen = (0, "")
+
+    def _bind_remote(self, session: Any, entry: LiveSession) -> Any:
+        """Bind the durable mirror when enabled; a remote outage keeps local-only service."""
+        from ..session_bus_remote import for_owner_client
+        from ..session_store import _snapshot_enabled
+
+        if not _snapshot_enabled() or getattr(session, "client", None) is None:
+            return None
+        try:
+            remote = for_owner_client(session, entry)
+            remote.bind()
+            return remote
+        except (SessionBusError, OSError):
+            logger.debug(
+                "session bus: durable binding unavailable; keeping local-only", exc_info=True
+            )
+            return None
 
     def _withdraw(self, session: Any, *, keep_if: Any = None) -> None:
         if session is None:
@@ -101,7 +126,9 @@ class BusAttachment:
         if presence is None or presence.session_id == keep_if:
             return
         try:
-            self.bus.unregister(presence.session_id)
+            if presence.bus is not None:
+                self.bus.unregister(presence.session_id)
+            presence.withdraw_remote()
         except (SessionBusError, OSError):
             logger.debug("session bus: unregister failed", exc_info=True)
 
@@ -132,12 +159,12 @@ class BusAttachment:
             return None
         now = time.monotonic() if now is None else now
         if now - self._last_beat >= HEARTBEAT_EVERY_SEC:
-            self.bus.heartbeat(presence.session_id)
+            presence.heartbeat()
             self._last_beat = now
         return self._notice_if_changed(presence)
 
     def _notice_if_changed(self, presence: BusPresence) -> dict[str, Any] | None:
-        unread = self.bus.unread(presence.session_id)
+        unread = presence.unread()
         latest = unread[-1].message_id if unread else ""
         seen = (len(unread), latest)
         if seen == self._last_seen:

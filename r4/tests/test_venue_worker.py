@@ -185,6 +185,8 @@ class FakeRail:
         self.refuse: VenueRailError | None = None
         # ADR-099 D-8: the owner's agent settings (rev 0 = none sent).
         self.settings: dict = {"rev": 0, "settings": {}}
+        self.bus_calls: list[tuple[str, str, dict | None]] = []
+        self.bus_inbox: list[dict] = []
 
     def get_settings(self):
         return {"session_id": "sess-1", **self.settings}
@@ -201,7 +203,28 @@ class FakeRail:
             raise self.refuse
         if not self.queue:
             return None
-        return {"id": "q", "content": self.queue.pop(0), "client_id": "tui", "added_at": "t"}
+        item = self.queue.pop(0)
+        if isinstance(item, dict):
+            return item
+        return {"id": "q", "content": item, "client_id": "tui", "added_at": "t"}
+
+    def session_bus_request(self, method, tail, json=None):
+        if self.refuse:
+            raise self.refuse
+        self.bus_calls.append((method, tail, json))
+        if tail == "presence":
+            return {"sessions": []}
+        if tail == "inbox":
+            messages = list(self.bus_inbox)
+            if isinstance(json, dict) and json.get("action") == "take":
+                self.bus_inbox = []
+            return {"messages": messages}
+        return {
+            "bound": method != "DELETE",
+            "session_id": "sess-1",
+            "bus_session_id": "sess-1",
+            "venue": "frontend",
+        }
 
     def heartbeat(self, **body):
         if self.refuse:
@@ -265,6 +288,7 @@ class FakeSession:
         self._fail = fail
         self._on_turn_started_hook = None
         self._current_turn_id = ""
+        self.bus_presence = None
 
     def send(self, text, *, stream=False):
         del stream
@@ -584,3 +608,67 @@ class TestToolActivity:
         assert len(worker._tool_activity) == 12
         assert worker._tool_activity[0].startswith("▸ tool8")
         assert worker._tool_activity[-1].startswith("▸ tool19")
+
+
+class TestWorkerSessionMessages:
+    def test_worker_rejects_local_durable_identity_mismatch_before_binding(self):
+        rail = FakeRail()
+        session = FakeSession()
+        session.session_id = "sess-parent-fallback"
+        worker, _store, _clock = _worker(rail, session)
+        with pytest.raises(R4Error, match="ids do not match"):
+            worker.bootstrap()
+        assert rail.bus_calls == [] and session.sent == []
+
+    def test_message_body_never_becomes_the_wake_user_turn(self):
+        from r4.companion.session_bus_remote import SESSION_MESSAGE_WAKE
+
+        rail = FakeRail(
+            [
+                {
+                    "id": "msg-aaaaaaaaaaaa",
+                    "kind": "session_message",
+                    "content": "SENDER-CONTROLLED-WAKE-TEXT",
+                    "sender_id": "sess-sender01",
+                    "sender_name": "sender",
+                    "recipient_id": "sess-1",
+                    "added_at": "2026-11-10T00:00:00+00:00",
+                }
+            ]
+        )
+        session = FakeSession()
+        worker, _store, _clock = _worker(rail, session)
+        worker.bootstrap()
+        assert worker.run_once() is True
+        assert session.sent == [SESSION_MESSAGE_WAKE]
+        assert "SENDER-CONTROLLED-WAKE-TEXT" not in session.sent[0]
+        assert session.bus_presence is not None
+        assert any(call[0] == "PUT" for call in rail.bus_calls)
+
+    def test_stop_before_pop_cancels_without_touching_the_message(self, monkeypatch):
+        monkeypatch.setenv("R4_SESSION_BUS", "0")
+        rail = FakeRail(
+            [
+                {
+                    "id": "msg-aaaaaaaaaaaa",
+                    "kind": "session_message",
+                    "content": "MUST-STAY-QUEUED",
+                }
+            ]
+        )
+        rail.stop_after_heartbeats = 1
+        session = FakeSession()
+        worker, _store, _clock = _worker(rail, session, heartbeat_sec=0)
+        worker.bootstrap()
+        assert worker.run_once() is False
+        assert session.sent == [] and len(rail.queue) == 1
+        assert rail.bus_calls == [] and session.bus_presence is None
+
+    def test_queue_outage_is_not_reclassified_as_a_valid_message(self):
+        rail = FakeRail()
+        rail.refuse = VenueRailError(0, "rail unreachable")
+        session = FakeSession()
+        worker, _store, _clock = _worker(rail, session)
+        with pytest.raises(VenueRailError):
+            worker.bootstrap()
+        assert session.sent == []

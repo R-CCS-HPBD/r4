@@ -54,7 +54,8 @@ companion/
   memory_tools.py          — memory_read / memory_write / memory_forget, attached by the lead session only (ADR-111 D-4)
   memory_commands.py       — /memory and `r4 memory` verbs: list, add, forget, lessons, promote, off/on
   session_bus.py           — local session bus: live-session presence + one-file-per-message inboxes, private per user (2026-11-08, ADR-114)
-  session_bus_tools.py     — session_list / session_send / session_inbox + the unread reminder, attached by the lead session only (ADR-114 D-3)
+  session_bus_remote.py    — S2.1 thin owner/lease adapter to the proven durable binding + ADR-046 turn queue; no R4 durable state (2026-11-10)
+  session_bus_tools.py     — session_list / session_send / session_inbox + local/remote unread merging and the reminder, attached by the lead session only (ADR-114 D-3)
   context_budget.py        — budget resolved from the active model
   skills.py                — SkillRegistry + unified SKILL.md parser (all sources)
   builtin/                 — 27 built-in skill groups, Agent Skills format (<name>/SKILL.md)
@@ -177,6 +178,17 @@ Prevent mistakes (guides) rather than catch them after (sensors), but use both.
   `frontend_session`). **The worker never holds a user JWT or a provider
   key**: it holds a scoped lease token, and provider calls exit through the
   credential-injecting inference proxy in the UMRS trust zone.
+- *2026-11-10 (ADR-114 S2.1):* a remote worker explicitly binds its exact
+  durable companion id to `metadata.session_bus` through the lease rail. Its
+  messages remain entries in ADR-046 P8's server-owned `chat_queue`; read /
+  replay / expiry transitions live in `umrs/api/_companion_session_bus.py`.
+  R4's S2.1 adapter adds no queue or credential. Ordinary turns never carry a
+  session-message body: only R4's fixed wake prompt runs, and bodies enter via
+  the tainted `session_inbox` tool. S2.2 (ADR-114 D-13) requires an exact
+  named-tab/bound-session match for console notices and scopes delivery through
+  `applyOnTab`; busy/background tabs never auto-start work, and the fixed
+  idle-active wake remains the default. S2.3 headless/REPL presence remains
+  unimplemented.
 - Venues today: `frontend` and `cluster:<name>`; CPU-only and trusted-host
   venues are design targets (D-09, D-48).
 

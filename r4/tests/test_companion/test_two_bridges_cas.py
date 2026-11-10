@@ -22,7 +22,16 @@ from typing import Any
 
 import pytest
 
-_SRC = Path(__file__).resolve().parents[2] / "src"
+_ROOT = Path(__file__).resolve().parents[2]
+_PYTHONPATH = os.pathsep.join(
+    str(path)
+    for path in (
+        _ROOT / "src",
+        _ROOT.parent / "r4-contracts" / "src",
+        _ROOT.parent / "packages" / "r4-teamengine-spi" / "src",
+        _ROOT.parent / "science" / "src",
+    )
+)
 
 
 class _FakeOpenAI(BaseHTTPRequestHandler):
@@ -104,7 +113,7 @@ class _Bridge:
             {
                 "HOME": str(home),
                 "XDG_CONFIG_HOME": str(home / ".config"),
-                "PYTHONPATH": str(_SRC),
+                "PYTHONPATH": _PYTHONPATH,
                 "PYTHONUNBUFFERED": "1",
                 "NO_COLOR": "1",
             }

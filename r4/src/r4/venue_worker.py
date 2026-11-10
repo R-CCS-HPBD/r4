@@ -186,6 +186,7 @@ class VenueWorker:
         # The owner's agent-settings revision applied last (-1 = none yet:
         # the first read applies the local rule's defaults even at rev 0).
         self._settings_rev = -1
+        self._remote_bus: Any = None
         self.exit_code = EXIT_OK
 
     # ── bootstrap ─────────────────────────────────────────────────────
@@ -211,6 +212,7 @@ class VenueWorker:
             self.session = self._bootstrap_from_rail()
         restore_started_web_access(self.session, self.env.web_access)
         self._configure(self.session)
+        self._attach_session_bus()
         return self.session
 
     def _snapshot_payload(self) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -264,6 +266,34 @@ class VenueWorker:
         # (F7 hook — same durability window the local bridge covers).
         session._on_turn_started_hook = self._on_turn_started
         self._sync_settings()
+
+    def _attach_session_bus(self) -> None:
+        """ADR-114 S2.1: explicitly bind this venue's exact durable identity."""
+        from .companion.session_bus import LiveSession
+        from .companion.session_bus_remote import for_venue_rail
+        from .companion.session_bus_tools import BusPresence
+        from .companion.ui.session_bus_bridge import bus_enabled
+
+        if not bus_enabled():
+            return
+        sid = self.env.session_id
+        if str(getattr(self.session, "session_id", "") or "") != sid:
+            raise R4Error("venue worker: local and durable session ids do not match")
+        entry = LiveSession(
+            session_id=sid,
+            name=str(getattr(self.session, "name", "") or ""),
+            host=socket.gethostname(),
+            venue="frontend",
+        )
+        if not callable(getattr(self.rail, "session_bus_request", None)):
+            # Pre-S2.1 rail doubles cannot express presence; never synthesize it.
+            logger.debug("venue rail has no session-bus endpoint")
+            return
+        remote = for_venue_rail(self.rail, self.session, entry)
+        remote.clock = self._clock
+        remote.bind()
+        self._remote_bus = remote
+        self.session.bus_presence = BusPresence(None, sid, entry.name, remote=remote)
 
     # ── the owner's agent settings (ADR-099 D-8) ──────────────────────
 
@@ -322,6 +352,9 @@ class VenueWorker:
             tool_activity=list(self._tool_activity),
         )
         self._last_heartbeat = self._clock()
+        if self._remote_bus is not None:
+            # Long model turns renew presence through these existing heartbeats too.
+            self._remote_bus.heartbeat()
         if response.get("stop_requested"):
             self._stop = True
         self._paused = bool(response.get("paused"))
@@ -601,11 +634,24 @@ class VenueWorker:
         # D-8). Read BEFORE the pop: a refused lease (401) then exits with the
         # turn still queued instead of losing a popped one.
         self._sync_settings()
+        if self._remote_bus is not None:
+            self._remote_bus.heartbeat()
         item = self.rail.pop_queue()
         if item is None:
             return False
-        self._run_turn(str(item.get("content") or ""))
+        content = self._turn_content(item)
+        self._run_turn(content)
         return True
+
+    def _turn_content(self, item: dict[str, Any]) -> str:
+        """A session message wakes R4's own turn, never the sender's text."""
+        if item.get("kind") != "session_message":
+            return str(item.get("content") or "")
+        from .companion.session_bus_remote import SESSION_MESSAGE_WAKE
+
+        if str(item.get("recipient_id") or "") != self.env.session_id:
+            raise R4Error("venue worker: queued message recipient does not match this session")
+        return SESSION_MESSAGE_WAKE
 
     def _run_turn(self, content: str) -> None:
         self._partial = ""
@@ -697,9 +743,25 @@ class VenueWorker:
         return EXIT_OK
 
     def run(self) -> int:
-        refused = self._prelude()
-        self.exit_code = self._loop() if refused is None else refused
-        return self.exit_code
+        try:
+            refused = self._prelude()
+            self.exit_code = self._loop() if refused is None else refused
+            return self.exit_code
+        finally:
+            self._withdraw_session_bus()
+
+    def _withdraw_session_bus(self) -> None:
+        if self._remote_bus is None:
+            return
+        from .companion.session_bus import SessionBusError
+
+        try:
+            self._remote_bus.withdraw()
+        except (SessionBusError, VenueRailError):
+            logger.debug("session bus withdrawal failed", exc_info=True)
+        self._remote_bus = None
+        if self.session is not None:
+            self.session.bus_presence = None
 
 
 def restore_started_web_access(session: Any, spec: str) -> None:

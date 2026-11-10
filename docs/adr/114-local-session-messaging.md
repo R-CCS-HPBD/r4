@@ -92,6 +92,96 @@ terminal (`sender_kind: user`, sender `terminal`).
 ChangeLog; sessions use the bus. `ConflictDetector` in the same file is out of
 scope here.
 
+### Slice 2.1 amendment (2026-11-10): remote venue and other machines
+
+**D-9. One identity, proven before presence.** The durable companion session id
+is the remote address; there is no runtime-id alias and no parent-session
+fallback. An owner client binds its local-bus `session_id` at
+`PUT /umrs/companion/sessions/{sid}/session-bus`; a venue worker binds through
+its existing lease-only rail. In both cases UMRS locks and reads the same
+owner-scoped `companion_session_snapshots` row named by `{sid}` and refuses the
+bind unless its decoded payload `id`, its `session_id`, and the requested bus
+identity are all exactly `{sid}`. The binding carries only the existing bus
+labels plus venue, timestamps and a 90-second expiry, under
+`metadata.session_bus` **in that same snapshot payload**. Presence listing shows
+only unexpired bindings belonging to the verified owner. The console's normal
+snapshot writes preserve this server-owned binding just as they preserve the
+server queue. A frontend console mirror does not register a second local
+identity for the worker's session. `R4_SESSION_BUS=0` does not bind, poll or
+advertise anything.
+
+**D-10. ADR-046 P8's existing turn queue is the only remote message store.** A
+remote `session_message` is an entry in the same
+`companion_session_snapshots.payload.metadata.chat_queue` list that owner-turn
+append/pop/clear and the venue rail already mutate transactionally. There is no
+new table, database, outbox, retry store, gateway state, daemon, scheduler or
+team mechanism. An entry adds `kind="session_message"`, its client-generated
+`msg-*` id, recipient, sender labels/kind, optional `reply_to`, server
+`added_at`/`expires_at`, and delivery/read markers; ordinary `{id, content,
+client_id, added_at}` turns keep their existing append/pop/clear behavior. The
+id, sender and recipient are validated against durable sessions of the one
+verified owner. The recipient named in the entry must equal the queue owner's
+session id. Unknown, cross-user, archived/stopped/completed/error, self, or
+identity-mismatched recipients are refused without disclosure. An exact durable
+id may accept a message while its previously bound receiver is offline; no
+presence is fabricated and a never-bound or mirror-off session is not remotely
+addressable.
+
+**D-11. Expiry, replay and read are queue transitions.** The server, not the
+sender, stamps expiry (24 hours by default, `UMRS_SESSION_MESSAGE_TTL_SECONDS`).
+Expired session entries are removed during queue work; ordinary turns are not
+expired. Repeating the same message id to the same recipient with the identical
+sender/body/reply tuple returns the existing receipt without another delivery;
+a different tuple is a conflict. Read entries remain in this same queue as
+non-unread deduplication markers until expiry (or the owner's explicit queue
+clear), so replay suppression survives a worker restart without an inbox table.
+Digest mismatches never overwrite a marker. The unread cap and 8000-character
+body cap are the local bus's 100/8000 limits. `reply_to` is valid only when the
+sender's queue holds that already-read message and its original sender is the
+reply recipient. `session_inbox` returns bodies only through the existing
+`session_message`-tainted tool output and marks entries read atomically in queue
+order. Notices and reminders continue to carry counts and sanitized labels,
+never plaintext bodies or sender-authored wake text. These owner/lease routes
+are private surfaces, not a public inbox export or an address-discovery API.
+
+**D-12. Venue delivery preserves FIFO without turning a message into a user
+turn.** The existing worker rail's queue-pop operation skips expired/read or
+already-notified session entries. For the oldest unnotified message it marks
+the entry notified, leaves it durable and unread, and starts one turn containing
+only R4's fixed instruction to call `session_inbox`; the body never becomes a
+user prompt. `session_inbox` then reads/marks messages FIFO while ordinary
+turn entries retain their relative order. An ordinary turn ahead of a message
+runs first; an older ordinary turn behind a notified message is not blocked by
+that durable unread marker. Cancellation before reading leaves the entry
+unread, and cancellation/stop never replaces its body with a wake prompt.
+Queue clear cancels every pending item using the existing semantics. Local
+bridges poll their own bound queue from the existing bus watcher and merge
+local and remote unread rows by send time. Queue outages are reported and never
+fall back to a different recipient/store. Local-only bus behavior, direct-call
+refusal, relay permission rungs, stable-prefix mode and both bus/snapshot
+opt-outs are unchanged. S2.2 is specified by D-13 below; S2.3
+headless/REPL presence remains undecided and unimplemented.
+
+### Slice 2.2 amendment (2026-11-10): explicit tab-targeted notices
+
+**D-13. A notice belongs to its named tab and bound session, never to an
+implicit active tab.** The console's per-bridge listener must supply a non-empty
+open tab id, and the `session_inbox` payload's `session_id` must equal that tab's
+currently bound session. Unknown, unnamed, closed, unbound or stale-session
+targets drop the notice; none falls back to the active tab and none broadcasts
+to every tab. Delivery uses the existing tab-targeted store scope so a background
+arrival updates only its owner's one live notice and tab-attention bookkeeping.
+
+This does **not** add background work. A busy or background target does not issue
+`send_message`; activating a tab with an already-seen unread set also does not
+replay a wake. Only a newly arrived, not-yet-coalesced notice for the active idle
+target may start a turn, with the same fixed R4 prompt and once-per-`latest`
+coalescing as D-6. `R4_SESSION_BUS_WAKE=0` still leaves the notice but disables
+that turn. Extra payload fields cannot supply a wake prompt or body: message
+text still enters only through the `session_message`-tainted `session_inbox` tool.
+D-1…D-12, one-user identity, local/remote queues, taint and relay permissions are
+unchanged. S2.3 headless/REPL presence is not part of this amendment.
+
 ### Why
 
 - Files under the user's own config home need no daemon, no port and no
@@ -112,12 +202,12 @@ scope here.
   (`r4 session send`).
 - Cost: one daemon thread per bridge (2 s poll); a session in autopilot that
   has read the web asks before messaging another session first.
-- NOT in scope (slice 2 and later): sessions on other machines and remote venue
-  sessions (through UMRS, reusing the server-owned queue: no second store in
-  `r4/` or `gateway/`); waking a background tab (needs a tab-targeted send in
-  the console); headless and REPL sessions on the bus; a console list/compose
-  view; messages between different users (never through this bus: it is
-  private per user by construction).
+- NOT in scope after the 2026-11-10 S2.1/S2.2 amendments: automatic work in a
+  busy or background tab (D-13 delivers only its notice); headless and REPL
+  sessions on the bus; a console list/compose view; messages between different
+  users (never through this bus: it is private per user by construction). Remote
+  venue/other-machine identity and queue behavior remain D-9…D-12; S2.3 remains
+  a separate decision.
 
 ## Alternatives Considered
 
@@ -177,8 +267,69 @@ the full consolidated gate is recorded in wave ledger (260).
 
 The separate slice-2 plan
 tracks remote/other-machine delivery through ADR-046's server-owned queue,
-tab-targeted background notices and the headless/REPL decision. It is
-unstarted. D-69 remains Partial.
+tab-targeted background notices and the headless/REPL decision. D-69 remains Partial.
+
+## Rollout-status (2026-11-10): S2.1 repo-side, live acceptance pending
+
+S2.1 is implemented on `wave/session-messaging-s2-1`; UMRS
+`0eb22a2938e218d423af2b2e6866f9e187fe1cea` is on UMRS-org's
+`ai4s-platform` branch and the parent PR carries its submodule pointer.
+
+- D-9's exact durable/local identity check and expiring owner presence share the
+  existing snapshot payload. Owner clients bind via JWT; venue workers bind via
+  the lease rail only. No runtime-id alias or parent fallback exists.
+- D-10…D-11 keep messages and their notification/read/replay markers in the
+  existing `chat_queue`, with recipient validation, offline delivery, expiry,
+  idempotency, ordering, cancellation and cross-user refusal. Snapshot mirrors
+  preserve both server-owned fields. The companion error taxonomy adds the
+  named refusals; no migration or new store was introduced.
+- D-12's R4 owner adapter merges remote and local presence/unread rows and the
+  venue adapter fixed-wake path never treats sender text as a user turn.
+  Long-running workers renew through their existing heartbeat. Local-only bus,
+  opt-out, direct-call refusal, relay permission and stable-prefix tests remain
+  green; S2.2 and S2.3 are untouched.
+
+Fail-before evidence: `/tmp/opencode/s21-umrs-fail-before.log`
+(**7 failed / 65 passed**) and `/tmp/opencode/s21-r4-fail-before.log`
+(**7 failed / 32 passed**), with one additional worker identity-mismatch test
+added during the final review. Final focused evidence: **95** R4 messaging and
+compatibility tests and **126** UMRS route/queue/scope tests. The final
+worktree-local `bash scripts/ci-lint-local.sh --files …` run printed **ALL
+CHECKS PASSED**, with the full R4 suite and **11,890 UMRS passes / 327 skips**;
+`--umrs-changed` also passed. Serial Codacy analysis found no new issues (two
+older reimport notes in touched files). Logs are under `/tmp/opencode` with the
+`s21-` prefix.
+
+**No live venue or other-machine acceptance is claimed.** The remaining owner
+leg is a separately authorized deployment followed by two venue-backed consoles
+exchanging one message with the queue receipt and both journal histories. D-69
+stays Partial; S2.2 is recorded separately below and headless/REPL presence
+(S2.3) remains unimplemented.
+
+## Rollout-status (2026-11-10): S2.2 repo-side named-tab delivery
+
+S2.2 is implemented on `wave/session-messaging-s2-2`, stacked on PR #840 head
+`d14d65976345da7f6d7504c9eb7cbc9156d48939` (which contains main `34be4f31`).
+UMRS remains `0eb22a2938e218d423af2b2e6866f9e187fe1cea`; there is no submodule,
+queue, schema, venue, gateway or credential change in this slice.
+
+D-13 closes two fail-before gaps in the console handler: a background arrival
+could write the active tab's notice when handled outside the routing wrapper,
+and an unnamed/unknown/stale-session target could notify or wake the active tab.
+The handler now requires an exact named-tab/session match and scopes its notice
+through the existing `applyOnTab` primitive. The normal per-bridge router and
+idle-active wake are otherwise unchanged; no background or activation-triggered
+turn, broadcast, sender-authored prompt or body-carrying notice was added.
+
+Fail-before evidence: `/tmp/opencode/s22-console-fail-before.log` (**2 failed /
+6 passed**) on the old code. Final focused evidence: **8 console inbox tests**
+and **35 Python local/remote session-bus tests**, plus 40 venue-worker/real-bridge
+compatibility tests. Full console check: typecheck, **2939 passed / 37 skipped /
+0 failed**, and smoke. The required changed-files gate printed **ALL CHECKS
+PASSED (0 warnings)**; the pre-commit gate is recorded in wave ledger (266).
+D-69 stays **Partial**: S2.1's separately authorized live venue
+receipt and S2.3 remain open, and this wave ran no interactive/live acceptance,
+merge, deployment, host action or public export.
 
 ## Related
 

@@ -106,10 +106,15 @@ class VenueRailClient:
         )
 
     def pop_queue(self) -> dict[str, Any] | None:
-        """Next queued turn ``{id, content, client_id, added_at}`` or None."""
+        """Next queued turn or unnotified ADR-114 session message, else None."""
         result = self._call("POST", "queue/pop", json={})
         front = result.get("front")
         return front if isinstance(front, dict) and front.get("content") else None
+
+    def session_bus_request(self, method: str, tail: str, json: Any = None) -> dict[str, Any]:
+        """ADR-114 bus verbs on this lease's path-anchored session rail."""
+        suffix = f"/{tail.lstrip('/')}" if tail else ""
+        return self._call(method, f"session-bus{suffix}", json=json)
 
     def heartbeat(
         self,

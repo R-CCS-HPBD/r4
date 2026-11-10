@@ -15,8 +15,9 @@ whose pids mean nothing here.
 
 This is a delivery channel between one user's own sessions, not a job
 store, a scheduler or a team engine (CONSTITUTION ownership table; the
-companion guide's "one loop, one team engine"). Messages between machines
-go through UMRS in a later slice; nothing here talks to a server.
+companion guide's "one loop, one team engine"). This file remains local-only:
+the S2.1 ``session_bus_remote`` adapter talks to UMRS's existing queue without
+adding any durable state here.
 """
 
 from __future__ import annotations
@@ -85,6 +86,9 @@ class LiveSession:
     model: str = ""
     mode: str = ""
     started_at: float = 0.0
+    #: Durable venue and transport marker from a verified remote binding.
+    venue: str = ""
+    remote: bool = False
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -285,11 +289,22 @@ class SessionBus:
     def unread_count(self, session_id: str) -> int:
         return len(self._unread_paths(session_id))
 
-    def take(self, session_id: str, limit: int = 20) -> list[BusMessage]:
-        """Read and remove up to ``limit`` unread messages, oldest first."""
+    def take(
+        self,
+        session_id: str,
+        limit: int = 20,
+        *,
+        message_ids: set[str] | list[str] | None = None,
+    ) -> list[BusMessage]:
+        """Read/remove selected unread messages, oldest first (all by default)."""
         taken: list[BusMessage] = []
-        for path in self._unread_paths(session_id)[: max(1, limit)]:
+        wanted = set(message_ids) if message_ids is not None else None
+        for path in self._unread_paths(session_id):
+            if len(taken) >= max(1, limit):
+                break
             row = _read_json(path)
+            if wanted is not None and str((row or {}).get("message_id") or "") not in wanted:
+                continue
             path.unlink(missing_ok=True)
             if row:
                 taken.append(BusMessage.from_dict(row))
