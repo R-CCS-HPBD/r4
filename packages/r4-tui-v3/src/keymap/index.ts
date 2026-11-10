@@ -57,6 +57,7 @@ import { editorForEnv } from "../lib/external-editor";
 import { copyText } from "../lib/clipboard";
 import { rotateInteractionMode } from "../lib/interaction-mode";
 import { sessionVerbBlockedForRemoteOnly } from "../lib/session-filters";
+import { isSubagentSession, openSessionRecord } from "../lib/subagent-navigation";
 import { spawnSync } from "node:child_process";
 import {
   CTRL_C_WINDOW_MS,
@@ -636,6 +637,10 @@ function sessionVerb(run: (record: SessionRecord) => void, verb?: string): KeyHa
   return inPane("sessions", () => {
     const record = workspace.sessionsList[workspace.sessionsCursor];
     if (!record) return false;
+    if (verb && isSubagentSession(record)) {
+      actions.sendSystemNotice("child sessions are read-only in the inspector; Enter opens the child");
+      return true;
+    }
     if (verb && !sessionsRowNeedsLocal(record, verb)) return true;
     run(record);
     return true;
@@ -651,7 +656,7 @@ function sessionsBridge(): Promise<typeof import("../bridge/session-bridge")> {
 function sessionFilter(cycle: () => string): KeyHandler {
   return inPane("sessions", () => {
     actions.sendSystemNotice(cycle());
-    void sessionsBridge().then((m) => m.fetchSessions());
+    void sessionsBridge().then((m) => m.fetchSessions({ includeChildren: true }));
     return true;
   });
 }
@@ -660,6 +665,10 @@ function sessionFilter(cycle: () => string): KeyHandler {
 function stopSession(): boolean {
   const record = workspace.sessionsList[workspace.sessionsCursor];
   if (!record) return true;
+  if (isSubagentSession(record)) {
+    actions.sendSystemNotice("child inspection is read-only; use the parent's remote-session controls");
+    return true;
+  }
   if (record.venue !== "frontend") {
     actions.sendSystemNotice("stop applies to Server (frontend) sessions only");
     return true;
@@ -683,7 +692,7 @@ function sessionsHandlers(): Handlers {
     "sessions.nav.up": inPane("sessions", consume(() => actions.moveSessionCursor(-1))),
     "sessions.nav.down": inPane("sessions", consume(() => actions.moveSessionCursor(1))),
     // Chat tabs: opening a session gives it its own tab (dedupes if open).
-    "sessions.resume": sessionVerb((r) => void actions.tabOpenSession(r.id, r.name)),
+    "sessions.resume": sessionVerb((r) => void openSessionRecord(r)),
     // P2: venue is chosen at session start — the picker gates Server on the
     // journal probe (disabled-with-reason, never a dead button).
     "sessions.new": inPane("sessions", consume(() => actions.openVenuePicker())),

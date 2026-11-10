@@ -45,6 +45,7 @@ import { WorkflowExecOverlay } from "./components/workflow-exec-overlay";
 import { EndpointDetailOverlay } from "./components/endpoint-detail-overlay";
 import { WorkflowDefOverlay } from "./components/workflow-def-overlay";
 import { AgentDetailOverlay } from "./components/agent-detail-overlay";
+import { SubagentInspectorOverlay } from "./components/subagent-inspector-overlay";
 import { umrsWorkflowActions } from "./stores/umrs-workflow";
 import { createCompanionChatBackend } from "./adapters/companion-chat";
 import { installTerminalKeyInterceptor } from "./terminal/interceptor";
@@ -259,6 +260,7 @@ export function App(props: {
             <EndpointDetailOverlay />
             <WorkflowDefOverlay />
             <AgentDetailOverlay />
+            <SubagentInspectorOverlay />
             <Show when={workspace.quitDialogOpen}><QuitDialog /></Show>
           </>
         )}

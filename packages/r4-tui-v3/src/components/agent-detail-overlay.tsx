@@ -8,7 +8,10 @@
  */
 
 import { For, Show, createMemo } from "solid-js";
+import type { KeyEvent } from "@opentui/core";
 import { workspace, actions } from "../stores";
+import { openAgentInspection } from "../lib/subagent-navigation";
+import { KeyTrap } from "./key-trap";
 import { agentRuntime } from "../stores/agent-runtime";
 import { palette } from "../themes";
 import { Floating } from "../ui/Floating";
@@ -77,6 +80,14 @@ export function AgentDetailOverlay() {
   });
 
   const close = () => actions.setAgentDetailId(null);
+  const open = () => {
+    const current = agent();
+    return current ? openAgentInspection(current) : false;
+  };
+  const handleKey = (event: KeyEvent) => {
+    if (event.name !== "o" || !open()) return;
+    event.preventDefault();
+  };
 
   return (
     <Show when={aid()}>
@@ -98,8 +109,11 @@ export function AgentDetailOverlay() {
           )}
         </For>
         <box height={1} marginTop={1}>
-          <text fg={palette.fgDim}>Esc close</text>
+          <text fg={agent()?.sessionId ? palette.statusOk : palette.fgDim} onMouseDown={() => open()}>
+            {agent()?.sessionId ? "[o] open session (read-only) · Esc close" : "Esc close"}
+          </text>
         </box>
+        <KeyTrap focused={Boolean(aid()) && !workspace.subagentInspector} captureText onKeyDown={handleKey} />
       </Floating>
     </Show>
   );

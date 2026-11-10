@@ -37,6 +37,13 @@ const OPENERS: Record<string, () => void> = {
   "connect-wizard": () => actions.openConnectWizard("login"),
   "start-actions-menu": () => actions.openStartActionsMenu(),
   "rewind-menu": () => setWorkspace("rewindMenuOpen", true),
+  "subagent-inspector": () => actions.openSubagentInspector({
+    sessionId: "child-1",
+    agentId: "agent-1",
+    parentSessionId: "parent-1",
+    parentAgentId: "parent-agent",
+    venue: "local",
+  }),
 };
 
 /** Store layers above the composer that own NO typed input (Esc / verbs

@@ -355,6 +355,8 @@ export interface WorkspaceState {
   workflowDefId: string | null;
   /** T5 topic-6: active agent-detail overlay id (null = hidden). */
   agentDetailId: string | null;
+  /** D-70 S4: read-only child inspector, tied to its opening tab. */
+  subagentInspector: import("../types").SubagentInspectorTarget | null;
   /** Optional id the current overlay renders (e.g. job id for jobgraph). */
   overlayTargetId: string | null;
   /** W2.5: coding session mode (builtin `code` skill active via /code). */
@@ -679,6 +681,7 @@ export function createInitialWorkspaceState(): WorkspaceState {
     endpointDetailId: null,
     workflowDefId: null,
     agentDetailId: null,
+    subagentInspector: null,
     overlayTargetId: null,
     codingMode: false,
     paneView: null,
@@ -2218,6 +2221,7 @@ export const actions = {
     setWorkspace("agentDetailId", null);
     // TUI sweep batch: same for the workflow-execution mission overlay.
     setWorkspace("execDetailId", null);
+    setWorkspace("subagentInspector", null);
     setWorkspace("startResearch", null);
     setWorkspace("connectWizard", null);
     setWorkspace("startActionsMenuOpen", false);
@@ -2886,6 +2890,15 @@ export const actions = {
   /** T5 topic-6: agent-detail overlay id setter (null = hidden). */
   setAgentDetailId(id: string | null) {
     setWorkspace("agentDetailId", id);
+  },
+
+  /** Open a child read-only; the parent detail/tab remains untouched underneath. */
+  openSubagentInspector(target: Omit<import("../types").SubagentInspectorTarget, "ownerTabId">) {
+    setWorkspace("subagentInspector", { ...target, ownerTabId: workspace.activeChatTabId });
+  },
+
+  closeSubagentInspector() {
+    setWorkspace("subagentInspector", null);
   },
 
   /** F4 asset rails: apply a full snapshot (bootfit) — replaces the entire

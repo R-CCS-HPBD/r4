@@ -281,7 +281,7 @@ preferences verb, not the pane.
 | **Tasks** | `/tasks` | Plan tasks with status glyphs. ↑↓; Enter or `a` drafts a chat question about the task; `r` → Research; `k` → Knowledge. | `workspace.tasks` from the project plan. |
 | **Knowledge** | `/knowledge` | Build strip (plan → ingest → extract → coverage → graph, plus a quota line), Verify box + answer card (evidence ids, confidence), graph lane (server canonical spine, else local plan projection, with the agent proposal inbox), Knowledge Bases list (the server's `/k2/artifacts` rows, the same list as `r4 knowledge ls`, each with who added it; K1.3 2026-10-24), Ingestion / Coverage / Readiness cards, Research Plan / Loop / Sessions cards. ↑↓; Enter on a file prefills Verify; Enter in Verify asks; Esc returns to the list; with the pane focused, `]` / `[` select an agent proposal and `a` / `r` approve or reject it. | Bridge `get_knowledge` poll; platform adapter `listGraphs` / `graphContent` / `graphProposals` / `reconcileKnowledge` / `catalogStats`; `get_governance_overview`. |
 | **Catalog** | `/catalog` | ADR-031 science catalogue: search row (Enter searches, Esc clears), asset rows with consistency badge + cross-plane links, read drill with byte-bounded preview and lineage, inventory and consistency lines; then workspace assets (skills / MCP / sessions / code changes) from local stores. | `catalogSearch` (`/umrs/catalog/search`), `catalogRead`, `catalogStats`, `reconcileKnowledge`, `knowledgeLineage`. |
-| **Sessions** | `/sessions` | Server session records: venue glyph `L`/`F`/`C`, state chip, sync badge (`local-only` / `remote-only` / `mirrored` / `degraded`), pinned `★`, archived `⛁`; filter chips `[n] new · [s] state · [v] venue · [A] archives`; footer verbs ↵ resume · r rename · p pin · d archive · x export · t stop remote (F rows). Rows and verbs are clickable. | `list_sessions` (filters ride the wire), `load_session`, `session.rename/pin/unpin/archive/fork/turns`, `session.venue_stop`. |
+| **Sessions** | `/sessions` | Server session records: venue glyph `L`/`F`/`C`, state chip, sync badge (`local-only` / `remote-only` / `mirrored` / `degraded`), pinned `★`, archived `⛁`; filter chips `[n] new · [s] state · [v] venue · [A] archives`; footer verbs ↵ resume · r rename · p pin · d archive · x export · t stop remote (F rows). The active parent's durable child rows also appear; Enter opens those read-only instead of resuming them. Rows and verbs are clickable. | `list_sessions` (ordinary filters + opt-in local `session_kind=subagent` / parent filter), `inspect_subagent`, writable `load_session` only for ordinary rows, `session.rename/pin/unpin/archive/fork/turns`, `session.venue_stop`. |
 | **Loop** | `/loop` | Local workflow-builder demo (templates, step editor, gate approval, loop history) — functional only with `--demo` (Ctrl+A assemble, Ctrl+R run, `c` reset); live mode shows a redirect card to Research. | Nothing (local stores). |
 | **Research** | `/research` | Mission Control, Agents monitor, Project Graph, Live verify, bottom tabs Ops / Strategy / Explain (Alt+1/2/3; Alt+Shift+N and Ctrl+Alt+Shift+N fallbacks). Tab / Shift+Tab cycle focus graph → verify → chat. Live verify answers stay in the pane (2026-10-18: the Ctrl+U "resolve as finding" key is retired; findings live in project verification reports, `/umrs/knowledge/findings`). | Agent-runtime store (mission control, hypotheses, agents), `workspace.goals`/`tasks`, knowledge verify. |
 | **Code view** | `/codeview` (`/codereview`, `/git`) | Git change sets (A/M/D/R) with a per-file `git diff HEAD` preview — side-by-side old/new at ≥ 110 columns, unified below. Footer: ↵ diff · o `$VISUAL`/`$EDITOR` · r arm revert → R confirm · t `bun test`. | `git status` / `git diff` in `R4_TUI_WORKSPACE`. |
@@ -296,11 +296,16 @@ or cancelled; duplicate events are idempotent and a result that arrives before
 its spawn creates one defensive terminal row which another spawn in the same
 execution turn cannot reopen. A genuine follow-up increments `subagent_turn`,
 updates the task and may run again; stale or duplicate results from an earlier
-turn stay ignored. The runtime also retains child/parent session lineage. This
-is only the existing Work-row correlation fix: the read-only child transcript inspector
-and open-session action are S3/S4, not yet available. Child session rows and
-redacted tool history are durable locally; ordinary session resume excludes
-them so opening one cannot create a second writer.
+turn stay ignored. The runtime also retains child/parent session lineage. S4
+adds `[o] open session` on this row's agent detail and read-only child rows in
+Sessions. Either opens the actual child task, prompt, model, lifecycle,
+follow-ups and chronological expandable redacted/bounded event history through
+`inspect_subagent`, including after bridge restart; it never calls writable
+`load_session` or switches the parent. `[]` selects an event, Enter expands it,
+`n`/`p` pages by durable event id, and `r` refreshes. One sequential poll runs
+only while the owner's non-terminal inspector is open; completed/failed/
+cancelled, close, tab switch and unmount stop it. `b`/Esc returns to the parent
+surface. Remote children report local-only/S5 unavailability, never invented data.
 
 **Parallel hypothesis tracks (ADR-066 amendment 2, surfaced 2026-09-27).**
 A loop started with `--tracks N` shows a `t<N>` chip on its Work row, and

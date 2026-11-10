@@ -118,6 +118,14 @@ There is no Python TUI in this package: the Ink/JS TUI was deleted
 to `ui/bridge_server.py`. `--legacy-tui` or `force_repl=True` selects the
 Rich REPL.
 
+D-70 S4 (2026-11-10): `components/subagent-inspector-overlay.tsx` plus
+`lib/subagent-inspector.ts` / `subagent-navigation.ts` open durable children from
+Work-row detail or the active parent's child rows in Sessions. They use only
+`inspect_subagent`, validate immediate lineage, retain one bounded event page,
+and stop sequential polling on terminal state, close, owner-tab switch or
+unmount. Child resume/mutation verbs stay refused; remote venues report the S5
+local-only boundary instead of fabricating local data.
+
 ## Key Principles
 
 ### 1. Platform-first
@@ -238,7 +246,7 @@ Use `CompanionEventType` (`agent.py`) for all agent→UI communication. Never pr
 - `session.py` should stay focused on wiring collaborators and exposing the public session API.
 - New helper logic belongs in the adjacent `session_*` modules unless it truly requires direct session-owned mutation.
 - Keep compatibility imports and `DB_PATH` behavior stable for REPL, console-bridge, ACP and Jupyter callers.
-- Durable subagent inspection (2026-11-10, D-70 S3) goes through `inspect_subagent`, never writable `load_session` / `CompanionSessionStore.load`. Pagination uses the event row `after_id`, not timestamps. Full stored conversation messages are returned; event payloads remain redacted and explicitly bounded. Child inventory requires `session_kind="subagent"`; ordinary lists/load calls keep excluding children, and child lists never merge the remote journal before S5.
+- Durable subagent inspection (2026-11-10, D-70 S3/S4) goes through `inspect_subagent`, never writable `load_session` / `CompanionSessionStore.load`. Pagination uses the event row `after_id`, not timestamps. Full stored conversation messages are returned; event payloads remain redacted and explicitly bounded. Child inventory requires `session_kind="subagent"`; ordinary lists/load calls keep excluding children, and child lists never merge the remote journal before S5. Console polling is read-only and bounded to an open, non-terminal child on its owning tab.
 
 ### Skills
 - ALL skills use the general Agent Skills format (https://agentskills.io/specification):

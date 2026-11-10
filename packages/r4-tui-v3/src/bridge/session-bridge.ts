@@ -75,26 +75,56 @@ function snapshotTurnId(metadata: unknown): string {
   return typeof id === "string" ? id : "";
 }
 
+function textField(row: Record<string, unknown>, key: string, fallback = ""): string {
+  return String(row[key] ?? fallback);
+}
+
+function stringField(row: Record<string, unknown>, key: string): string {
+  const value = row[key];
+  return typeof value === "string" ? value : "";
+}
+
+function numberField(row: Record<string, unknown>, key: string): number | undefined {
+  const value = row[key];
+  return typeof value === "number" ? value : undefined;
+}
+
+function ordinarySessionRecord(row: Record<string, unknown>, id: string): SessionRecord {
+  return {
+    id,
+    name: textField(row, "name", "(unnamed)"),
+    model: textField(row, "model", "?"),
+    created_at: textField(row, "created_at"),
+    updated_at: textField(row, "updated_at"),
+    pinned: row.pinned === true,
+    archived_at: textField(row, "archived_at"),
+    turn_count: numberField(row, "turn_count"),
+    cost_usd: numberField(row, "cost_usd"),
+    venue: stringField(row, "venue"),
+    state: stringField(row, "state"),
+    sync: mapSyncBadge(row.sync),
+  };
+}
+
+function mapChildSummary(record: SessionRecord, row: Record<string, unknown>): void {
+  if (row.session_kind !== "subagent") return;
+  record.session_kind = "subagent";
+  record.parent_session_id = textField(row, "parent_session_id");
+  record.parent_agent_id = textField(row, "parent_agent_id");
+  record.agent_id = textField(row, "agent_id");
+  record.subagent_status = textField(row, "subagent_status");
+  record.state = record.subagent_status;
+}
+
 /** Map one server record defensively (shape drift tolerated). */
 export function mapSessionRecord(raw: unknown): SessionRecord | null {
   if (!raw || typeof raw !== "object") return null;
-  const r = raw as Record<string, unknown>;
-  const id = String(r.id ?? "");
+  const row = raw as Record<string, unknown>;
+  const id = textField(row, "id");
   if (!id) return null;
-  return {
-    id,
-    name: String(r.name ?? "(unnamed)"),
-    model: String(r.model ?? "?"),
-    created_at: String(r.created_at ?? ""),
-    updated_at: String(r.updated_at ?? ""),
-    pinned: r.pinned === true,
-    archived_at: String(r.archived_at ?? ""),
-    turn_count: typeof r.turn_count === "number" ? r.turn_count : undefined,
-    cost_usd: typeof r.cost_usd === "number" ? r.cost_usd : undefined,
-    venue: typeof r.venue === "string" ? r.venue : "",
-    state: typeof r.state === "string" ? r.state : "",
-    sync: mapSyncBadge(r.sync),
-  };
+  const record = ordinarySessionRecord(row, id);
+  mapChildSummary(record, row);
+  return record;
 }
 
 /** Record the journal reachability half of a list_sessions response. */
@@ -105,11 +135,29 @@ function applyRemoteStatus(result: { remote_available?: unknown; remote_reason?:
   });
 }
 
+/** Read the active parent's durable local children; never merge the S5 remote journal. */
+async function fetchChildInventory(
+  bridge: ReturnType<typeof getCompanionBridge>,
+  parentSessionId: string,
+): Promise<SessionRecord[]> {
+  if (!parentSessionId) return [];
+  const result = (await bridge.request("list_sessions", {
+    session_kind: "subagent",
+    parent_session_id: parentSessionId,
+    limit: 50,
+  }, 30_000)) as { sessions?: unknown[] };
+  return (result.sessions ?? [])
+    .map(mapSessionRecord)
+    .filter((row): row is SessionRecord => row?.session_kind === "subagent");
+}
+
 /** Fetch the /sessions list into the store (filters ride the wire — plan
  *  §4.4: no client-side emulation for remote rows). `quiet`: a background
- *  refresh nobody asked for posts no card when it fails. */
-export async function fetchSessions(opts: { quiet?: boolean } = {}): Promise<number> {
+ *  refresh nobody asked for posts no card when it fails. Child inventory is
+ *  opt-in so title refreshes do not double their RPC traffic. */
+export async function fetchSessions(opts: { quiet?: boolean; includeChildren?: boolean } = {}): Promise<number> {
   const bridge = getCompanionBridge();
+  const parentSessionId = activeTab().sessionId;
   try {
     const result = (await bridge.request(
       "list_sessions",
@@ -120,7 +168,11 @@ export async function fetchSessions(opts: { quiet?: boolean } = {}): Promise<num
       remote_available?: unknown;
       remote_reason?: unknown;
     };
-    const records = (result.sessions ?? []).map(mapSessionRecord).filter((r): r is SessionRecord => r !== null);
+    const conversations = (result.sessions ?? []).map(mapSessionRecord).filter((r): r is SessionRecord => r !== null);
+    const children = opts.includeChildren
+      ? await fetchChildInventory(bridge, parentSessionId)
+      : workspace.sessionsList.filter((row) => row.session_kind === "subagent" && row.parent_session_id === parentSessionId);
+    const records = [...conversations, ...children];
     actions.setSessionsList(records);
     // Chat tabs: every fetch refreshes the strip titles from server names.
     actions.syncChatTabTitles();

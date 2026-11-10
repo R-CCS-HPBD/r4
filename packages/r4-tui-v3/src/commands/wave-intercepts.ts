@@ -202,7 +202,7 @@ export async function handleWaveIntercepts(parsed: {
     } = await import("../bridge/session-bridge");
     if (!verb) {
       actions.openPane("sessions");
-      const count = await fetchSessions();
+      const count = await fetchSessions({ includeChildren: true });
       actions.sendSystemNotice(`sessions: ${count} records (Tab into the pane for verbs)`);
       return { kind: "handled" };
     }

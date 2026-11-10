@@ -25,6 +25,7 @@ import {
 } from "../bridge/session-bridge";
 import { isRemoteOnly, venueGlyph, venueWord } from "../lib/session-filters";
 import type { SessionRecord } from "../types";
+import { isSubagentSession, openSessionRecord } from "../lib/subagent-navigation";
 
 /** Inner columns of the docked pane: its MEASURED box (the percentage
  * estimate lays out narrower — D-2), the estimate only before the first
@@ -74,22 +75,26 @@ export function SessionsRoute() {
   /** Selected row gated to local-usable rows (remote-only = no local verbs). */
   const selectedLocal = () => {
     const record = selected();
-    return record && !isRemoteOnly(record) ? record : undefined;
+    return record && !isRemoteOnly(record) && !isSubagentSession(record) ? record : undefined;
+  };
+  const selectedChild = () => {
+    const record = selected();
+    return record && isSubagentSession(record) ? record : undefined;
   };
   const filters = () => workspace.sessionFilters;
   const remote = () => workspace.sessionsRemote;
 
   const cycleState = () => {
     actions.cycleSessionStateFilter();
-    void fetchSessions();
+    void fetchSessions({ includeChildren: true });
   };
   const cycleVenue = () => {
     actions.cycleSessionVenueFilter();
-    void fetchSessions();
+    void fetchSessions({ includeChildren: true });
   };
   const toggleArchives = () => {
     actions.toggleSessionArchived();
-    void fetchSessions();
+    void fetchSessions({ includeChildren: true });
   };
 
   return (
@@ -151,11 +156,22 @@ export function SessionsRoute() {
             </box>
             <box height={1} width="100%" overflow="hidden">
               <text fg={palette.fgDim}>
-                {isRemoteOnly(record())
-                  ? remoteOnlyReasonLine()
-                  : "Tab in · ↵ resume · n new · r rename · p pin · d archive · x export · s state · v venue · A archives"}
+                {isSubagentSession(record())
+                  ? "Tab in · ↵ inspect child read-only · n new · s state · v venue · A archives"
+                  : isRemoteOnly(record())
+                    ? remoteOnlyReasonLine()
+                    : "Tab in · ↵ resume · n new · r rename · p pin · d archive · x export · s state · v venue · A archives"}
               </text>
             </box>
+          </box>
+        )}
+      </Show>
+      <Show when={selectedChild()}>
+        {(record) => (
+          <box flexDirection="row" marginTop={0} overflow="hidden">
+            <text fg={palette.statusOk} onMouseDown={() => void openSessionRecord(record())}>
+              ↵ inspect child (read-only)
+            </text>
           </box>
         )}
       </Show>
@@ -219,7 +235,7 @@ function SessionRow(props: { record: SessionRecord; focused: boolean }) {
       flexDirection="row"
       gap={1}
       backgroundColor={props.focused ? palette.bgActive : undefined}
-      onMouseDown={() => void actions.tabOpenSession(record.id, record.name)}
+      onMouseDown={() => void openSessionRecord(record)}
     >
       <text flexShrink={0} fg={headFg()}>
         {cells().head}

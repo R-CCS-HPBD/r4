@@ -207,10 +207,26 @@ export interface SessionRecord {
   /** Venue grammar (plan §4.1): "local" | "frontend" | "cluster:<name>" | ""
    *  ("" = pre-venue row, never fabricated — venue unknown client-side). */
   venue?: string;
-  /** Canonical state enum: "" | "ongoing" | "stopped" | "completed" | "error". */
+  /** Ordinary rows use the canonical session state; child rows use lifecycle. */
   state?: string;
   /** Merge badge from the unified listing (server-computed). */
   sync?: SessionSyncBadge;
+  /** D-70 child inventory: present only on durable subagent rows. */
+  session_kind?: string;
+  parent_session_id?: string;
+  parent_agent_id?: string;
+  agent_id?: string;
+  subagent_status?: string;
+}
+
+/** The console's read-only child target, bound to the tab that opened it. */
+export interface SubagentInspectorTarget {
+  sessionId: string;
+  agentId: string;
+  parentSessionId: string;
+  parentAgentId: string;
+  venue: string;
+  ownerTabId: string;
 }
 
 /** Venue picker choices (round 1: cluster:<name> arrives with WP-05 round 2). */

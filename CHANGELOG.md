@@ -26,7 +26,7 @@ the per-wave detail is kept in the maintainers' development records.
   invoke the parent's snapshot rail. Ordinary Work rows now correlate by the
   backend `agent_id` and finish from `agent_result`, including defensive
   result-before-spawn handling and distinct execution turns for follow-ups.
-  Open-session UI and remote venue parity remain later S4–S5 waves
+  Console inspection builds on this in S4 below; remote venue parity remains S5
   (plan).
 - **Read-only durable subagent inspection** (S3, D-70; 2026-11-10): the typed
   `inspect_subagent` bridge RPC returns the child's full stored conversation,
@@ -35,7 +35,14 @@ the per-wave detail is kept in the maintainers' development records.
   switching a live session. Event payloads stay redacted and explicitly bounded;
   `list_sessions` gains opt-in local child inventory and lineage filters while
   default lists and writable loading still exclude children. Remote child
-  inventory/transport and console open-session navigation remain S5/S4 work.
+  inventory/transport remains S5 work.
+- **Console subagent inspector** (S4, D-70; 2026-11-10): Work-row agent details
+  and the active parent's durable child rows in Sessions open the actual child
+  read-only, including after bridge restart. The inspector shows task/prompt,
+  lineage, model, lifecycle, follow-ups and chronological expandable event
+  history. It polls only open non-terminal local children, paginates by durable
+  event id, and never calls `load_session` or creates a second writer. Remote
+  children report local-only unavailability until S5 rather than fabricated data.
 
 ## [v0.2.0-rc4] — 2026-11-07
 

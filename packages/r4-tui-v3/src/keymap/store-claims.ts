@@ -52,6 +52,7 @@ function closeDetailOverlays(): boolean {
   actions.setEndpointDetailId(null);
   actions.setExecDetailId(null);
   actions.setWorkflowDefId(null);
+  actions.closeSubagentInspector();
   return true;
 }
 
@@ -168,6 +169,13 @@ const DETAIL_LAYERS: StoreLayer[] = [
   detailLayer("endpoint-detail", () => workspace.endpointDetailId != null),
   detailLayer("exec-detail", () => workspace.execDetailId != null, ["exec-overlay"]),
   detailLayer("workflow-def", () => workspace.workflowDefId != null),
+  {
+    owner: "subagent-inspector",
+    open: () => workspace.subagentInspector != null,
+    keys: ["escape", "tab", "letters"],
+    rank: CLAIM_RANK.detailOverlay,
+    onEscape: closeWith(() => actions.closeSubagentInspector()),
+  },
 ];
 
 function modalLayer(owner: string, open: () => boolean, keys: readonly ClaimKey[]): StoreLayer {
