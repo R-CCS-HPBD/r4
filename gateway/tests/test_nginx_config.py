@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 
@@ -243,7 +244,130 @@ def test_health_backend_is_rate_limited_on_its_own_zone():
     block = _named_location(_nginx_server_config_text(), "= /health/backend")
     assert "limit_req zone=health_backend burst=10 nodelay;" in block
     assert "error_page 429 = @error429;" in block
-    assert "limit_req_zone $server_port zone=health_backend:1m rate=5r/s;" in _nginx_config_text()
+    zone = "limit_req_zone $server_port:$health_backend_lane zone=health_backend:1m rate=5r/s;"
+    assert zone in _nginx_config_text()
+
+
+def test_health_backend_bucket_is_split_by_lane():
+    """Review 2026-11-07, item 1: one bucket per gateway let any public
+    caller (behind Apache everyone shares it) 429 the converge's "Platform
+    serving" probe. Apache always adds X-Forwarded-For; the probe calls
+    127.0.0.1:<port> directly without it, so the key splits the two lanes.
+    Runtime proof: test_nginx_audit_runtime.py::test_edge_flood_does_not_spend_the_direct_probe_bucket."""
+    config = _nginx_config_text()
+    start = config.index("map $http_x_forwarded_for $health_backend_lane {")
+    block = config[start : config.index("}", start)]
+    assert '""      direct;' in block
+    assert "default edge;" in block
+    assert config.index("$health_backend_lane {") < config.index("zone=health_backend:")
+
+
+def _status_badge_block() -> str:
+    return _location_block(_nginx_server_config_text(), "location = /status/models.json {")
+
+
+def test_status_badge_is_anonymous_and_reaches_only_the_umrs_badge_route():
+    """ADR-106 amendment 2026-11-07: the public service-model badge. No
+    auth_request (anonymous, like /health/backend and /gw/ops/ping), one
+    fixed UMRS route, the query string dropped (trailing ``?``)."""
+    block = _status_badge_block()
+    assert "auth_request" not in block
+    assert "rewrite ^ /umrs/status/service-badge? break;" in block
+    assert "proxy_pass http://umrs;" in block
+    assert "limit_except GET HEAD { deny all; }" in block
+
+
+def test_status_badge_forwards_nothing_from_the_client():
+    """Security review 2026-11-07, item 3: no client header (Authorization,
+    Cookie, X-User-ID, X-Verified-*, X-Request-ID) and no body reach UMRS;
+    Host and X-Request-ID are the gateway's own."""
+    block = _status_badge_block()
+    for directive in (
+        "proxy_pass_request_headers off;",
+        "proxy_pass_request_body off;",
+        "proxy_set_header Host $proxy_host;",
+        "proxy_set_header X-Request-ID $request_id;",
+        "client_max_body_size 16k;",
+    ):
+        assert directive in block, directive
+    assert "$http_" not in block
+
+
+def test_status_badge_has_its_own_zone_and_a_micro_cache():
+    """Security review 2026-11-07, item 1: never the health_backend bucket;
+    a 30 s cache under one fixed key, stale only while updating (never on
+    error or timeout, so it cannot stick on green); upstream cache headers
+    cannot stretch the 30 s."""
+    block = _status_badge_block()
+    config = _nginx_config_text()
+    assert "limit_req zone=status_badge_limit burst=20 nodelay;" in block
+    assert "health_backend" not in block
+    assert "limit_req_zone $server_port zone=status_badge_limit:1m rate=5r/s;" in config
+    assert "keys_zone=status_badge_cache:1m" in config
+    for directive in (
+        "proxy_cache status_badge_cache;",
+        'proxy_cache_key "status-models-json";',
+        "proxy_cache_valid 200 30s;",
+        "proxy_cache_lock on;",
+        "proxy_cache_use_stale updating;",
+        "proxy_ignore_headers Cache-Control Expires Set-Cookie Vary X-Accel-Expires;",
+        'add_header Cache-Control "max-age=300";',
+    ):
+        assert directive in block, directive
+    assert block.count("proxy_cache_use_stale") == 1
+
+
+def test_status_badge_errors_are_fixed_answers_never_relayed():
+    """Security review 2026-11-07, item 2: without proxy_intercept_errors a
+    UMRS 5xx (its body carries a request id) went straight through. Upstream
+    5xx -> fixed red "down"; a 429 -> grey "rate limited", never red; another
+    4xx or a redirect -> grey "unknown"; all no-store."""
+    block = _status_badge_block()
+    config = _nginx_server_config_text()
+    assert "proxy_intercept_errors on;" in block
+    assert "error_page 429 =200 @status_badge_limited;" in block
+    expected = {
+        "@status_badge_down": '"message":"down","color":"red"}',
+        "@status_badge_limited": '"message":"rate limited","color":"lightgrey"}',
+        "@status_badge_unknown": '"message":"unknown","color":"lightgrey"}',
+    }
+    for name, tail in expected.items():
+        named = _named_location(config, name)
+        assert 'return 200 \'{"schemaVersion":1,"label":"models",' + tail + "';" in named
+        assert 'add_header Cache-Control "no-store" always;' in named
+        assert "default_type application/json;" in named
+
+
+def _error_page_targets(block: str) -> dict[int, str]:
+    """status code -> the ``error_page`` target (with its ``=code``) in ``block``."""
+    targets: dict[int, str] = {}
+    directives = re.sub(r"#[^\n]*", "", block)  # comments may name codes too
+    for line in re.findall(r"^\s*error_page\s+([^;]+);", directives, re.M):
+        words = line.split()
+        target = " ".join(w for w in words if not w.isdigit())
+        for code in (int(w) for w in words if w.isdigit()):
+            assert code not in targets, f"error_page {code} mapped twice"
+            targets[code] = target
+    return targets
+
+
+def test_status_badge_maps_every_upstream_error():
+    """Review 2026-11-07, item 3: an upstream code with no error_page passes
+    its body through (e.g. 406, 415, 431, 501, 505 before the fix). Every
+    3xx redirect and every 4xx/5xx must land on a fixed answer."""
+    targets = _error_page_targets(_status_badge_block())
+    expected = dict.fromkeys(range(500, 600), "=200 @status_badge_down")
+    # nginx refuses ``error_page 499`` (its own client-closed code).
+    expected |= dict.fromkeys(range(400, 499), "=200 @status_badge_unknown")
+    expected |= dict.fromkeys(range(300, 309), "=200 @status_badge_unknown")
+    expected |= {429: "=200 @status_badge_limited", 403: "= @error403"}
+    assert targets == expected
+
+
+def test_status_badge_hides_the_umrs_request_id():
+    """Review 2026-11-07, item 4: UMRS's X-Request-ID response header is a
+    per-request id the anonymous caller has no use for; it is hidden."""
+    assert "proxy_hide_header X-Request-ID;" in _status_badge_block()
 
 
 def test_health_backend_probe_asks_umrs_health_with_short_timeouts():

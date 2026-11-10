@@ -434,6 +434,12 @@ class WorkflowCatalogRow:
     owner: str = ""
     shared: bool = False
     access: List[str] = field(default_factory=list)
+    # ADR-113 D-3: the default version, every registered one (SemVer-
+    # descending) and the default's code digest; "" / [] from older UMRS,
+    # absent from bridges before 2026-11-08.
+    version: str = absent("")
+    versions: List[str] = absent(factory=list)
+    source_sha256: str = absent("")
 
 
 @dataclass(frozen=True)
@@ -453,6 +459,10 @@ class WorkflowStatusResult:
     status: str = ""
     progress: Optional[float] = None
     error: Optional[str] = None
+    # ADR-113 D-4: the version and code digest the run pinned ("" from older
+    # UMRS; absent from bridges before 2026-11-08).
+    workflow_version: str = absent("")
+    source_sha256: str = absent("")
 
 
 @dataclass(frozen=True)
@@ -472,6 +482,10 @@ class WorkflowRunResult:
     artifacts: Optional[List[Any]] = None
     outputs: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
+    # ADR-113 D-4: the version and code digest the run pinned ("" from older
+    # UMRS; absent from bridges before 2026-11-08).
+    workflow_version: str = absent("")
+    source_sha256: str = absent("")
 
 
 @dataclass(frozen=True)
@@ -495,6 +509,8 @@ class WorkflowExecutionRecord:
 
     execution_id: str = absent("")
     workflow_name: Optional[str] = absent(None)
+    workflow_version: str = absent("")  # ADR-113 D-4
+    source_sha256: str = absent("")
     user_id: str = absent("")
     status: str = absent("")
     submitted_at: Optional[float] = absent(None)
@@ -549,6 +565,9 @@ class WorkflowDescription:
     contract_version: str = absent("")
     workflow_name: Optional[str] = absent(None)
     version: str = absent("")
+    versions: List[str] = absent(factory=list)  # ADR-113 D-3
+    source_sha256: str = absent("")
+    code: str = absent("")  # ADR-113 D-8: "available" | "unavailable"
     description: str = absent("")
     scope: str = absent("")
     user_id: str = absent("")

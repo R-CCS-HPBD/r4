@@ -19,7 +19,16 @@ import { paneLayout } from "../lib/pane-layout";
 import { workspace, actions, activeTab } from "../stores";
 import { agentRuntime, agentActions } from "../stores/agent-runtime";
 import { umrsWorkflowStore, umrsWorkflowActions, executionRowDetail } from "../stores/umrs-workflow";
-import { cardTriggerCommand } from "../lib/workflow-card-rows";
+import { cardTriggerCommand, cardVersion } from "../lib/workflow-card-rows";
+import {
+  catalogRowLabel,
+  catalogRowRef,
+  parseWorkflowRef,
+  pickNextVersion,
+  runLabelWithDigest,
+  workflowRefLabel,
+  type VersionedRow,
+} from "../lib/workflow-versions";
 import { openExecutionGraph } from "../lib/workflow-graph-open";
 import { activeWorkProjectId, inWorkScope } from "../lib/work-scope";
 import { draftWorkflowTrigger } from "../components/workflow-def-overlay";
@@ -137,6 +146,12 @@ export function WorkRoute() {
   const [selected, setSelected] = createSignal(0);
   const [busy, setBusy] = createSignal(false);
   const rowWidth = useWorkRowWidth();
+  /** ADR-113 WV4: the version `v`/`V` picked per catalog workflow (absent = default). */
+  const [pickedVersions, setPickedVersions] = createSignal<Record<string, string>>({});
+  const catalogRow = (name: string): VersionedRow =>
+    umrsWorkflowStore.catalog.find((wf) => (wf.workflow_name ?? wf.name) === name) ?? {};
+  /** `name` (the default) or `name@picked`: what Enter shows and `t` runs. */
+  const rowRef = (name: string) => catalogRowRef(name, catalogRow(name), pickedVersions()[name]);
 
   /**
    * Active-project scope (2026-10-01 (11)+(12), maintainer-refined): the
@@ -332,16 +347,21 @@ export function WorkRoute() {
         section: "work" as const,
         key: `exec:${exec.execution_id}`,
         glyph: statusIcon(exec.status),
-        label: `${exec.execution_id.slice(0, 12)} · ${exec.workflow_name ?? "workflow"} · ${exec.status}`,
+        // ADR-113 D-4: the version + digest the run pinned.
+        label: `${exec.execution_id.slice(0, 12)} · ${runLabelWithDigest(exec)} · ${exec.status}`,
         detail: executionRowDetail(exec),
       }));
-    const catalog: WorkRow[] = umrsWorkflowStore.catalog.slice(0, 12).map((wf) => ({
-      section: "work" as const,
-      key: `wf:${wf.workflow_name ?? wf.name ?? "?"}`,
-      glyph: "▸",
-      label: `trigger: ${wf.workflow_name ?? wf.name ?? "?"}`,
-      detail: wf.description ?? null,
-    }));
+    const catalog: WorkRow[] = umrsWorkflowStore.catalog.slice(0, 12).map((wf) => {
+      const name = wf.workflow_name ?? wf.name ?? "?";
+      return {
+        section: "work" as const,
+        key: `wf:${name}`,
+        glyph: "▸",
+        // ADR-113 D-3: default version + count; `v` picks another.
+        label: `trigger: ${catalogRowLabel(name, wf, pickedVersions()[name])}`,
+        detail: wf.description ?? null,
+      };
+    });
     return [...execs, ...catalog];
   });
 
@@ -417,9 +437,10 @@ export function WorkRoute() {
     if (!row.key.startsWith("exec:")) {
       // 2026-10-01: Enter on a catalog row opens the DEFINITION card
       // (meta + step graph + registered code); `t` still triggers.
-      const name = row.key.slice(3);
-      actions.setWorkflowDefId(name);
-      void umrsWorkflowActions.fetchDefinition(name).catch(() => undefined);
+      // ADR-113: the version `v` picked, else the default.
+      const ref = rowRef(row.key.slice(3));
+      actions.setWorkflowDefId(ref);
+      void umrsWorkflowActions.fetchDefinition(ref).catch(() => undefined);
       return true;
     }
     // Mission overlay (2026-09-27): steps + cost, live via the store poll,
@@ -545,26 +566,51 @@ export function WorkRoute() {
         setBusy(false);
       }
     }
-    if (name !== "t" || !row.key.startsWith("wf:")) return false;
+    if (!row.key.startsWith("wf:")) return false;
+    if (name === "v" || name === "V") return pickVersion(row.key.slice(3), name === "v" ? 1 : -1);
+    if (name !== "t") return false;
     setBusy(true);
     try {
-      const workflowName = row.key.slice(3);
-      // 2026-10-02: a workflow that needs values gets its trigger line in the
-      // composer (the definition card's `r`) instead of a run without them;
-      // one that needs none — or whose package is unavailable — runs now.
-      const detail =
-        umrsWorkflowStore.definitions[workflowName] ?? (await umrsWorkflowActions.fetchDefinition(workflowName));
-      const trigger = detail ? cardTriggerCommand(detail) : null;
-      if (trigger && trigger.required > 0) {
-        draftWorkflowTrigger(trigger.command, trigger.required);
-        return true;
-      }
-      const exec = await umrsWorkflowActions.run(workflowName);
-      announce(`triggered ${workflowName} → ${exec.execution_id.slice(0, 12)} (${exec.status})`);
+      await triggerCatalogRow(row.key.slice(3));
       return true;
     } finally {
       setBusy(false);
     }
+  };
+
+  /** `v` / `V` on a workflow row (ADR-113 WV4): step through its versions;
+   * Enter then shows, and `t` runs, the picked one. */
+  const pickVersion = (workflowName: string, step: number): boolean => {
+    const row = catalogRow(workflowName);
+    const next = pickNextVersion(row, pickedVersions()[workflowName], step);
+    if (!next) {
+      announce(`${workflowName}: one version${row.version ? ` (${row.version})` : ""} — nothing to pick`);
+      return true;
+    }
+    setPickedVersions({ ...pickedVersions(), [workflowName]: next });
+    const isDefault = next === row.version;
+    announce(`${workflowRefLabel(workflowName, next)}${isDefault ? " (default)" : ""} picked — t runs it · Enter shows it`);
+    return true;
+  };
+
+  /**
+   * `t` on a workflow row. 2026-10-02: a workflow that needs values gets its
+   * trigger line in the composer (the definition card's `r`) instead of a run
+   * without them; one that needs none — or whose package is unavailable —
+   * runs now. ADR-113: both carry the picked version (else the default the
+   * package names), so the run is the version whose parameters were read.
+   */
+  const triggerCatalogRow = async (workflowName: string): Promise<void> => {
+    const ref = rowRef(workflowName);
+    const detail = umrsWorkflowStore.definitions[ref] ?? (await umrsWorkflowActions.fetchDefinition(ref));
+    const trigger = detail ? cardTriggerCommand(detail) : null;
+    if (trigger && trigger.required > 0) {
+      draftWorkflowTrigger(trigger.command, trigger.required);
+      return;
+    }
+    const version = (detail ? cardVersion(detail) : undefined) ?? parseWorkflowRef(ref).version;
+    const exec = await umrsWorkflowActions.run(workflowName, version ? { version } : {});
+    announce(`triggered ${workflowRefLabel(workflowName, version)} → ${exec.execution_id.slice(0, 12)} (${exec.status})`);
   };
 
   /** `T` on a workflow-execution row (batch 4, 2026-09-27): execution traces
@@ -789,7 +835,7 @@ export function WorkRoute() {
       </Show>
       <box height={1} width="100%" overflow="hidden" marginTop={1}>
         <text fg={palette.fgDim}>
-          {`↑↓ select · Enter detail · jobs: r retry · c cancel · teams/plans: c cancel · workflows: t trigger · A all-projects · ${busy() ? "working…" : "ready"}`}
+          {`↑↓ select · Enter detail · jobs: r retry · c cancel · teams/plans: c cancel · workflows: t trigger · v version · A all-projects · ${busy() ? "working…" : "ready"}`}
         </text>
       </box>
       {/* The definition card holds the keys while open. KeyTrap takes focus

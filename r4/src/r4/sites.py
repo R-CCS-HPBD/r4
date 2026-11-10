@@ -75,6 +75,11 @@ class SiteRow:
     staged_lane: Optional[bool] = None
     gpu: Optional[bool] = None
     error: Optional[str] = None
+    # ADR-112 D-1: the site's login is a person's own account (``personal``)
+    # and whether its owner gave written consent for others' work (``consent``).
+    # Absent or not a real boolean reads False: never assume consent.
+    personal: bool = False
+    consent: bool = False
 
     @property
     def declared(self) -> bool:
@@ -157,6 +162,13 @@ def _apply_access(row: SiteRow, access: dict[str, Any]) -> None:
     row.modes_allowed = [m for m in (safe_token(v) for v in modes) if m]
     operator = access.get("operator")
     row.operator = safe_text(operator, 64) or None if operator else None
+    _apply_disclosure(row, access)
+
+
+def _apply_disclosure(row: SiteRow, access: dict[str, Any]) -> None:
+    """``personal``/``consent`` count only as JSON ``true`` (fail closed)."""
+    row.personal = access.get("personal") is True
+    row.consent = access.get("consent") is True
 
 
 def _apply_me(row: SiteRow, me: dict[str, Any]) -> None:
@@ -392,6 +404,8 @@ def describe(row: SiteRow) -> str:
         state,
         f"server={row.site}",
         f"mode={row.access_mode}",
+        f"personal={_yes_no(row.personal)}",
+        f"consent={_yes_no(row.consent)}",
         f"account={row.account}",
         f"scheduler={row.scheduler or '?'}",
         f"staged_lane={_yes_no(row.staged_lane)}",

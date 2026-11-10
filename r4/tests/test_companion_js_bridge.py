@@ -931,7 +931,7 @@ def _parity_bridge() -> CompanionBridgeServer:
         }
     )
     session.client.workflows = SimpleNamespace(
-        describe=lambda name: {
+        describe=lambda name, version=None: {
             "workflow_name": name,
             "description": "demo",
             "parameter_schema": {"type": "object", "properties": {}},

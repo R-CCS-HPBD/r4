@@ -18,6 +18,7 @@
  * listed. Everything outside the schema is inferred — the card says so.
  */
 import type { WorkflowDefinitionDetail, WorkflowDefStep } from "./workflow-def-types";
+import { workflowRefLabel } from "./workflow-versions";
 
 export type ParamSource = "schema" | "template" | "builtin" | "code";
 
@@ -261,9 +262,11 @@ export function needsJson(p: WorkflowParam): boolean {
 /**
  * The trigger line the composer gets: every required parameter as
  * `--param k=` (the value to type); optional ones keep their defaults.
+ * A `version` makes it `name@version` (ADR-113 D-3): the run is the
+ * version whose parameters the card listed.
  */
-export function triggerCommand(workflowName: string, params: WorkflowParam[]): string {
-  const parts = [`/workflow trigger ${workflowName}`];
+export function triggerCommand(workflowName: string, params: WorkflowParam[], version?: string): string {
+  const parts = [`/workflow trigger ${workflowRefLabel(workflowName, version)}`];
   for (const p of params) {
     if (p.required && !needsJson(p)) parts.push(`--param ${p.name}=`);
   }

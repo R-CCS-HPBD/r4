@@ -88,6 +88,7 @@ Verified 2026-11-03 at parent `4e0b64a11`, umrs `b81af636`.
   - A changed one is kept until its owner merges it (D-5) or discards it.
   - A parent with live children is never removed. Cleanup runs bottom-up.
   - `r4 worktree list|clean` covers every level; `r4 team-plan clean` stays as an alias.
+  - *2026-11-09, ADR-104 amendment 3:* an agent-issued `worktree_exit(action="remove")` asks in autopilot rather than silently discarding files; R4-owned temporary cleanup remains outside this prompt.
 - **Writes** stay inside the level's own worktree. This is the ADR-092 guard, extended to sessions and loops. Reads may reach the parent's tree.
 
 **D-3. Every level has a UMRS scope, carried as a signed token.**

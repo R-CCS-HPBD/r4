@@ -3,6 +3,12 @@
 Thin CLI wrapper around :class:`r4.workflows.WorkflowClient`, exposing
 ``r4 workflow list|trigger|upload|status|cancel`` against the Gateway
 endpoints implemented in ``gateway/gateway/routes/workflows.py``.
+
+ADR-113 (2026-11-08): every subcommand that names a workflow takes
+``NAME@VERSION`` or ``--version VERSION`` (the default is the highest
+registered SemVer); ``versions`` lists them, ``adopt`` turns a
+name-versioned workflow into NAME@VERSION, ``triggers --pin`` chooses the
+version ingest triggers run.
 """
 
 from __future__ import annotations
@@ -13,6 +19,8 @@ import sys
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+
+from r4_contracts.workflows import resolve_workflow_ref, workflow_ref_label
 
 from .base import CommandHandler
 from .registry import command
@@ -36,7 +44,9 @@ class WorkflowCommand(CommandHandler):
             epilog=(
                 "Examples:\n"
                 "  r4 workflow list\n"
+                "  r4 workflow versions my-workflow\n"
                 "  r4 workflow upload ./workflow.zip\n"
+                "  r4 workflow trigger my-workflow@1.2.0 --param foo=bar\n"
                 "  r4 workflow export my-workflow -o ./exports/ --extract ./my-workflow-src\n"
                 "  r4 workflow trigger my-workflow --param foo=bar\n"
                 "  r4 workflow trigger my-workflow --params-file params.json\n"
@@ -60,10 +70,35 @@ class WorkflowCommand(CommandHandler):
             dest="all_users",
             help="List every owner's workflows (admin only; ignored otherwise)",
         )
+        sub_list.add_argument(
+            "--all-versions",
+            action="store_true",
+            dest="all_versions",
+            help="One row per registered version (default: one row per workflow)",
+        )
         sub_list.add_argument("--json", "-j", action="store_true", dest="as_json")
 
+        sub_versions = sub.add_parser(
+            "versions", help="List every registered version of a workflow (ADR-113)"
+        )
+        sub_versions.add_argument("workflow_name")
+        sub_versions.add_argument("--json", "-j", action="store_true", dest="as_json")
+
+        sub_adopt = sub.add_parser(
+            "adopt",
+            help=(
+                "Re-register a workflow whose name carries a version (my-wf-v1.2.0) "
+                "as NAME@VERSION; its access and triggers move with it (owner or admin)"
+            ),
+        )
+        sub_adopt.add_argument("from_name", metavar="OLD_NAME")
+        sub_adopt.add_argument("--as", dest="new_name", required=True, metavar="NAME")
+        sub_adopt.add_argument("--version", required=True, metavar="VERSION")
+        sub_adopt.add_argument("--json", "-j", action="store_true", dest="as_json")
+
         sub_trigger = sub.add_parser("trigger", help="Trigger a workflow run")
-        sub_trigger.add_argument("workflow_name")
+        sub_trigger.add_argument("workflow_name", help="NAME or NAME@VERSION")
+        _add_version_arg(sub_trigger)
         sub_trigger.add_argument(
             "--param",
             "-p",
@@ -98,6 +133,7 @@ class WorkflowCommand(CommandHandler):
             help="MCP tool to inject into workflow context (repeatable)",
         )
         sub_trigger.add_argument("--json", "-j", action="store_true", dest="as_json")
+        _register_gated_trigger(sub_trigger)
 
         sub_run = sub.add_parser(
             "run",
@@ -138,8 +174,15 @@ class WorkflowCommand(CommandHandler):
         sub_upload.add_argument("--name", help="Override workflow name")
         sub_upload.add_argument("--json", "-j", action="store_true", dest="as_json")
 
-        sub_delete = sub.add_parser("delete", help="Delete a registered workflow (owner or admin)")
-        sub_delete.add_argument("workflow_name")
+        sub_delete = sub.add_parser(
+            "delete",
+            help=(
+                "Delete a registered workflow: one version (NAME@X) or every version "
+                "(owner or admin)"
+            ),
+        )
+        sub_delete.add_argument("workflow_name", help="NAME (every version) or NAME@VERSION")
+        _add_version_arg(sub_delete, "Delete only this version (default: every version)")
         sub_delete.add_argument(
             "--yes",
             "-y",
@@ -174,9 +217,23 @@ class WorkflowCommand(CommandHandler):
         sub_reject.add_argument("--comment", help="Rejection reason for the audit trail")
 
         sub_triggers = sub.add_parser(
-            "triggers", help="List a workflow's declared event triggers (W4)"
+            "triggers",
+            help=(
+                "List a workflow's declared event triggers (W4); --pin chooses the version they run"
+            ),
         )
-        sub_triggers.add_argument("workflow_name")
+        sub_triggers.add_argument(
+            "workflow_name", help="NAME, or NAME@VERSION for that version's declared triggers"
+        )
+        _add_version_arg(sub_triggers, "Show the triggers this version declares")
+        sub_triggers.add_argument(
+            "--owner", metavar="USER", help="With --pin/--unpin: another owner's workflow (admin)"
+        )
+        pin = sub_triggers.add_mutually_exclusive_group()
+        pin.add_argument("--pin", metavar="VERSION", help="Triggers run this version")
+        pin.add_argument(
+            "--unpin", action="store_true", help="Triggers run the default (highest) version"
+        )
         sub_triggers.add_argument("--json", "-j", action="store_true", dest="as_json")
 
         sub_access = sub.add_parser(
@@ -201,7 +258,8 @@ class WorkflowCommand(CommandHandler):
             "export",
             help="Download a workflow you can see (own, system, shared) as a verified zip",
         )
-        sub_export.add_argument("workflow_name")
+        sub_export.add_argument("workflow_name", help="NAME or NAME@VERSION")
+        _add_version_arg(sub_export)
         sub_export.add_argument(
             "--output", "-o", metavar="PATH", help="File or directory (default: ./NAME.zip)"
         )
@@ -214,7 +272,8 @@ class WorkflowCommand(CommandHandler):
         sub_export.add_argument("--json", "-j", action="store_true", dest="as_json")
 
         sub_show = sub.add_parser("show", help="Describe a workflow; --graph renders the step DAG")
-        sub_show.add_argument("workflow_name")
+        sub_show.add_argument("workflow_name", help="NAME or NAME@VERSION")
+        _add_version_arg(sub_show)
         sub_show.add_argument(
             "--graph",
             action="store_true",
@@ -268,7 +327,10 @@ class WorkflowCommand(CommandHandler):
 
         d_save = def_sub.add_parser("save", help="Save/update a named run definition")
         d_save.add_argument("name", help="Run definition name")
-        d_save.add_argument("--workflow", required=True, help="Registered workflow name")
+        d_save.add_argument(
+            "--workflow", required=True, help="Registered workflow: NAME or NAME@VERSION"
+        )
+        _add_version_arg(d_save, "Version a replay runs (default: the one UMRS resolves now)")
         d_save.add_argument("--param", "-p", action="append", default=[], metavar="KEY=VALUE")
         d_save.add_argument("--params-json", metavar="JSON")
         d_save.add_argument("--params-file", metavar="FILE")
@@ -298,7 +360,8 @@ class WorkflowCommand(CommandHandler):
         if not sub:
             print(
                 "Usage: r4 workflow "
-                "<list|show|triggers|access|export|trigger|run|upload|delete|definition|status|watch|approve|reject|cancel|lint>",
+                "<list|versions|show|triggers|access|export|trigger|run|upload|adopt|delete|"
+                "definition|status|watch|approve|reject|cancel|lint>",
                 file=sys.stderr,
             )
             return 1
@@ -323,6 +386,8 @@ def _subcommands() -> dict:
     """Dispatch table (built lazily so forward defs resolve at call time)."""
     return {
         "list": _cmd_list,
+        "versions": _cmd_versions,
+        "adopt": _cmd_adopt,
         "trigger": _cmd_trigger,
         "run": _cmd_run,
         "upload": _cmd_upload,
@@ -340,6 +405,104 @@ def _subcommands() -> dict:
         "lint": lambda _wf, args: _cmd_lint(args),
         "definition": _cmd_definition,
     }
+
+
+def _add_version_arg(parser: ArgumentParser, help_text: str | None = None) -> None:
+    """``--version X`` (ADR-113 D-3); ``NAME@X`` names the same version."""
+    parser.add_argument(
+        "--version",
+        metavar="VERSION",
+        default=None,
+        help=help_text or "Workflow version (default: the highest registered); NAME@X works too",
+    )
+
+
+def _ref_or_error(args: Namespace, attr: str = "workflow_name") -> tuple[str, str | None] | None:
+    """(name, version) of ``NAME[@X]`` + ``--version``; None after printing
+    the error (malformed reference, or two versions that disagree)."""
+    try:
+        name, version = resolve_workflow_ref(
+            getattr(args, attr, "") or "", getattr(args, "version", None)
+        )
+    except ValueError as exc:
+        _print_error(exc)
+        return None
+    return str(name), version
+
+
+def _name_only(args: Namespace, why: str) -> str | None:
+    """NAME of a per-name subcommand (access, triggers, versions): a version
+    in the reference is refused by name with *why*."""
+    ref = _ref_or_error(args)
+    if ref is None:
+        return None
+    name, version = ref
+    if version:
+        print(f"Error: {name}@{version}: {why}", file=sys.stderr)
+        return None
+    return name
+
+
+def _str_attr(obj: object, attr: str) -> str:
+    """A string attribute, else "" (old servers and test doubles)."""
+    value = getattr(obj, attr, "")
+    return value if isinstance(value, str) else ""
+
+
+def _short_digest(digest: object) -> str:
+    """First 12 hex characters of a ``source_sha256``."""
+    return str(digest or "")[:12]
+
+
+def _print_pin(name: str, version: str, digest: str) -> None:
+    """``workflow : name@version`` and the short code digest a run pinned
+    (ADR-113 D-4); nothing for what an old server does not send."""
+    if name:
+        print(f"workflow     : {workflow_ref_label(name, version)}")
+    elif version:
+        print(f"version      : {version}")
+    if digest:
+        print(f"digest       : {_short_digest(digest)}")
+
+
+def _print_result_pin(result: object) -> None:
+    _print_pin(
+        _str_attr(result, "workflow_name"),
+        _str_attr(result, "workflow_version"),
+        _str_attr(result, "source_sha256"),
+    )
+
+
+#: What to do next for the ADR-113 error codes (``x-platform-error-code``).
+_VERSION_ERROR_HINTS = {
+    "workflows.invalid_version": (
+        "workflow.json needs `version` as MAJOR.MINOR.PATCH[-prerelease], e.g. 1.0.0"
+    ),
+    "workflows.version_exists": (
+        "that version is registered with other files: bump `version` in workflow.json"
+    ),
+    "workflows.version_not_found": "`r4 workflow versions NAME` lists the registered versions",
+    "workflows.code_unavailable": (
+        "this version's files were not kept (registered before versions); run another version"
+    ),
+    "workflows.source_mismatch": (
+        "the pinned version's code changed since it was saved or planned; save or plan again"
+    ),
+}
+
+
+def _print_error(exc: BaseException) -> None:
+    """``Error: ...`` plus the next step for a workflow-version error code."""
+    print(f"Error: {exc}", file=sys.stderr)
+    details = getattr(exc, "details", None)
+    code = details.get("code") if isinstance(details, dict) else None
+    hint = _VERSION_ERROR_HINTS.get(str(code or ""))
+    if hint:
+        print(f"hint : {hint}", file=sys.stderr)
+
+
+def _confirm(prompt: str) -> bool:
+    return input(prompt).strip().lower() in ("y", "yes")
 
 
 def _cmd_definition(wf, args: Namespace) -> int:
@@ -364,28 +527,44 @@ def _cmd_def_save(wf, args: Namespace) -> int:
     if err:
         print(f"Error: {err}", file=sys.stderr)
         return 2
+    ref = _ref_or_error(args, "workflow")
+    if ref is None:
+        return 2
+    workflow, version = ref
     try:
         data = wf.save_run_definition(
             args.name,
-            args.workflow,
+            workflow,
             params=params,
             description=getattr(args, "description", "") or "",
+            version=version,
         )
     except Exception as exc:  # noqa: BLE001
-        print(f"Error: {exc}", file=sys.stderr)
+        _print_error(exc)
         return 1
     if args.as_json:
         print(json.dumps(data, indent=2, default=str))
         return 0
-    print(f"run definition '{args.name}' saved (workflow={args.workflow})")
+    pinned = _saved_definition_version(data) or version or ""
+    print(f"run definition '{args.name}' saved (workflow={workflow_ref_label(workflow, pinned)})")
     return 0
+
+
+def _saved_definition_version(data: object) -> str:
+    """The ``workflow_version`` UMRS pinned for a saved definition: on the
+    save response itself, else on its ``definition`` ("" when none)."""
+    if not isinstance(data, dict):
+        return ""
+    saved = data.get("definition")
+    nested = saved.get("workflow_version") if isinstance(saved, dict) else ""
+    return str(data.get("workflow_version") or nested or "")
 
 
 def _cmd_def_list(wf, args: Namespace) -> int:
     try:
         data = wf.list_run_definitions()
     except Exception as exc:  # noqa: BLE001
-        print(f"Error: {exc}", file=sys.stderr)
+        _print_error(exc)
         return 1
     items = (data or {}).get("definitions", [])
     if args.as_json:
@@ -394,22 +573,26 @@ def _cmd_def_list(wf, args: Namespace) -> int:
     if not items:
         print("No run definitions.")
         return 0
-    print(f"{'NAME':<28} {'WORKFLOW':<28} UPDATED")
-    print("-" * 90)
+    print(f"{'NAME':<28} {'WORKFLOW':<36} UPDATED")
+    print("-" * 98)
     for d in items:
-        print(
-            f"{(d.get('name') or '')[:28]:<28} "
-            f"{(d.get('workflow_name') or '')[:28]:<28} "
-            f"{d.get('updated_at') or ''}"
-        )
+        print(_definition_row(d))
     return 0
+
+
+def _definition_row(d: dict[str, Any]) -> str:
+    """NAME, WORKFLOW (``name@version`` when the definition pins one), UPDATED."""
+    workflow = workflow_ref_label(
+        str(d.get("workflow_name") or ""), str(d.get("workflow_version") or "")
+    )
+    return f"{str(d.get('name') or '')[:28]:<28} {workflow[:36]:<36} {d.get('updated_at') or ''}"
 
 
 def _cmd_def_show(wf, args: Namespace) -> int:
     try:
         data = wf.get_run_definition(args.name)
     except Exception as exc:  # noqa: BLE001
-        print(f"Error: {exc}", file=sys.stderr)
+        _print_error(exc)
         return 1
     definition = (data or {}).get("definition", {})
     if args.as_json:
@@ -428,7 +611,7 @@ def _cmd_def_delete(wf, args: Namespace) -> int:
     try:
         data = wf.delete_run_definition(args.name)
     except Exception as exc:  # noqa: BLE001
-        print(f"Error: {exc}", file=sys.stderr)
+        _print_error(exc)
         return 1
     print(data.get("message", f"run definition '{args.name}' deleted"))
     return 0
@@ -438,7 +621,7 @@ def _cmd_def_run(wf, args: Namespace) -> int:
     try:
         result = wf.trigger_run_definition(args.name, wait=bool(getattr(args, "wait", False)))
     except Exception as exc:  # noqa: BLE001
-        print(f"Error: {exc}", file=sys.stderr)
+        _print_error(exc)
         return 1
     if args.as_json:
         print(json.dumps(_status_to_dict(result), indent=2, default=str))
@@ -446,26 +629,44 @@ def _cmd_def_run(wf, args: Namespace) -> int:
     print(f"execution accepted: {getattr(result, 'execution_id', '') or '(unknown)'}")
     state = getattr(result, "status", None) or "submitted"
     print(f"status: {state}")
+    _print_result_pin(result)
     return 0
 
 
 def _cmd_delete(wf, args: Namespace) -> int:
-    """Delete a registered workflow after confirmation."""
-    if not args.yes:
-        answer = input(f"Delete workflow '{args.workflow_name}'? [y/N] ").strip().lower()
-        if answer not in ("y", "yes"):
-            print("aborted")
-            return 0
+    """Delete one version (NAME@X / --version) or every version, after confirmation."""
+    ref = _ref_or_error(args)
+    if ref is None:
+        return 2
+    name, version = ref
+    what = (
+        f"version {version} of workflow '{name}'"
+        if version
+        else f"workflow '{name}' (every version)"
+    )
+    if not args.yes and not _confirm(f"Delete {what}? [y/N] "):
+        print("aborted")
+        return 0
     try:
-        data = wf.delete(args.workflow_name)
+        data = wf.delete(name, version=version)
     except Exception as exc:  # noqa: BLE001
-        print(f"Error: {exc}", file=sys.stderr)
+        _print_error(exc)
         return 1
     if args.as_json:
         print(json.dumps(data, indent=2, default=str))
         return 0
-    print(data.get("message", f"workflow '{args.workflow_name}' deleted"))
+    print(data.get("message", f"{what} deleted"))
+    _print_delete_details(data)
     return 0
+
+
+def _print_delete_details(data: object) -> None:
+    """The versions a delete removed, and whether files wait for runs (D-6)."""
+    removed = data.get("versions") if isinstance(data, dict) else None
+    if isinstance(removed, list) and removed:
+        print(f"  versions removed: {', '.join(str(v) for v in removed)}")
+    if isinstance(data, dict) and data.get("files_deferred"):
+        print("  files are kept until the queued or running runs that use them end")
 
 
 def _cmd_approve(wf, args: Namespace) -> int:
@@ -487,7 +688,7 @@ def _submit_gate_decision(wf, args: Namespace, *, approved: bool) -> int:
             comment=getattr(args, "comment", None),
         )
     except Exception as exc:  # noqa: BLE001
-        print(f"Error: {exc}", file=sys.stderr)
+        _print_error(exc)
         return 1
     verdict = "approved" if approved else "rejected"
     print(f"gate {verdict}: {args.step_name} (execution {args.execution_id})")
@@ -497,43 +698,95 @@ def _submit_gate_decision(wf, args: Namespace, *, approved: bool) -> int:
 
 
 def _cmd_triggers(wf, args: Namespace) -> int:
+    ref = _ref_or_error(args)
+    if ref is None:
+        return 2
+    name, version = ref
+    if getattr(args, "pin", None) or getattr(args, "unpin", False):
+        if version:
+            print(f"Error: {name}@{version}: give the version to pin with --pin", file=sys.stderr)
+            return 2
+        pinned = None if args.unpin else args.pin
+        return _set_trigger_pin(wf, name, pinned, getattr(args, "owner", None))
     try:
-        data = wf.list_workflow_triggers(args.workflow_name)
+        data = wf.list_workflow_triggers(name, version=version)
     except Exception as exc:  # noqa: BLE001
-        print(f"Error: {exc}", file=sys.stderr)
+        _print_error(exc)
         return 1
 
     if args.as_json:
         print(json.dumps(data, indent=2, default=str))
         return 0
+    _print_triggers(name, data)
+    return 0
 
+
+def _print_triggers(name: str, data: dict[str, Any]) -> None:
+    """Declared triggers plus the version they fire (ADR-113 D-7)."""
     triggers = data.get("triggers") or []
+    label = workflow_ref_label(name, str(data.get("version") or ""))
     if not triggers:
-        print(f"{args.workflow_name}: no triggers declared")
-        return 0
-    print(f"{args.workflow_name}: {len(triggers)} trigger(s) declared")
+        print(f"{label}: no triggers declared")
+    else:
+        print(f"{label}: {len(triggers)} trigger(s) declared")
+    for line in _trigger_state_lines(name, data, bool(triggers)):
+        print(line)
     for index, trig in enumerate(triggers, 1):
         matchers = ", ".join(f"{k}={v}" for k, v in trig.items() if k != "on") or "(any)"
         print(f"  {index}. on={trig.get('on', '?')} {matchers}")
+
+
+def _trigger_state_lines(name: str, data: dict[str, Any], has_triggers: bool) -> list[str]:
+    """Disabled (an adopted old name, D-8), else which version fires (D-7)."""
+    if data.get("triggers_disabled"):
+        adopted = str(data.get("adopted_as") or "")
+        return [f"  disabled: adopted as {adopted}" if adopted else "  disabled"]
+    fires = _trigger_fires_line(name, str(data.get("trigger_version") or ""), has_triggers)
+    return [fires] if fires else []
+
+
+def _trigger_fires_line(name: str, pinned: str, has_triggers: bool) -> str:
+    """Which version the triggers run: the pin, else the default."""
+    if pinned:
+        return f"  fires: {name}@{pinned} (pinned; --unpin to follow the default)"
+    return "  fires: the default (highest) version" if has_triggers else ""
+
+
+def _set_trigger_pin(
+    wf: WorkflowClient, name: str, version: str | None, owner: str | None = None
+) -> int:
+    """PUT the trigger version pin (None unpins); *owner*: an admin pins
+    another owner's workflow."""
+    try:
+        data = wf.set_trigger_version(name, version, owner=owner)
+    except Exception as exc:  # noqa: BLE001
+        _print_error(exc)
+        return 1
+    shown = (data or {}).get("trigger_version", version) if isinstance(data, dict) else version
+    if shown:
+        print(f"{name}: triggers fire {name}@{shown}")
+    else:
+        print(f"{name}: triggers fire the default (highest) version")
     return 0
 
 
 def _cmd_access(wf, args: Namespace) -> int:
     """Show or replace a workflow's ADR-080 access list (via the parent Client)."""
+    name = _name_only(args, "access applies to every version of a workflow (ADR-113 D-5)")
+    if name is None:
+        return 2
     client = wf._parent
     try:
         if args.private or args.access_set:
-            data = client.set_workflow_access(
-                args.workflow_name, [] if args.private else args.access_set
-            )
+            data = client.set_workflow_access(name, [] if args.private else args.access_set)
         else:
-            data = client.get_workflow_access(args.workflow_name)
+            data = client.get_workflow_access(name)
     except Exception as exc:  # noqa: BLE001
-        print(f"Error: {exc}", file=sys.stderr)
+        _print_error(exc)
         return 1
     scopes = data.get("access") or []
     owner = data.get("owner") or "?"
-    print(f"{args.workflow_name}  owner: {owner}")
+    print(f"{name}  owner: {owner}")
     print("  access: " + (", ".join(scopes) if scopes else "owner only"))
     return 0
 
@@ -542,37 +795,56 @@ def _cmd_export(wf: WorkflowClient, args: Namespace) -> int:
     """Download (and optionally unpack) a workflow export zip."""
     from ..workflows import extract_export, read_export_manifest
 
+    ref = _ref_or_error(args)
+    if ref is None:
+        return 2
+    name, version = ref
     try:
-        path = wf.export(args.workflow_name, args.output, overwrite=args.force)
+        path = wf.export(name, args.output, overwrite=args.force, version=version)
         manifest = read_export_manifest(path)
         extracted = (
             extract_export(path, args.extract, overwrite=args.force) if args.extract else None
         )
     except Exception as exc:  # noqa: BLE001
-        print(f"Error: {exc}", file=sys.stderr)
+        _print_error(exc)
         return 1
-    summary = {
-        "workflow": args.workflow_name,
-        "path": str(path),
-        "files": len(manifest.get("files") or []),
-        "excluded": len(manifest.get("excluded") or []),
-        "extracted_to": str(extracted) if extracted else None,
-    }
+    summary = _export_summary(name, version, path, manifest, extracted)
     if args.as_json:
         print(json.dumps(summary, indent=2))
         return 0
-    print(f"exported {args.workflow_name} -> {path}")
+    print(f"exported {summary['workflow']} -> {path}")
     print(f"  files: {summary['files']}  excluded: {summary['excluded']}  (images not included)")
     if extracted:
         print(f"  extracted to: {extracted}")
     return 0
 
 
+def _export_summary(
+    name: str,
+    version: str | None,
+    path: Path,
+    manifest: dict[str, Any],
+    extracted: Path | None,
+) -> dict[str, Any]:
+    """The ``export`` summary; ``workflow`` is ``name@version`` when known."""
+    return {
+        "workflow": workflow_ref_label(name, str(manifest.get("version") or version or "")),
+        "path": str(path),
+        "files": len(manifest.get("files") or []),
+        "excluded": len(manifest.get("excluded") or []),
+        "extracted_to": str(extracted) if extracted else None,
+    }
+
+
 def _cmd_show(wf, args: Namespace) -> int:
+    ref = _ref_or_error(args)
+    if ref is None:
+        return 2
+    name, version = ref
     try:
-        desc = wf.describe(args.workflow_name)
+        desc = wf.describe(name, version=version)
     except Exception as exc:  # noqa: BLE001
-        print(f"Error: {exc}", file=sys.stderr)
+        _print_error(exc)
         return 1
 
     if args.as_json:
@@ -580,22 +852,23 @@ def _cmd_show(wf, args: Namespace) -> int:
         return 0
 
     steps = desc.get("steps") or []
-
     if args.graph or args.mermaid:
-        from ..workflow_graph import WorkflowGraphError, render_ascii, render_mermaid
+        return _print_graph(steps, name, mermaid=bool(args.mermaid))
 
-        try:
-            if args.mermaid:
-                print(render_mermaid(steps, title=args.workflow_name))
-            else:
-                print(render_ascii(steps))
-        except WorkflowGraphError as exc:
-            print(f"Error: {exc}", file=sys.stderr)
-            return 1
-        return 0
+    shared = _shared_with_caller(wf, desc.get("name", name), desc.get("user_id"))
+    _print_description(desc, name, len(steps), shared=shared)
+    return 0
 
-    shared = _shared_with_caller(wf, desc.get("name", args.workflow_name), desc.get("user_id"))
-    _print_description(desc, args.workflow_name, len(steps), shared=shared)
+
+def _print_graph(steps: list[Any], title: str, *, mermaid: bool) -> int:
+    """``show --graph`` (ASCII layers) or ``--mermaid``."""
+    from ..workflow_graph import WorkflowGraphError, render_ascii, render_mermaid
+
+    try:
+        print(render_mermaid(steps, title=title) if mermaid else render_ascii(steps))
+    except WorkflowGraphError as exc:
+        _print_error(exc)
+        return 1
     return 0
 
 
@@ -623,7 +896,7 @@ def _print_description(
 ) -> None:
     """Human-readable describe payload (non-graph branch of ``show``)."""
     print(f"name        : {_described_name(desc, fallback_name)}")
-    print(f"version     : {desc.get('version', '-')}")
+    _print_version_lines(desc)
     scope = f"shared · {desc['user_id']}" if shared else desc.get("scope", "-")
     print(f"scope       : {scope}")
     if desc.get("user_id"):
@@ -638,6 +911,18 @@ def _print_description(
         for pname, default, required in rows:
             flag = " (required)" if required else ""
             print(f"  - {pname:<24} default={default}{flag}")
+
+
+def _print_version_lines(desc: dict[str, Any]) -> None:
+    """version, every registered version and the code digest (ADR-113 D-3)."""
+    print(f"version     : {desc.get('version') or '-'}")
+    versions = [str(v) for v in desc.get("versions") or []]
+    if versions:
+        print(f"versions    : {', '.join(versions)}")
+    if desc.get("source_sha256"):
+        print(f"digest      : {_short_digest(desc['source_sha256'])}")
+    if desc.get("code") == "unavailable":
+        print("code        : unavailable (files not kept; this version cannot run)")
 
 
 def _described_name(desc: dict[str, Any], fallback_name: str) -> str:
@@ -725,10 +1010,10 @@ def _load_params_json_object(raw: str, source: str) -> tuple[dict | None, str | 
 
 
 def _cmd_list(wf, args: Namespace) -> int:
-    items = _filter_wfs(
-        wf.list_workflows(all_users=getattr(args, "all_users", False)),
-        getattr(args, "name", None),
-    )
+    filters: dict[str, bool] = {"all_users": bool(getattr(args, "all_users", False))}
+    if getattr(args, "all_versions", False):
+        filters["all_versions"] = True
+    items = _filter_wfs(wf.list_workflows(**filters), getattr(args, "name", None))
 
     if args.as_json:
         print(json.dumps([_workflow_to_dict(w) for w in items], indent=2))
@@ -736,8 +1021,8 @@ def _cmd_list(wf, args: Namespace) -> int:
     if not items:
         print("No workflows registered.")
         return 0
-    print(f"{'NAME':<32} {'DESCRIPTION':<48} TAGS")
-    print("-" * 100)
+    print(f"{'NAME':<32} {'VERSION':<12} {'VERSIONS':<8} {'DESCRIPTION':<40} TAGS")
+    print("-" * 110)
     for row in (_wf_row(w) for w in items):
         print(row)
     return 0
@@ -751,10 +1036,184 @@ def _filter_wfs(items: list, needle: str | None) -> list:
 
 
 def _wf_row(w) -> str:
+    """NAME, VERSION (the default, or the row's own with --all-versions),
+    VERSIONS (how many are registered), DESCRIPTION, TAGS."""
     name = (getattr(w, "name", "") or "")[:32]
-    desc = (getattr(w, "description", "") or "")[:48]
+    version = (_str_attr(w, "version") or "-")[:12]
+    versions = getattr(w, "versions", None)
+    count = str(len(versions)) if isinstance(versions, list) and versions else "-"
+    desc = (getattr(w, "description", "") or "")[:40]
     tags = ", ".join(getattr(w, "tags", []) or [])
-    return f"{name:<32} {desc:<48} {tags}"
+    return f"{name:<32} {version:<12} {count:<8} {desc:<40} {tags}"
+
+
+def _cmd_versions(wf: WorkflowClient, args: Namespace) -> int:
+    """Every registered version of one workflow (ADR-113 D-3)."""
+    name = _name_only(args, "`versions` lists every version; drop @VERSION")
+    if name is None:
+        return 2
+    try:
+        rows = [w for w in wf.list_workflows(all_versions=True) if getattr(w, "name", "") == name]
+    except Exception as exc:  # noqa: BLE001
+        _print_error(exc)
+        return 1
+    if not rows:
+        print(f"Error: no workflow named {name!r} is visible to you", file=sys.stderr)
+        return 1
+    if args.as_json:
+        print(json.dumps([_workflow_to_dict(w) for w in rows], indent=2))
+        return 0
+    default = _default_version(wf, name)
+    print(f"{name}: {len(rows)} version(s); * = the default a run without a version takes")
+    print(f"  {'VERSION':<16} {'DIGEST':<13} OWNER")
+    for w in rows:
+        print(_version_row(w, default))
+    return 0
+
+
+def _version_row(w: object, default: str) -> str:
+    """One ``versions`` row: default mark, VERSION, short DIGEST, OWNER label."""
+    version = _str_attr(w, "version") or "-"
+    mark = "*" if version == default else " "
+    owner = ", ".join(getattr(w, "tags", []) or []) or _str_attr(w, "owner")
+    digest = _short_digest(_str_attr(w, "source_sha256")) or "-"
+    return f"{mark} {version:<16} {digest:<13} {owner}"
+
+
+def _default_version(wf: WorkflowClient, name: str) -> str:
+    """The version a run without one takes (describe's ``version``); "" when
+    describe fails: the list still prints, unmarked."""
+    try:
+        return str(wf.describe(name).get("version") or "")
+    except Exception:  # noqa: BLE001 - the marker only
+        return ""
+
+
+def _cmd_adopt(wf: WorkflowClient, args: Namespace) -> int:
+    """Re-register OLD_NAME's files as NAME@VERSION (ADR-113 D-8)."""
+    try:
+        data = wf.adopt(args.from_name, args.new_name, args.version)
+    except Exception as exc:  # noqa: BLE001
+        _print_error(exc)
+        return 1
+    if args.as_json:
+        print(json.dumps(data, indent=2, default=str))
+        return 0
+    name = str(data.get("name") or args.new_name)
+    version = str(data.get("version") or args.version)
+    note = " (already adopted, unchanged)" if data.get("unchanged") else ""
+    print(f"adopted {args.from_name} -> {name}@{version}{note}")
+    if data.get("source_sha256"):
+        print(f"  digest: {_short_digest(data['source_sha256'])}")
+    print(
+        f"  {args.from_name}'s triggers are disabled; once nothing uses it: "
+        f"r4 workflow delete {args.from_name}"
+    )
+    return 0
+
+
+def _register_gated_trigger(parser: ArgumentParser) -> None:
+    """``--site`` and its companions (ADR-112 wave B2: a signed intent)."""
+    parser.add_argument(
+        "--site",
+        default=None,
+        help="Run under my own account at this site: review and sign the run (ADR-112)",
+    )
+    parser.add_argument(
+        "--listed-input",
+        action="append",
+        nargs=3,
+        default=[],
+        metavar=("STEP", "S3_URI", "FILE"),
+        help="An input I choose: r4 hashes my local FILE, the copy of S3_URI (repeatable)",
+    )
+    parser.add_argument(
+        "--show-inputs", action="store_true", help="List every input in the summary"
+    )
+    parser.add_argument(
+        "--yes", action="store_true", help="Skip the y/N prompt (the key still asks)"
+    )
+
+
+def _gated_request(
+    args: Namespace, params: dict[str, Any], site: str | None, project: str | None
+) -> Any:
+    from ..hpc_intents import TriggerRequest, listed_input
+
+    # The same NAME[@X] + --version resolution as the plain trigger (ADR-113 D-3).
+    name, version = resolve_workflow_ref(args.workflow_name or "", getattr(args, "version", None))
+    listed = tuple(
+        listed_input(step, uri, Path(path)) for step, uri, path in (args.listed_input or [])
+    )
+    return TriggerRequest(
+        workflow=name,
+        version=version,
+        params=params,
+        input_files=list(args.input_file or []),
+        project=project,
+        listed=listed,
+        site=site,
+        yes=bool(args.yes),
+        show_inputs=bool(args.show_inputs),
+    )
+
+
+def _confirm_signing(prompt: str) -> bool:
+    """The y/N before a gated run is signed; end of input means no."""
+    try:
+        return input(f"{prompt} [y/N] ").strip().lower() in ("y", "yes")
+    except EOFError:
+        return False
+
+
+def _gated_client(wf: Any, site: str | None) -> Any:
+    if not site:
+        return wf._parent
+    from .hpc import _site_client
+
+    return _site_client(site)
+
+
+def _cmd_trigger_gated(wf: Any, args: Namespace, params: dict[str, Any], site: str | None) -> int:
+    """Propose, recompute, show, sign, trigger (plan §5 B2.0 item 11)."""
+    from ..errors import R4Error
+    from ..hpc_intents import run_gated_trigger
+
+    try:
+        client = _gated_client(wf, site)
+        project = args.project_id or getattr(client.config, "project_id", None)
+        answer = run_gated_trigger(
+            client, _gated_request(args, params, site, project), confirm=_confirm_signing
+        )
+    except R4Error as exc:
+        print(f"✗ {exc}", file=sys.stderr)
+        return 1
+    if args.as_json:
+        print(json.dumps(answer, indent=2, default=str))
+        return 0
+    print(f"execution_id : {answer.get('execution_id', '-')}")
+    print(f"intent_id    : {answer.get('intent_id', '-')}")
+    print(f"status       : {answer.get('status', '-')}")
+    if args.wait and answer.get("execution_id"):
+        return _print_trigger_summary(
+            client.workflows.wait_for_completion(answer["execution_id"]), args
+        )
+    return 0
+
+
+def _needs_signature(exc: Exception) -> bool:
+    """A plain trigger answered 428 ``signature_required`` (a user_account run)."""
+    details = getattr(exc, "details", None) or {}
+    code = str(details.get("code") or "")
+    return details.get("status_code") == 428 or code.endswith("signature_required")
+
+
+def _confirm_at_terminal(args: Namespace) -> Namespace:
+    """The 428 fallback of a plain trigger enters signing although the
+    command was not ``--site`` (the never-auto fence matches only that):
+    ``--yes`` never applies there, the person confirms at the terminal
+    (D-8; fixer finding 2026-11-08)."""
+    return Namespace(**{**vars(args), "yes": False})
 
 
 def _cmd_trigger(wf, args: Namespace) -> int:
@@ -762,35 +1221,33 @@ def _cmd_trigger(wf, args: Namespace) -> int:
     if err:
         print(f"Error: {err}", file=sys.stderr)
         return 2
+    ref = _ref_or_error(args)
+    if ref is None:
+        return 2
+    name, version = ref
 
     mcp_tools = getattr(args, "mcp_tool", []) or []
     if mcp_tools:
         params["mcp_tools"] = mcp_tools
 
-    wait = bool(getattr(args, "wait", False))
-
+    if getattr(args, "site", None):
+        return _cmd_trigger_gated(wf, args, params, args.site)
     try:
         result = wf.trigger(
-            workflow_id=args.workflow_name,
+            workflow_id=name,
+            version=version,
             parameters=params,
             input_files=args.input_file or None,
             project_id=getattr(args, "project_id", None),
-            wait=wait,
+            wait=bool(getattr(args, "wait", False)),
         )
     except Exception as exc:  # noqa: BLE001
-        print(f"Error: {exc}", file=sys.stderr)
+        if _needs_signature(exc):
+            print("This site runs your work under your own account: sign it.", file=sys.stderr)
+            return _cmd_trigger_gated(wf, _confirm_at_terminal(args), params, None)
+        _print_error(exc)
         return 1
-
-    if args.as_json:
-        print(json.dumps(_status_to_dict(result), indent=2, default=str))
-        return 0
-
-    print(f"execution_id : {getattr(result, 'execution_id', '-')}")
-    print(f"status       : {getattr(result, 'status', '-')}")
-    if getattr(result, "error", None):
-        print(f"error        : {result.error}")
-        return 1
-    return 0
+    return _print_trigger_summary(result, args, name, version)
 
 
 def _cmd_run(wf, args: Namespace) -> int:
@@ -805,16 +1262,19 @@ def _cmd_run(wf, args: Namespace) -> int:
         print(f"Error: {err}", file=sys.stderr)
         return 2
 
-    workflow_id, err = _run_upload(wf, args)
-    if err is not None:
+    ref, err = _run_upload(wf, args)
+    if ref is None:
         print(f"upload failed : {err}", file=sys.stderr)
         return 1
-
-    print(f"upload accepted: {workflow_id}")
+    workflow_id, version = ref
+    # ADR-113 D-3: run exactly the version just registered, not the default
+    # (an older upload may hold a higher version). Old servers send none.
+    print(f"upload accepted: {workflow_ref_label(workflow_id, version or '')}")
 
     try:
         result = wf.trigger(
             workflow_id=workflow_id,
+            version=version,
             parameters=params,
             input_files=args.input_file or None,
             project_id=getattr(args, "project_id", None),
@@ -824,11 +1284,12 @@ def _cmd_run(wf, args: Namespace) -> int:
         print(f"Error (trigger): {exc}", file=sys.stderr)
         return 1
 
-    return _print_trigger_summary(result, args)
+    return _print_trigger_summary(result, args, workflow_id, version)
 
 
-def _run_upload(wf, args: Namespace) -> tuple[str | None, str | None]:
-    """Upload the definition for ``run``; (workflow_id, error)."""
+def _run_upload(wf, args: Namespace) -> tuple[tuple[str, str | None] | None, str | None]:
+    """Upload the definition for ``run``; ((workflow_id, version), error).
+    The version is the one UMRS registered (None from servers before ADR-113)."""
     try:
         result = wf.upload(workflow_path=args.path, workflow_name=args.name)
     except Exception as exc:  # noqa: BLE001
@@ -838,21 +1299,34 @@ def _run_upload(wf, args: Namespace) -> tuple[str | None, str | None]:
     if upload_error or not getattr(result, "accepted", False):
         detail = upload_error or getattr(result, "message", None) or "not accepted"
         return None, str(detail)
+    _print_upload_warnings(result)
 
     workflow_id = getattr(result, "workflow_id", None) or args.name
     if not workflow_id:
         return None, "upload accepted but no workflow name resolved; pass --name explicitly."
-    return workflow_id, None
+    return (workflow_id, _str_attr(result, "version") or None), None
 
 
-def _print_trigger_summary(result, args: Namespace) -> int:
-    """Shared plain/JSON summary for trigger-family command results."""
+def _print_upload_warnings(result: object) -> None:
+    """The server's upload advice (e.g. a version suffix in the name)."""
+    warnings = getattr(result, "warnings", None)
+    for warning in warnings if isinstance(warnings, list) else []:
+        print(f"warning     : {warning}", file=sys.stderr)
+
+
+def _print_trigger_summary(
+    result, args: Namespace, name: str = "", version: str | None = None
+) -> int:
+    """Shared plain/JSON summary for trigger-family command results; the
+    ``workflow : name@version`` line names what runs (ADR-113 D-3)."""
     if args.as_json:
         print(json.dumps(_status_to_dict(result), indent=2, default=str))
         return 0
 
     print(f"execution_id : {getattr(result, 'execution_id', '-')}")
     print(f"status       : {getattr(result, 'status', '-')}")
+    pinned = _str_attr(result, "workflow_version") or version or ""
+    _print_pin(name or _str_attr(result, "workflow_name"), pinned, "")
     if getattr(result, "error", None):
         print(f"error        : {result.error}")
         return 1
@@ -866,9 +1340,14 @@ def _cmd_upload(wf, args: Namespace) -> int:
         print(json.dumps(_status_to_dict(result), indent=2, default=str))
         return 0
     print(f"workflow_id : {getattr(result, 'workflow_id', '-')}")
+    if _str_attr(result, "version"):
+        print(f"version     : {result.version}")
     print(f"status      : {getattr(result, 'status', '-')}")
+    if _str_attr(result, "source_sha256"):
+        print(f"digest      : {_short_digest(result.source_sha256)}")
     if getattr(result, "message", None):
         print(f"message     : {result.message}")
+    _print_upload_warnings(result)
     if getattr(result, "error", None):
         print(f"error       : {result.error}")
         return 1
@@ -899,17 +1378,21 @@ def _cmd_watch(wf, args: Namespace) -> int:
         print("\nwatch stopped.", file=sys.stderr)
         return 0
     except Exception as exc:  # noqa: BLE001
-        print(f"Error: {exc}", file=sys.stderr)
+        _print_error(exc)
         return 1
     return _watch_exit_code(detail)
 
 
 def _watch_frame(wf, detail: dict, execution_id: str) -> str:
     """Render one watch frame: summary line + step DAG with statuses."""
+    workflow = workflow_ref_label(
+        str(detail.get("workflow_name") or "-"), str(detail.get("workflow_version") or "")
+    )
+    digest = _short_digest(detail.get("source_sha256"))
     lines = [
         f"watch {execution_id}",
-        f"status: {detail.get('status', 'unknown')}  "
-        f"workflow: {detail.get('workflow_name') or '-'}",
+        f"status: {detail.get('status', 'unknown')}  workflow: {workflow}"
+        + (f"  digest: {digest}" if digest else ""),
     ]
     steps = _execution_step_defs(wf, detail)
     if steps:
@@ -925,12 +1408,13 @@ def _watch_frame(wf, detail: dict, execution_id: str) -> str:
 
 
 def _execution_step_defs(wf, detail: dict) -> list:
-    """Step definitions from the workflow describe (best effort)."""
+    """Step definitions from the describe of the version the run pinned
+    (ADR-113 D-4; best effort)."""
     name = detail.get("workflow_name")
     if not name:
         return []
     try:
-        desc = wf.describe(name)
+        desc = wf.describe(name, version=detail.get("workflow_version") or None)
     except Exception:  # noqa: BLE001 — describe may 404 for ad-hoc runs
         return []
     return desc.get("steps") or []
@@ -959,6 +1443,7 @@ def _cmd_status(wf, args: Namespace) -> int:
         return 0
     print(f"execution_id : {getattr(result, 'execution_id', '-')}")
     print(f"status       : {getattr(result, 'status', '-')}")
+    _print_result_pin(result)
     progress = getattr(result, "progress", None)
     if progress is not None:
         print(f"progress     : {progress * 100:.1f}%")
@@ -1023,6 +1508,9 @@ def _workflow_to_dict(w) -> dict:
         "description": getattr(w, "description", None),
         "parameters": getattr(w, "parameters", []),
         "tags": getattr(w, "tags", []),
+        "version": _str_attr(w, "version"),
+        "versions": list(getattr(w, "versions", None) or []),
+        "source_sha256": _str_attr(w, "source_sha256"),
         **_ownership_fields(w),
     }
 
@@ -1046,6 +1534,9 @@ def _cmd_results(wf, args: Namespace) -> int:
         payload = {
             "execution_id": execution_id,
             "status": getattr(result, "status", None),
+            "workflow_name": _str_attr(result, "workflow_name"),
+            "workflow_version": _str_attr(result, "workflow_version"),
+            "source_sha256": _str_attr(result, "source_sha256"),
             "error": getattr(result, "error", None),
             "steps": steps,
             "artifacts": artifacts,
@@ -1054,6 +1545,7 @@ def _cmd_results(wf, args: Namespace) -> int:
         return 0
     print(f"execution_id : {execution_id}")
     print(f"status       : {getattr(result, 'status', '-')}")
+    _print_result_pin(result)
     if getattr(result, "error", None):
         print(f"error        : {result.error}")
     for name, step in steps.items():
@@ -1107,5 +1599,10 @@ def _status_to_dict(s) -> dict:
         "accepted",
         "message",
         "source_path",
+        # ADR-113: upload (version, warnings) and run pin (workflow_version).
+        "version",
+        "workflow_version",
+        "source_sha256",
+        "warnings",
     )
     return {k: getattr(s, k, None) for k in keys if hasattr(s, k)}

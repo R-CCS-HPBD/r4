@@ -17,7 +17,8 @@ typed answers with full probability distributions.
 While it is on, the harness uses it too (2026-10-02, ADR-076, which records the
 measurements). It reads
 unclear replies to a pending plan, adds an approval question before an
-auto-approved risky tool call that looks off-task, and drops false
+auto-approved risky tool call that looks off-task in chat/plan (autopilot
+records the doubt as an audit note and continues), and drops false
 "lessons". You don't call anything for these. `decision_evaluate` itself
 never needs approval: it scores, it does not act.
 

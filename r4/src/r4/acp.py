@@ -793,6 +793,11 @@ class _AgentSessionRuntime:
         session_id, request_token = self._ask_user_context()
         if request_token is None or session_id is None:
             return "[ask_user unavailable — no active interactive chat]"
+        session = self.sessions.get(session_id)
+        if getattr(session, "interaction_mode", "") == "autopilot":
+            from .companion.agent_settings import ask_user_auto_answer
+
+            return ask_user_auto_answer()
         return self._request_user_answer(session_id, request_token, question, options)
 
     def _ask_user_context(self) -> tuple[str | None, str | None]:

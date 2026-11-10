@@ -385,6 +385,16 @@ workflows = client.workflows.list_workflows()
 Other workflow verbs: `upload`, `describe`, `get_results`, `cancel`,
 `wait_for_completion`, `approve_gate`, and `lint_file` for offline validation.
 
+Versions (ADR-113, 2026-11-08): each row carries `version` (the default),
+`versions` (every registered one) and `source_sha256`;
+`list_workflows(all_versions=True)` returns one row per version. Every verb
+that names a workflow (`trigger`, `plan`, `describe`, `definition_package`,
+`export`, `delete`, `save_run_definition`) takes `version=` or the
+`"name@1.2.0"` shorthand; `r4.workflows.parse_workflow_ref("name@1.2.0")`
+returns `("name", "1.2.0")`. `adopt(from_name, name, version)` and
+`set_trigger_version(name, version | None)` cover migration and the trigger
+pin; run status and results carry `workflow_version` and `source_sha256`.
+
 ### `client.workflows.export()`
 
 ```python
@@ -401,10 +411,12 @@ that escape `dest_dir`. Container images are not included.
 ### `client.workflows.trigger()`
 
 ```python
+# 2026-11-08: keywords corrected to the SDK's (`parameters=`, `project_id=`).
 execution = client.workflows.trigger(
     "my-pipeline",
-    params={"key": "value"},
-    project="mylab",
+    version="1.2.0",          # optional; default: the highest registered
+    parameters={"key": "value"},
+    project_id="mylab",
 )
 ```
 

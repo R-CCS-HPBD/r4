@@ -21,6 +21,8 @@ TAINT_CLASSES: tuple[str, ...] = (
     "mcp_output",
     "web",
     "generic",
+    # ADR-114: text another of the user's sessions sent (session_inbox).
+    "session_message",
 )
 
 #: Companion tool name → taint class for results that count as untrusted
@@ -45,6 +47,8 @@ TOOL_TAINT_CLASSES: dict[str, str] = {
     "search": "web",
     "web_search": "web",
     "web_fetch": "web",
+    # ADR-114 D-4: another session's message is another agent's words.
+    "session_inbox": "session_message",
 }
 
 #: Name prefix → taint class for tools whose names are minted at runtime.

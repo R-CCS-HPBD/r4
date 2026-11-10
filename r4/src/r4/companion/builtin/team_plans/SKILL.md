@@ -34,11 +34,13 @@ and the result comes back as structured data you act on.
   user (on_tie: "report" only lists them). Never break a tie yourself.
 - "Did we miss anything?": completeness_critic (loop until dry). One question
   through several sources or tool sets: multi_modal_sweep.
-- A `gate` stops the run until the USER answers (ADR-066 class: cost,
-  competing_hypotheses, physical_action, direction_change). A gate is
-  never auto-approved, in any mode; a no, or no human to ask (a CLI run
-  without a terminal), stops the run `cancelled` with the gate named. Resume
-  replays a journalled answer; to ask again, the user runs
+- A local interactive `gate` asks in chat/plan; autopilot answers it with an
+  audit note and no human provenance (ADR-104 amendment 3). Server/loop-owned
+  durable approval gates are never auto-approved by that local rule. A gate is
+  never auto-approved in chat/plan; a no, or no decision lane (a CLI run
+  without a terminal), stops the run `cancelled` with the gate named. Human
+  resume replays a journalled answer; automatic gate answers are recomputed so
+  returning to chat cannot inherit them. To ask again, the user runs
   `r4 team plan resume <run_id> --from-phase <gate's phase>`
   (team_plan_run(resume=...) has no from_phase).
 - Project knowledge: a profile listing `knowledge_query` reads THIS
@@ -55,9 +57,10 @@ and the result comes back as structured data you act on.
 - status "running": the call returned before the run ended; poll
   team_plan_result(run_id). A `truncated` output names the path to read whole.
 - resume=<run_id> reruns only what changed; unchanged calls replay free.
-- team_plan_run always asks the user, in every mode (autopilot included):
-  approving its card grants that run's agents the card's SAFE tools for that
-  run only; any other tool an agent calls still follows the user's mode.
+- team_plan_run asks in chat/plan. Autopilot auto-answers its local card with
+  an audit note and creates no human-card grant; server/loop policy still
+  applies. After a real approval in chat/plan, the card grants that run's
+  agents its SAFE tools for that run only; other tools follow the user's mode.
 - team_plan_cancel(run_id) stops a running plan as a unit: agents in flight
   become `cancelled` nulls, the run ends `cancelled`, and a later resume
   replays its ok calls and reruns the cancelled ones.
@@ -82,9 +85,10 @@ and the result comes back as structured data you act on.
   An isolated agent may READ the project root but writes only its workspace.
   The text of a shell command is not contained: isolation separates parallel
   agents, it is not a sandbox (that comes with the server venue).
-- Isolated work reaches the project only through a `merge_back` step: it
-  shows the USER the diffs and applies them only on their yes (never
-  auto-approved; a no stops the run). A conflict (the project changed under
+- Isolated work reaches the project only through a `merge_back` step:
+  non-deleting batches run automatically in autopilot; a batch containing
+  deletions always asks, while chat/plan asks for the batch (a no stops the
+  run). A conflict (the project changed under
   a file, two workspaces changed one file differently), a symlink, a binary
   file or a path into .git is refused by name and nothing is written: read
   the null_reasons. Without a merge_back, isolated changes are discarded at

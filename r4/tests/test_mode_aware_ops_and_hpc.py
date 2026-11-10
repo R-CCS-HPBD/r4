@@ -9,8 +9,11 @@ durable helpers ride ``_api_prefix`` now — ``/gw`` behind the edge,
 
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 from unittest.mock import MagicMock
+
+import pytest
 
 from r4.config import Config
 
@@ -95,3 +98,42 @@ def test_durable_submit_failure_is_honest_and_submits_nothing(monkeypatch):
     assert out.startswith("Error: durable UMRS submit failed")
     assert "nothing was submitted" in out
     local.assert_not_called()
+
+
+_REFUSAL_DETAIL = (
+    "Site cluster-a runs user work under one login, a personal account of the "
+    "operator; only the listed projects may use it until the operator consents, "
+    "and project proj-a is not listed. (hpcaccess.project_not_allowed)"
+)
+
+
+def _refused_post(*_args, **_kwargs):
+    """The real r4 mapping of UMRS's typed 403 (ADR-112 hpcaccess.*)."""
+    from r4._http import raise_for_status
+
+    response = SimpleNamespace(
+        status_code=403,
+        text=json.dumps({"detail": _REFUSAL_DETAIL}),
+        headers={"x-platform-error-code": "hpcaccess.project_not_allowed"},
+    )
+    raise_for_status(response)
+
+
+@pytest.mark.parametrize("armed", [False, True])
+def test_a_site_refusal_reaches_the_agent_whole_with_its_code(monkeypatch, armed):
+    """Plan §3 A.3.2 (review 2026-11-08): ``hpc_submit`` passes the typed
+    ``hpcaccess.*`` code through. Before, the 403 was cut to 120 characters
+    (the code, at the end, was lost), dressed as "gateway unreachable" with
+    retry advice, and an armed session dropped it entirely."""
+    from r4.companion import tools as tools_mod
+
+    client = SimpleNamespace(_api_prefix="/gw", post=_refused_post)
+    monkeypatch.setattr("r4.client.Client", lambda: client)
+    monkeypatch.setattr(tools_mod, "_WORKFLOW_ARMED", armed)
+
+    out = tools_mod._hpc_submit_via_umrs("/tmp/job.sh")
+
+    assert out is not None
+    assert "hpcaccess.project_not_allowed" in out
+    assert "proj-a is not listed" in out
+    assert "gateway is reachable" not in out and "legacy sbatch" not in out

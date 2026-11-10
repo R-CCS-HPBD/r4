@@ -127,6 +127,10 @@ commit fails fast there too.
   pass — install them (`uv pip install radon xenon lizard`, `shellcheck`) so
   the local run mirrors CI.
 
+## Hosted SDK log safety
+
+- Give every large-string `parametrize` case an explicit short, single-line ID. Pytest otherwise embeds the complete argument in every verbose xdist event; on 2026-11-10 this produced multiline SDK payloads over 100 KiB and truncated hosted logs immediately before the actionable line. `r4/tests/test_harness_args_budget.py::test_planning_args_parameter_ids_stay_log_safe` guards that case; compacting IDs must never remove or weaken a test case.
+
 ## DO NOT
 
 - Skip running the script because "it's a small change"

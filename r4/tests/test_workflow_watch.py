@@ -14,7 +14,7 @@ class _FakeWf:
         self._desc = desc or {}
         self._raise = raise_desc
 
-    def describe(self, name):
+    def describe(self, name, version=None):
         if self._raise:
             raise RuntimeError("no such workflow")
         return self._desc

@@ -459,6 +459,11 @@ export interface AgentRuntime {
   updatedAt: string;
   progress?: number;
   errorMessage?: string;
+  /** Companion subagent lineage, when supplied by the backend. */
+  sessionId?: string;
+  parentSessionId?: string;
+  parentAgentId?: string;
+  subagentTurn?: number;
 }
 
 // ── Research Queue Types ────────────────────────────────────────────────

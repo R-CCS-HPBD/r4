@@ -7,8 +7,8 @@
  *   session-keyed teamup lines on theirs;
  * - `/teamup on plan:<template>` (wave-intercepts) checks the template,
  *   arms it, and the next chat message runs `team.plan_run` with it as goal;
- * - a never-auto approval (MD-5) is never remembered or answered by rule,
- *   and every card names the agent that asks;
+ * - a never-auto classification is never remembered or answered by a UI rule;
+ *   the local autopilot resolver may auto-answer it, and cards name their agent;
  * - the Work pane lists plan runs with status, agents and cost; Enter reads
  *   the result, `c` cancels.
  */
@@ -22,6 +22,7 @@ import {
   agentResultLines,
   applyPlanEvent,
   isPlanEvent,
+  planEventLine,
   planRowLabel,
   teamAgentChips,
   type PlanEventLine,
@@ -132,6 +133,13 @@ describe("plan-live", () => {
       line("agent_result", { agent: "a", preview: "A" }),
     ];
     expect(agentResultLines(ring)).toEqual(["✓ a — A", "✓ b — B"]);
+  });
+
+  it("shows automatic gate provenance and its autopilot notes", () => {
+    expect(planEventLine(line("gate_answered", { gate: "review", approved: true, decided_by: "autopilot" })))
+      .toBe("gate review → approved · autopilot");
+    expect(planEventLine(line("plan_log", { text: "[autopilot] never_auto ask auto-answered" })))
+      .toBe("[autopilot] never_auto ask auto-answered");
   });
 
   it("team rows show agents only when reported (slice 4: no budget chip)", () => {

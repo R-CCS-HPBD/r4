@@ -1,7 +1,8 @@
 """Pins for the maintainer's ADR-092 decisions of 2026-10-11 and the slice-1
 open items they closed.
 
-- MD-5: ``team_plan_run`` is never auto-approved, autopilot included.
+- MD-5: historical never-auto classification; ADR-104 A3 resolves it locally
+  in autopilot without a human-card grant.
 - MD-6: forks do not inherit ask-mode for every read; approving a plan's card
   grants the card's SAFE tools to that run's agents, for that run only.
 - MD-7: teamup role turns run on the plan agents' per-round hooks (the lead
@@ -176,9 +177,10 @@ def test_a_grant_never_bypasses_the_server_trust_allowlist() -> None:
     assert fork.check("file_read", {"path": "a.py"}) is True
     assert fork.check("grep_search", {"pattern": "x"}) is True
     assert asked == []
-    assert fork.check("file_edit", {"path": "a.py"}) is False
-    assert [tool for tool, _ in asked] == ["file_edit"]
-    assert "allowlist" in asked[0][1]
+    decision = fork.decide("file_edit", {"path": "a.py"})
+    assert (decision.behavior, decision.source) == ("ask", "trust_allowlist")
+    assert fork.check("file_edit", {"path": "a.py"}) is True
+    assert asked == []
 
 
 @pytest.mark.parametrize(

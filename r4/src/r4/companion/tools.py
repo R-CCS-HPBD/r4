@@ -1324,6 +1324,30 @@ def _hpc_submit(script_path: str, dry_run: bool = False) -> str:
         return f"Error submitting job: {e}"
 
 
+_HPC_ACCESS_CODE = re.compile(r"hpcaccess\.[a-z_]+")
+
+
+def _hpc_access_refusal(error: Exception) -> str | None:
+    """The tool result for a site-policy refusal (ADR-112 ``hpcaccess.*``),
+    or None for any other failure.
+
+    The server reached a decision, so this is neither "unreachable" nor
+    retryable: the message and its typed code go back whole (plan §3 A.3.2),
+    in armed sessions too, never cut to 120 characters or replaced by retry
+    advice (review 2026-11-08).
+    """
+    text = str(error)
+    code = getattr(error, "error_code", None) or ""
+    match = _HPC_ACCESS_CODE.search(f"{code} {text}")
+    if match is None:
+        return None
+    return (
+        f"Error: the site refused this job ({match.group(0)}): {text}. Nothing was "
+        "submitted; retrying will not help. Ask the site operator or an "
+        "administrator about the project's access to this site."
+    )
+
+
 def _hpc_submit_via_umrs(script_path: str) -> str | None:
     """POST an hpc_script durable job; None when UMRS is unreachable (legacy lane)."""
     try:
@@ -1339,6 +1363,9 @@ def _hpc_submit_via_umrs(script_path: str) -> str | None:
             },
         )
     except Exception as e:
+        refusal = _hpc_access_refusal(e)
+        if refusal is not None:
+            return refusal
         # UMRS unreachable: armed sessions get None (the caller refuses by
         # name). Unarmed sessions get the honest error — nothing submitted
         # anywhere (the earlier note claimed a local-sbatch fallback; the

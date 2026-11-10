@@ -247,7 +247,6 @@ def _maybe_run_onboard_health_check(profile: str, project_id: str) -> None:
     _check_gateway_readiness(client)
     _check_rag_readiness(client, project_id)
     _check_mcp_readiness(client)
-    _maybe_enroll_hpc(client)
 
 
 def _check_gateway_readiness(client) -> None:
@@ -279,104 +278,6 @@ def _check_mcp_readiness(client) -> None:
         print(f"  ✓ MCP registry reachable ({count} servers registered)")
     except Exception:
         print("  – MCP registry not reachable (may not be deployed yet)")
-
-
-def _maybe_enroll_hpc(client) -> None:
-    try:
-        caps = client.site_capabilities()
-    except Exception:
-        return
-    if caps.get("slurm_delegation") != "per_user_ssh":
-        return
-    pubkey_path = caps.get("service_pubkey_path", "")
-    proxy_path = caps.get("slurm_proxy_path", "")
-    if pubkey_path and proxy_path:
-        print(
-            (
-                f"\n  This site ({caps.get('site_name', 'unknown')}) "
-                f"supports per-user Slurm delegation."
-            )
-        )
-        print("  (Optional — jobs will use the shared site account if you skip.)")
-        if _yes_no("  Enroll your SSH key for per-user HPC job submission?"):
-            _enroll_hpc_ssh(pubkey_path, proxy_path)
-    else:
-        print("  ⚠ Site uses per-user delegation but pubkey/proxy paths not configured")
-
-
-def _enroll_hpc_ssh(pubkey_path: str, proxy_path: str) -> None:
-    """Append UMRS service key to ~/.ssh/authorized_keys with forced-command.
-
-    This is safe because:
-    - The forced-command restricts the key to Slurm CLI commands only
-    - The ``restrict`` keyword disables PTY, forwarding, agent, X11
-    - The user sees and confirms the key fingerprint before enrollment
-    - Duplicates are detected and skipped
-    """
-    from pathlib import Path
-
-    pubkey_file = Path(pubkey_path)
-    if not pubkey_file.is_file():
-        print(f"  ✗ Service pubkey not found at: {pubkey_path}")
-        print("    (Are you on the login node with access to the shared filesystem?)")
-        return
-
-    pubkey = pubkey_file.read_text().strip()
-    parts = pubkey.split()
-    if len(parts) < 2:
-        print(f"  ✗ Invalid public key format in {pubkey_path}")
-        return
-
-    _print_service_key_fingerprint(parts[1], proxy_path)
-
-    if not _yes_no("\n  Authorize this key for Slurm-only access?"):
-        print("  – Skipped. Re-run 'r4 login' to enroll later.")
-        return
-
-    proxy_file = Path(proxy_path)
-    if not proxy_file.is_file():
-        print(f"  ⚠ Warning: proxy script not found at {proxy_path}")
-        print("    Jobs will fail until the proxy is deployed. Continuing enrollment...")
-
-    _append_authorized_key(pubkey, parts[1], proxy_path)
-
-
-def _print_service_key_fingerprint(encoded_key: str, proxy_path: str) -> None:
-    print("\n  UMRS service key fingerprint:")
-    print(f"    SHA256:{_service_key_fingerprint(encoded_key)}")
-    print(f"  Forced command: {proxy_path}")
-    print("  Restrictions: no-pty, no-port-forwarding, no-agent-forwarding, no-X11")
-
-
-def _service_key_fingerprint(encoded_key: str) -> str:
-    import base64
-    import hashlib
-
-    try:
-        raw = base64.b64decode(encoded_key)
-        digest = hashlib.sha256(raw).hexdigest()
-        return ":".join(digest[i : i + 2] for i in range(0, 32, 2))
-    except Exception:
-        return "(unable to compute)"
-
-
-def _append_authorized_key(pubkey: str, encoded_key: str, proxy_path: str) -> None:
-    from pathlib import Path
-
-    ak_line = f'command="{proxy_path}",restrict {pubkey}\n'
-    ak_path = Path.home() / ".ssh" / "authorized_keys"
-    ak_path.parent.mkdir(mode=0o700, exist_ok=True)
-
-    if ak_path.exists():
-        existing = ak_path.read_text()
-        if encoded_key in existing:
-            print("  ✓ UMRS service key already enrolled")
-            return
-
-    with open(ak_path, "a") as f:
-        f.write(ak_line)
-    ak_path.chmod(0o600)
-    print("  ✓ UMRS service key enrolled in ~/.ssh/authorized_keys")
 
 
 @command

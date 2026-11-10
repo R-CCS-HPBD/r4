@@ -274,7 +274,7 @@ eliminates the need for a manual `run-workflow` step.
 | Field | Type | Description |
 |-------|------|-------------|
 | `name` | string | Unique workflow name |
-| `version` | string | Version string (e.g., "1.0") |
+| `version` | string | Required SemVer `MAJOR.MINOR.PATCH` (e.g. "1.2.0"); each registered version is kept and can be chosen with `name@version` ([ADR-113](../adr/113-workflow-versions.md), dated 2026-11-08; not landed yet: until then the server keeps one copy per name and runs the first-registered version) |
 | `description` | string | Human-readable description |
 | `source.type` | string | Always "uploaded" |
 | `source.path` | string | Path to step code (usually ".") |

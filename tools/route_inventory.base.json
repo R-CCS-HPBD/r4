@@ -2195,6 +2195,14 @@
       "auth": "verified"
     },
     {
+      "path": "/umrs/projects/{project_id}/hpc-usage",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
       "path": "/umrs/projects/{project_id}/session-policy",
       "methods": [
         "GET"
@@ -2675,6 +2683,118 @@
       "auth": "verified"
     },
     {
+      "path": "/umrs/sites/me/hpc",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/sites/me/hpc",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/sites/me/hpc/control",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/sites/me/hpc/gate",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/sites/me/hpc/grant-proposal",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/sites/me/hpc/grants",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/sites/me/hpc/grants",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/sites/me/hpc/grants/{grant_id}/cancel",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/sites/me/hpc/links",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/sites/me/hpc/links/{project_id}",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/sites/me/hpc/site-profile",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/sites/me/hpc/transport-key",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/sites/me/hpc/usage",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/sites/me/hpc/verify",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
       "path": "/umrs/skills",
       "methods": [
         "GET"
@@ -2745,6 +2865,14 @@
       ],
       "router": "fastapi.routing",
       "auth": "verified"
+    },
+    {
+      "path": "/umrs/status/service-badge",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "none (public by design, adr-106 amendment)"
     },
     {
       "path": "/umrs/traces",
@@ -3195,6 +3323,14 @@
       "auth": "edge-auth(nginx)"
     },
     {
+      "path": "/umrs/workflows/adopt",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
       "path": "/umrs/workflows/executions/{execution_id}",
       "methods": [
         "GET"
@@ -3323,6 +3459,14 @@
       "auth": "verified"
     },
     {
+      "path": "/umrs/workflows/{workflow_name}/intent-proposal",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
       "path": "/umrs/workflows/{workflow_name}/package",
       "methods": [
         "GET"
@@ -3353,6 +3497,14 @@
       ],
       "router": "fastapi.routing",
       "auth": "edge-auth(nginx)"
+    },
+    {
+      "path": "/umrs/workflows/{workflow_name}/triggers",
+      "methods": [
+        "PUT"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
     },
     {
       "path": "/umrs/zmq/server-key",
@@ -3397,7 +3549,7 @@
   ],
   "summary": {
     "open(white)": 6,
-    "verified": 245,
+    "verified": 263,
     "edge-auth(nginx)": 140,
     "open(probe)": 1,
     "admin(jwt|verified-admin)": 8,
@@ -3405,6 +3557,7 @@
     "suspect-param": 1,
     "admin-token(x-admin-token)": 6,
     "open(discovery)|verified(s3cfg)": 1,
-    "owner-or-admin-token(governance_user_id|x-admin-token)": 3
+    "owner-or-admin-token(governance_user_id|x-admin-token)": 3,
+    "none (public by design, adr-106 amendment)": 1
   }
 }

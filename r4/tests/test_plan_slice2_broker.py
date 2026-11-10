@@ -4,8 +4,8 @@
   argument, the run's project's graphs only, numbered passages, retrieval
   refs with the result, ``rag_chunk`` taint (ADR-039) — reusing the
   companion's own tool, sized by the reader (ADR-093 D-14).
-- Gates: asked through the never-auto approval path, never auto-approved,
-  refused by name without a human; the CLI's terminal lane.
+- Gates: classified through the never-auto rung, asked in chat/plan and
+  auto-decided in autopilot; missing decision lanes refuse; the CLI terminal lane.
 - ``ApprovalRequest.agent``: which agent asked, on the bridge and in the
   control schema.
 
@@ -296,10 +296,40 @@ async def test_deny_mode_refuses_a_gate_without_asking() -> None:
 
 
 async def test_autopilot_answers_a_gate_without_asking() -> None:
-    """ADR-104 amendment 2: autopilot answers a plan gate (noted), no card."""
+    """ADR-104 amendment 3: no callback or card, and no false human provenance."""
     decision, asked = await _ask_a_gate(PermissionMode.TRUST)
-    assert decision.approved is True
+    assert (decision.approved, decision.decided_by) == (True, "autopilot")
     assert asked == []
+
+
+async def test_callback_free_autopilot_gate_is_approved_by_autopilot() -> None:
+    lead = PermissionManager(PermissionMode.TRUST)
+    broker, _ = _broker(lambda c, t: "x", _Client(), permission_manager=lead)
+    decision = await broker.ask_gate(_gate_request())
+    assert (decision.approved, decision.answered, decision.decided_by) == (
+        True,
+        True,
+        "autopilot",
+    )
+    assert any("never_auto ask auto-answered" in note for note in decision.notes)
+
+
+async def test_autopilot_merge_back_deletion_still_asks() -> None:
+    asked: list[str] = []
+    lead = PermissionManager(
+        PermissionMode.TRUST,
+        approval_callback=lambda tool, *_a: asked.append(tool) or False,
+    )
+    broker, _ = _broker(lambda c, t: "x", _Client(), permission_manager=lead)
+    request = _gate_request()
+    request.metadata["deletions"] = ["old.py"]
+    decision = await broker.ask_gate(request)
+    assert (decision.approved, decision.answered, decision.decided_by) == (
+        False,
+        True,
+        "human",
+    )
+    assert asked == [GATE_TOOL]
 
 
 @pytest.mark.parametrize("mode", [PermissionMode.ASK_ALWAYS, PermissionMode.AUTO_SAFE])
@@ -319,13 +349,10 @@ async def test_a_human_no_is_an_answered_rejection() -> None:
     assert (decision.approved, decision.answered) == (False, True)
 
 
-async def test_a_gate_without_a_human_lane_refuses_by_name() -> None:
+async def test_a_gate_without_a_decision_lane_refuses_by_name() -> None:
     broker, _ = _broker(lambda c, t: "x", _Client())  # the CLI: no manager, no lane
     decision = await broker.ask_gate(_gate_request())
     assert (decision.approved, decision.answered, decision.reason) == (False, False, "no_human")
-    lead = PermissionManager(PermissionMode.TRUST)  # autopilot with no callback
-    broker, _ = _broker(lambda c, t: "x", _Client(), permission_manager=lead)
-    assert (await broker.ask_gate(_gate_request())).reason == "no_human"
 
 
 async def test_a_gate_lane_of_its_own_never_reaches_the_agents() -> None:

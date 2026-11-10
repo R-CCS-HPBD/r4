@@ -53,7 +53,7 @@ def test_plan_returns_the_signed_plan(client):
     )
     assert out["digest"] == PLAN["digest"]
     client.workflows.plan.assert_called_once_with(
-        "relax", parameters={"steps": 3}, input_files=None
+        "relax", parameters={"steps": 3}, input_files=None, version=None
     )
 
 

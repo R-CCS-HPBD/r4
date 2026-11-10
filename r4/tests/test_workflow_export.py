@@ -261,7 +261,7 @@ def test_cli_prints_path_and_counts(tmp_path, capsys):
 
     assert _cmd_export(wf, args) == 0
 
-    wf.export.assert_called_once_with("seg", None, overwrite=True)
+    wf.export.assert_called_once_with("seg", None, overwrite=True, version=None)
     out = capsys.readouterr().out
     assert f"exported seg -> {tmp_path / 'seg.zip'}" in out
     assert "files: 2  excluded: 1" in out

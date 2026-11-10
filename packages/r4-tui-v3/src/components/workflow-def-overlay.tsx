@@ -8,7 +8,9 @@
  * One scrolling body (↑↓ PgUp PgDn Home End, mouse wheel); code files stay
  * collapsed until Enter/click (←→ pick the file). `r` puts the trigger line
  * in the composer and closes the card and pane so the composer has the keys;
- * `e` (2026-11-07) saves the workflow as a verified zip (lib/workflow-export.ts).
+ * `e` (2026-11-07) saves the workflow as a verified zip (lib/workflow-export.ts);
+ * `v` / `V` (ADR-113 WV4, 2026-11-09) step to the next / previous registered
+ * version (the overlay id becomes `name@version`, and `r` pins that version).
  * Esc closes via the global overlay sweep. Capability-detected: slots with
  * no data stay hidden; a backend without the route shows the honest error.
  */
@@ -17,8 +19,9 @@ import { For, Show, createEffect, createMemo, createSignal, on } from "solid-js"
 import { useTerminalDims } from "../lib/terminal-dims";
 import type { KeyEvent, ScrollBoxRenderable } from "@opentui/core";
 import { workspace, actions } from "../stores";
-import { umrsWorkflowStore } from "../stores/umrs-workflow";
-import { cardTriggerCommand, workflowCardRows, type CardTone } from "../lib/workflow-card-rows";
+import { umrsWorkflowActions, umrsWorkflowStore } from "../stores/umrs-workflow";
+import { cardTriggerCommand, cardVersion, workflowCardRows, type CardTone } from "../lib/workflow-card-rows";
+import { cycleVersion, workflowRefLabel } from "../lib/workflow-versions";
 import { isSharedInCatalog } from "../lib/workflow-sharing";
 import { exportWorkflowWithNotice } from "../lib/workflow-export";
 import { palette } from "../themes";
@@ -70,6 +73,12 @@ export function WorkflowDefOverlay() {
   const error = createMemo(() => {
     const id = name();
     return id ? umrsWorkflowStore.definitionErrors[id] : undefined;
+  });
+
+  /** `name@version` once the package says which version it is (ADR-113). */
+  const title = createMemo(() => {
+    const d = detail();
+    return d && cardVersion(d) ? workflowRefLabel(d.workflow_name, d.version) : (name() ?? "");
   });
 
   let scrollRef: ScrollBoxRenderable | undefined;
@@ -144,6 +153,17 @@ export function WorkflowDefOverlay() {
     return true;
   };
 
+  /** `v` / `V` (ADR-113 WV4): show the next / previous registered version;
+   * the card re-reads that version's package and `r` then pins it. */
+  const pickVersion = (step: number) => {
+    const d = detail();
+    const next = d ? cycleVersion(d.versions ?? [], d.version, step) : undefined;
+    if (!d || !next) return;
+    const ref = workflowRefLabel(d.workflow_name, next);
+    actions.setWorkflowDefId(ref);
+    if (!umrsWorkflowStore.definitions[ref]) void umrsWorkflowActions.fetchDefinition(ref).catch(() => undefined);
+  };
+
   /** `e`: save this workflow as a verified zip (cwd, else ~/Downloads); the card stays open. */
   const exportDefinition = () => {
     const id = name();
@@ -170,11 +190,19 @@ export function WorkflowDefOverlay() {
     enter: toggleSelectedFile,
   };
   /** Letter keys: only without Ctrl/Meta (those chords belong to the app). */
-  const letterKeys: KeyActions = { r: draftTrigger, e: exportDefinition };
+  const letterKeys: KeyActions = {
+    r: draftTrigger,
+    e: exportDefinition,
+    v: () => pickVersion(1),
+    V: () => pickVersion(-1),
+  };
 
   const keyAction = (event: KeyEvent, key: string): (() => void) | undefined => {
     const plain = !event.ctrl && !event.meta;
-    return ownAction(fileKeys, key) ?? (plain ? ownAction(letterKeys, key) : undefined);
+    if (!plain) return ownAction(fileKeys, key);
+    // Shift picks the upper-case verb (V) where one exists; Shift+r stays r.
+    const upper = event.shift ? ownAction(letterKeys, key.toUpperCase()) : undefined;
+    return ownAction(fileKeys, key) ?? upper ?? ownAction(letterKeys, key);
   };
 
   const handleKey = (event: KeyEvent) => {
@@ -196,7 +224,7 @@ export function WorkflowDefOverlay() {
         padding={2}
       >
         <box height={1} flexShrink={0} overflow="hidden">
-          <text fg={palette.accent}>{`workflow definition — ${name()}`}</text>
+          <text fg={palette.accent}>{`workflow definition — ${title()}`}</text>
         </box>
         <Show when={error()}>
           <box height={1} marginTop={1} flexShrink={0} overflow="hidden">
@@ -239,7 +267,7 @@ export function WorkflowDefOverlay() {
         </scrollbox>
         <box height={1} marginTop={1} flexShrink={0} overflow="hidden">
           <text fg={palette.fgDim}>
-            r trigger line → composer · e export zip · ↑↓ PgUp PgDn scroll · ←→ file · Enter/click code · Esc close
+            {`r trigger line → composer · ${(detail()?.versions?.length ?? 0) > 1 ? "v/V version · " : ""}e export zip · ↑↓ PgUp PgDn scroll · ←→ file · Enter/click code · Esc close`}
           </text>
         </box>
         {/* captureText: letters other than `r`/`e` never reach space shortcuts under the card. */}

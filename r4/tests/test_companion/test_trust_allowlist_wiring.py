@@ -23,17 +23,17 @@ class TestServerTrusted:
         pm = _perm(PermissionMode.TRUST)
         pm.set_trust_checker(lambda tool: tool == "shell_exec")
         assert pm.check("shell_exec", {}) is True
-        # not on the allowlist → explicit approval path → no callback → deny
-        assert pm.check("hpc_submit", {}) is False
+        # amendment 3: a policy miss still asks in the decision, then autopilot answers.
+        assert pm.check("hpc_submit", {}) is True
 
-    def test_checker_exception_denies(self):
+    def test_checker_exception_does_not_stop_autopilot(self):
         pm = _perm(PermissionMode.TRUST)
 
         def boom(tool: str) -> bool:
             raise RuntimeError("server down")
 
         pm.set_trust_checker(boom)
-        assert pm.check("shell_exec", {}) is False
+        assert pm.check("shell_exec", {}) is True
 
     def test_positive_results_cached(self):
         calls: list[str] = []
@@ -51,7 +51,7 @@ class TestServerTrusted:
     def test_set_trust_checker_none_restores_legacy(self):
         pm = _perm(PermissionMode.TRUST)
         pm.set_trust_checker(lambda tool: False)
-        assert pm.check("shell_exec", {}) is False
+        assert pm.check("shell_exec", {}) is True
         pm.set_trust_checker(None)
         assert pm.check("shell_exec", {}) is True
 
@@ -84,8 +84,8 @@ class TestDurableApprovalRecorder:
     def test_never_auto_tools_still_pinned(self):
         pm = _perm(PermissionMode.TRUST)
         pm.set_trust_checker(lambda tool: True)
-        # knowledge_graph_decide is NEVER_AUTO — even server allowlist can't skip
-        assert pm.check("knowledge_graph_decide", {"proposal_id": "x"}) is False
+        # The never-auto rung classifies it; amendment 3 answers locally.
+        assert pm.check("knowledge_graph_decide", {"proposal_id": "x"}) is True
         assert "--" not in repr(pm)
 
     def test_non_trust_modes_unaffected(self):

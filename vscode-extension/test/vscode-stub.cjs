@@ -23,6 +23,19 @@ module.exports = {
       return typeof uri === "string" ? uri : uri?.fsPath ?? "";
     },
   },
+  /** Tree views (workflow-versions.test.mjs): the fields providers set. */
+  TreeItemCollapsibleState: { None: 0, Collapsed: 1, Expanded: 2 },
+  TreeItem: class {
+    constructor(label, collapsibleState) {
+      this.label = label;
+      this.collapsibleState = collapsibleState;
+    }
+  },
+  ThemeIcon: class {
+    constructor(id) {
+      this.id = id;
+    }
+  },
   LanguageModelChatMessageRole: { User: 1, Assistant: 2 },
   LanguageModelTextPart: class {
     constructor(value) {

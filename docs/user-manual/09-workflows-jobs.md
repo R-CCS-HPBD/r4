@@ -13,7 +13,11 @@ r4 workflow list
 r4 workflow list --scope system
 r4 workflow list --name "my-pipeline"
 r4 workflow list --all   # admin only: the whole catalog across owners
+r4 workflow list --all-versions   # one row per registered version
 ```
+
+Each row shows the workflow's default `VERSION` and how many `VERSIONS` are
+registered (see [Workflow versions](#workflow-versions-2026-11-08-adr-113)).
 
 The default view lists your own workflows, the platform's `system`
 workflows, and rows whose access list (below) admits you — on both the
@@ -106,6 +110,7 @@ r4 workflow run ./my-workflow/ --param data_path=/projects/team/data.csv --wait
 ```json
 {
   "name": "protein-analysis",
+  "version": "1.0.0",
   "description": "Cleans a protein table, keeps hits above a cutoff, and writes a report.",
   "source": {"type": "local_path", "path": "./steps/"},
   "parameter_schema": {
@@ -141,6 +146,70 @@ before this rule keep running unchanged.
 
 See [demos/06_complex_workflow/workflow.json](../../demos/06_complex_workflow/workflow.json)
 for a complete example.
+
+### Workflow versions (2026-11-08, ADR-113)
+
+The `version` in `workflow.json` is part of the definition: a semantic
+version `MAJOR.MINOR.PATCH` with an optional `-prerelease` (`1.2.0`,
+`2.0.0-rc.1`). UMRS keeps every version you upload, and a version never
+changes once registered. Keep the version out of the workflow **name**: name
+the workflow `example-cnn-track` and bump `version`, not
+`example-cnn-track-v0.2.9` (an upload with such a name gets a warning).
+This needs a UMRS with ADR-113 support; older servers ignore the version.
+
+- **Upload** prints the registered version and its code digest. Re-uploading
+  the same version with the same files is a no-op (`status: unchanged`); the
+  same version with other files is refused: bump `version`. An upload without
+  a valid `version` is refused by name.
+- **Choose a version** with `NAME@VERSION` or `--version VERSION` on every
+  command that names a workflow (`show`, `trigger`, `export`, `delete`,
+  `definition save --workflow`). Without one, the highest registered version
+  runs (pre-releases only when no release exists). Giving two versions that
+  disagree is an error.
+- **`run`** uploads, then triggers exactly the version it just registered.
+- **Runs record what they ran**: `status`, `results` and `watch` show
+  `workflow : NAME@VERSION` and the code digest; a saved run definition
+  replays its recorded version.
+
+```bash
+r4 workflow versions protein-analysis          # every version; * marks the default
+r4 workflow show protein-analysis@1.1.0
+r4 workflow trigger protein-analysis --version 1.1.0 --param data_path=...
+r4 workflow delete protein-analysis@1.0.0      # one version; without @: every version
+r4 workflow triggers protein-analysis --pin 1.1.0   # ingest triggers run 1.1.0 (--unpin: default)
+# a workflow that kept its version in the name (owner or admin):
+r4 workflow adopt example-cnn-track-v0.2.9 --as example-cnn-track --version 0.2.9
+```
+
+`adopt` registers the old workflow's files as `NAME@VERSION` and carries its
+access list and triggers; the old name's triggers are switched off, and you
+can delete the old name once nothing uses it. Access (`r4 workflow access`)
+belongs to the name and covers every version.
+
+**In the console (TUI v3, 2026-11-09).**
+- `/workflow list` and the Work pane show each workflow with its default
+  version and how many others exist: `relax · v1.2.0 (+2)`.
+- In the Work pane, `v` on a workflow row picks the next version (`V` the
+  previous one); the row then reads `relax@1.1.0 · picked (+2)`. Enter opens
+  the definition card of that version and `t` runs it.
+- The definition card lists every version (the default marked), the code
+  digest, and `code · unavailable` for a version whose files are gone. `v` /
+  `V` step through the versions in the card; `r` puts
+  `/workflow trigger NAME@VERSION …` in the composer, pinned to the version
+  the card shows.
+- `/workflow show NAME@VERSION` describes that version. Runs (Work pane rows,
+  the execution overlay, `/workflow status|results`) show `NAME@VERSION` and
+  the first 12 characters of the code digest.
+
+**In VS Code (2026-11-09).** The Workflows view labels each workflow with
+`v<default> (+N)`. A workflow with several versions expands to one row per
+version (the default marked); the trigger button on a version row runs that
+version. Triggering such a workflow's own row asks which version to run, the
+default first. A typed `NAME@VERSION` in the trigger prompt runs that version,
+and the confirmation names the version the run pinned.
+
+Against a server without ADR-113 support the console and VS Code show the
+workflow as one version and never ask for one.
 
 ### Triggering a Workflow
 
@@ -241,7 +310,14 @@ Introspect the subscriptions any time:
 
 ```bash
 r4 workflow triggers protein-analysis
+r4 workflow triggers protein-analysis --pin 1.1.0   # fire this version (ADR-113)
 ```
+
+A workflow with several versions fires **once** per event: the pinned
+version, else the default (highest) one. `r4 workflow triggers NAME@VERSION`
+shows what that version declares; an adopted old name shows its triggers as
+disabled. A version error prints the next step (for example, a version that
+is not registered points to `r4 workflow versions NAME`).
 
 Cron scheduling uses `r4 schedule add` (see [Schedule Management](#schedule-management)
 below) — the two mechanisms are separate by design.
@@ -431,10 +507,12 @@ from r4 import Client
 
 client = Client()
 
-# Workflows
-workflows = client.workflows.list_workflows()
-execution = client.workflows.trigger("my-pipeline", params={"key": "value"})
-status = client.workflows.status(execution.id)
+# Workflows (2026-11-08: keyword names corrected to the SDK's
+# `parameters=` and `execution_id`; versions per ADR-113)
+workflows = client.workflows.list_workflows()          # .version, .versions per row
+execution = client.workflows.trigger("my-pipeline@1.2.0", parameters={"key": "value"})
+status = client.workflows.status(execution.execution_id)
+print(status.workflow_version, status.source_sha256)
 
 # Jobs
 jobs = client.jobs.list(status="running")

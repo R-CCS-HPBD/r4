@@ -34,6 +34,14 @@ and its future was the open decision D-01/D-02.)
   `/health/ready` is the sidecar's own liveness. *(2026-10-30, issue #634:
   this line called `/health/ready` the aggregate; the rows and the reasoning
   are in [docs/architecture/design/apis.md §2](../docs/architecture/design/apis.md).)*
+- **Public service-model badge** (2026-11-07): `/status/models.json` is a
+  shields.io endpoint JSON (`label` "models", e.g. `6/6 up`), anonymous,
+  GET/HEAD only, its own rate-limit zone, a 30 s micro-cache, and no client
+  header, body or query string forwarded to UMRS
+  (`/umrs/status/service-badge`). Contract and the anonymous exception:
+  [ADR-106 amendment 2026-11-07](../docs/adr/106-amendment-2026-11-07-public-service-badge.md).
+  The public README consumes only #796's address-free `<site>-models.json`
+  publication, never this gateway's URL (D-7, 2026-11-10).
 
 ```
 r4 ──HTTPS + JWT──▶ NGINX :8080 ──auth_request──▶ sidecar :8081

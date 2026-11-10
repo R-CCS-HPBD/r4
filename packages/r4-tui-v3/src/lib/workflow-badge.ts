@@ -10,6 +10,7 @@
 import { umrsWorkflowStore, type UmrsWorkflowExecution } from "../stores/umrs-workflow";
 import { statusForStep } from "./workflow-graph-projection";
 import { latestExecution, liveExecutions } from "./workflow-graph-open";
+import { runDefinitionKey } from "./workflow-versions";
 
 /** Below this terminal width the badge is not shown at all. */
 export const WORKFLOW_BADGE_MIN_COLS = 100;
@@ -45,7 +46,8 @@ export interface StepProgress {
  * and the cached definition's steps (unreported steps are pending). */
 export function stepProgress(exec: UmrsWorkflowExecution): StepProgress {
   const statuses = stepStatuses(exec);
-  const defined = exec.workflow_name ? umrsWorkflowStore.definitions[exec.workflow_name]?.steps?.length : undefined;
+  const key = runDefinitionKey(exec);
+  const defined = key ? umrsWorkflowStore.definitions[key]?.steps?.length : undefined;
   const done = statuses.filter(stepSettled).length;
   return { done, total: Math.max(statuses.length, defined ?? 0), totalKnown: defined !== undefined };
 }

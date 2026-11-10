@@ -18,7 +18,7 @@ import shutil
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, BinaryIO, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, BinaryIO, Dict, List, Optional, cast
 from urllib.parse import quote
 
 from r4_contracts.workflows import (
@@ -28,12 +28,59 @@ from r4_contracts.workflows import (
     WorkflowResult,
     WorkflowStatus,
     WorkflowUploadResult,
+    parse_workflow_ref,
+    resolve_workflow_ref,
+    workflow_ref_label,
 )
 
 from .errors import R4ConnectionError, R4Error
 
 if TYPE_CHECKING:
     from .client import Client
+
+
+__all__ = [
+    "WorkflowClient",
+    "parse_workflow_ref",
+    "resolve_workflow_ref",
+    "workflow_ref_label",
+    "read_export_manifest",
+    "verify_export",
+    "extract_export",
+]
+
+
+def _workflow_ref(workflow_name: str, version: Optional[str] = None) -> tuple[str, Optional[str]]:
+    """``(name, version)`` of ``name[@X]`` + an explicit version (ADR-113 D-3);
+    R4Error names a malformed reference or two versions that disagree."""
+    try:
+        name, chosen = resolve_workflow_ref(workflow_name, version)
+    except ValueError as exc:
+        raise R4Error(str(exc)) from exc
+    return str(name), chosen
+
+
+def _version_query(version: Optional[str]) -> Optional[Dict[str, str]]:
+    """``?version=X`` for describe/delete/package/export; None = default."""
+    return {"version": version} if version else None
+
+
+def _str_list(value: Any) -> List[str]:
+    return [str(entry) for entry in value] if isinstance(value, list) else []
+
+
+def _catalog_versions(item: Dict[str, Any]) -> Dict[str, Any]:
+    """ADR-113 fields of one catalog row; empty from servers before versions."""
+    return {
+        "version": str(item.get("version") or ""),
+        "versions": _str_list(item.get("versions")),
+        "source_sha256": str(item.get("source_sha256") or ""),
+    }
+
+
+def _run_pin(data: Dict[str, Any]) -> tuple[str, str]:
+    """``(workflow_version, source_sha256)`` a run pinned (ADR-113 D-4)."""
+    return str(data.get("workflow_version") or ""), str(data.get("source_sha256") or "")
 
 
 def _catalog_ownership(item: Dict[str, Any]) -> Dict[str, Any]:
@@ -107,6 +154,25 @@ _EXPORT_UNLISTED = frozenset({EXPORT_MANIFEST, "workflow.json"})
 _EXPORT_TIMEOUT_S = 600.0
 
 
+class _CappedSink:
+    """An in-memory write target that refuses more than ``cap`` bytes."""
+
+    def __init__(self, cap: int) -> None:
+        self._cap = cap
+        self._chunks: list[bytes] = []
+        self._size = 0
+
+    def write(self, chunk: bytes) -> int:
+        self._size += len(chunk)
+        if self._size > self._cap:
+            raise R4Error(f"the workflow export is larger than {self._cap} bytes")
+        self._chunks.append(bytes(chunk))
+        return len(chunk)
+
+    def getvalue(self) -> bytes:
+        return b"".join(self._chunks)
+
+
 def _names_directory(dest: str | Path) -> bool:
     """*dest* ends with a separator (``exports/``): a directory is meant even
     when none exists yet. Checked on ``str(dest)`` because ``Path`` drops the
@@ -115,11 +181,14 @@ def _names_directory(dest: str | Path) -> bool:
     return str(dest).endswith(seps)
 
 
-def _export_target(workflow_name: str, dest: str | Path | None) -> Path:
-    """Where an export lands: ``./<name>.zip`` by default, ``<dir>/<name>.zip``
-    for an existing directory or a *dest* ending in a separator (the caller
-    creates it, parents included), else *dest* itself."""
-    filename = f"{workflow_name.replace('/', '_')}.zip"
+def _export_target(
+    workflow_name: str, dest: str | Path | None, version: Optional[str] = None
+) -> Path:
+    """Where an export lands: ``./<name>.zip`` (``./<name>@<version>.zip`` for
+    a chosen version) by default, ``<dir>/<that>`` for an existing directory
+    or a *dest* ending in a separator (the caller creates it, parents
+    included), else *dest* itself."""
+    filename = f"{workflow_ref_label(workflow_name, version).replace('/', '_')}.zip"
     if dest is None:
         return Path.cwd() / filename
     target = Path(dest).expanduser()
@@ -334,6 +403,7 @@ class WorkflowClient:
         project_id: Optional[str] = None,
         wait: bool = False,
         timeout: Optional[int] = None,
+        version: Optional[str] = None,
     ) -> WorkflowResult:
         """
         Trigger a workflow execution.
@@ -341,7 +411,10 @@ class WorkflowClient:
         Uses ZMQ transport when configured for direct mode, otherwise HTTP.
 
         Args:
-            workflow_id: ID of the workflow to trigger (alias: workflow_name).
+            workflow_id: Workflow to trigger (alias: workflow_name); ``name@X``
+                selects version X (ADR-113 D-3).
+            version: Exact version to run; None runs the default (highest
+                SemVer). Must agree with a ``name@X`` reference.
             input_files: List of S3 keys or file IDs to process.
             parameters: Workflow-specific parameters.
             project_id: Project context for the workflow.
@@ -351,6 +424,7 @@ class WorkflowClient:
         Returns:
             WorkflowResult with execution ID and status.
         """
+        workflow_id, version = _workflow_ref(workflow_id, version)
         run_params = dict(parameters or {})
         if input_files:
             run_params["input_files"] = input_files
@@ -358,10 +432,12 @@ class WorkflowClient:
         if effective_project_id:
             run_params.setdefault("project_id", effective_project_id)
 
-        run_spec = {
+        run_spec: Dict[str, Any] = {
             "workflow_name": workflow_id,
             "params": run_params,
         }
+        if version:
+            run_spec["version"] = version
 
         result = self._router.execute(
             "workflow_run",
@@ -382,16 +458,21 @@ class WorkflowClient:
         *,
         parameters: Optional[Dict[str, Any]] = None,
         input_files: Optional[List[str]] = None,
+        version: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Ask UMRS for a signed plan of a run (ADR-105 D-4); nothing runs.
 
         The answer carries what the run would use (lane, partition, account,
         GPU steps, an upper-bound wall time, quota), ``signed`` + ``digest``
         to commit it, and whether the project allows an auto commit.
+        ``version`` (or ``name@X``) plans that exact version (ADR-113 D-3).
         """
+        workflow_name, version = _workflow_ref(workflow_name, version)
         payload: Dict[str, Any] = {"parameters": dict(parameters or {})}
         if input_files:
             payload["input_files"] = list(input_files)
+        if version:
+            payload["version"] = version
         return self._parent.http.post(
             self._wf_url(f"/{workflow_name}/plan"),
             json_body=payload,
@@ -416,26 +497,39 @@ class WorkflowClient:
             headers=companion_headers() if callable(companion_headers) else None,
         )
 
-    def describe(self, workflow_name: str) -> Dict[str, Any]:
-        """Return workflow metadata and parameter schema."""
+    def describe(self, workflow_name: str, version: Optional[str] = None) -> Dict[str, Any]:
+        """Return workflow metadata and parameter schema.
+
+        ``version`` (or ``name@X``) describes that version; without one UMRS
+        describes the default. The answer carries ``version``, ``versions``
+        and ``source_sha256`` (ADR-113 D-3).
+        """
+        workflow_name, version = _workflow_ref(workflow_name, version)
         url = self._wf_url(f"/{workflow_name}")
         try:
-            return self._parent.http.get(url, timeout=self._config.timeout)
+            return self._parent.http.get(
+                url, params=_version_query(version), timeout=self._config.timeout
+            )
         except R4Error:
             raise
         except Exception as e:
             raise R4Error(f"Failed to describe workflow: {e}")
 
-    def definition_package(self, workflow_name: str) -> Dict[str, Any]:
+    def definition_package(
+        self, workflow_name: str, version: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Definition + registered code rows (2026-10-01).
 
         Work-pane definition card payload: describe fields, resources, the
         step graph and capped code files. A server without the route answers
         404 — callers surface that honestly, never fabricate a package.
         """
+        workflow_name, version = _workflow_ref(workflow_name, version)
         url = self._wf_url(f"/{workflow_name}/package")
         try:
-            return self._parent.http.get(url, timeout=self._config.timeout)
+            return self._parent.http.get(
+                url, params=_version_query(version), timeout=self._config.timeout
+            )
         except R4Error:
             raise
         except Exception as e:
@@ -447,6 +541,7 @@ class WorkflowClient:
         dest: str | Path | None = None,
         *,
         overwrite: bool = False,
+        version: Optional[str] = None,
     ) -> Path:
         """Download a workflow you can see as a zip (2026-11-07).
 
@@ -463,8 +558,10 @@ class WorkflowClient:
         The body streams to a temp file beside the target, is verified
         against EXPORT.json and only then renamed into place — a failed
         download or checksum mismatch leaves no file behind (R4Error).
+        ``version`` (or ``name@X``) exports that version (ADR-113 D-3).
         """
-        target = _export_target(workflow_name, dest)
+        workflow_name, version = _workflow_ref(workflow_name, version)
+        target = _export_target(workflow_name, dest, version)
         if target.exists() and not overwrite:
             raise R4Error(f"{target} already exists; pass overwrite=True (CLI: --force)")
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -474,7 +571,7 @@ class WorkflowClient:
         partial = Path(tmp_name)
         try:
             with os.fdopen(fd, "wb") as handle:
-                self._stream_export(workflow_name, handle)
+                self._stream_export(workflow_name, handle, version)
             verify_export(partial, label=str(target))
             os.replace(partial, target)
         except BaseException:
@@ -482,8 +579,19 @@ class WorkflowClient:
             raise
         return target
 
-    def _stream_export(self, workflow_name: str, handle: BinaryIO) -> None:
-        """Stream the export zip into *handle* (gateway auth + project headers)."""
+    def export_bytes(self, workflow_name: str, *, version: str, max_bytes: int) -> bytes:
+        """One version's export zip, in memory (ADR-112 B2: r4 hashes the
+        code it signs itself and never extracts it to disk). More than
+        *max_bytes* is refused (R4Error)."""
+        sink = _CappedSink(max_bytes)
+        self._stream_export(workflow_name, cast(BinaryIO, sink), version=version)
+        return sink.getvalue()
+
+    def _stream_export(
+        self, workflow_name: str, handle: BinaryIO, version: Optional[str] = None
+    ) -> None:
+        """Stream the export zip into *handle* (gateway auth + project headers);
+        ``version`` selects one registered version (ADR-113)."""
         import httpx
 
         from ._http import map_httpx_error, raise_for_status, raise_if_web_login
@@ -497,7 +605,9 @@ class WorkflowClient:
         url = self._wf_url(f"/{quote(workflow_name, safe='')}/export")
         try:
             with core._client(_EXPORT_TIMEOUT_S) as client:  # noqa: SLF001 - shared HTTP config
-                with client.stream("GET", url, headers=headers) as response:
+                with client.stream(
+                    "GET", url, headers=headers, params=_version_query(version)
+                ) as response:
                     if response.is_error:
                         response.read()
                     raise_for_status(response)
@@ -507,20 +617,61 @@ class WorkflowClient:
         except httpx.RequestError as exc:
             raise map_httpx_error(exc, gateway_url=self._config.gateway_url) from exc
 
-    def delete(self, workflow_name: str) -> Dict[str, Any]:
+    def delete(self, workflow_name: str, version: Optional[str] = None) -> Dict[str, Any]:
         """Delete a registered workflow (owner or admin only).
+
+        ``version`` (or ``name@X``) deletes that one version; without one
+        every version of the name goes (ADR-113 D-6).
 
         Never raises on missing workflows beyond surfacing the server 404 —
         callers that want idempotent deletes should catch R4Error and check
         for 404.
         """
+        workflow_name, version = _workflow_ref(workflow_name, version)
         url = self._wf_url(f"/{workflow_name}")
         try:
-            return self._parent.http.delete(url, timeout=self._config.timeout)
+            return self._parent.http.delete(
+                url, params=_version_query(version), timeout=self._config.timeout
+            )
         except R4Error:
             raise
         except Exception as e:
             raise R4Error(f"Failed to delete workflow: {e}")
+
+    def adopt(self, from_name: str, name: str, version: str) -> Dict[str, Any]:
+        """Re-register a name-versioned workflow as (``name``, ``version``)
+        (ADR-113 D-8; owner or admin). UMRS copies the old name's files,
+        access and triggers and disables the old name's triggers; it answers
+        ``{name, version, source_sha256, from_name}``."""
+        if not from_name or not name or not version:
+            raise R4Error("adopt needs the old name, the new name and a version")
+        url = self._wf_url("/adopt")
+        body = {"from_name": from_name, "name": name, "version": version}
+        try:
+            return self._parent.http.post(url, json_body=body, timeout=self._config.timeout)
+        except R4Error:
+            raise
+        except Exception as e:
+            raise R4Error(f"Failed to adopt workflow: {e}")
+
+    def set_trigger_version(
+        self, workflow_name: str, version: Optional[str], *, owner: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Pin the version ingest triggers fire (ADR-113 D-7); None unpins
+        (triggers then run the default version). ``owner``: an admin pins
+        another owner's workflow (``?owner=``)."""
+        url = self._wf_url(f"/{workflow_name}/triggers")
+        try:
+            return self._parent.http.put(
+                url,
+                json_body={"version": version or None},
+                params={"owner": owner} if owner else None,
+                timeout=self._config.timeout,
+            )
+        except R4Error:
+            raise
+        except Exception as e:
+            raise R4Error(f"Failed to set the trigger version: {e}")
 
     # ── Run definitions (persisted invocation templates) ──────────────────
 
@@ -530,15 +681,23 @@ class WorkflowClient:
         workflow_name: str,
         params: Optional[Dict[str, Any]] = None,
         description: str = "",
+        version: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Create/update a named run definition (workflow + params template)."""
+        """Create/update a named run definition (workflow + params template).
+
+        ``version`` (or ``workflow_name@X``) pins the version a replay runs;
+        without one UMRS records the version it resolves (ADR-113 D-4).
+        """
+        workflow_name, version = _workflow_ref(workflow_name, version)
         url = self._wf_url("/run-definitions")
-        body = {
+        body: Dict[str, Any] = {
             "name": name,
             "workflow_name": workflow_name,
             "params": dict(params or {}),
             "description": description,
         }
+        if version:
+            body["version"] = version
         try:
             return self._parent.http.request(
                 "PUT", url, json_body=body, timeout=self._config.timeout
@@ -587,10 +746,23 @@ class WorkflowClient:
     ) -> WorkflowResult:
         """Replay a persisted run definition — exact (workflow, params).
 
-        No parameter overrides: the definition is the reproducibility record.
+        No parameter overrides: the definition is the reproducibility record;
+        UMRS replays the version it recorded (ADR-113 D-4).
         """
         definition = self.get_run_definition(name).get("definition", {})
-        workflow_name = str(definition.get("workflow_name") or "")
+        data = self._post_definition_trigger(name)
+        workflow_name = str(definition.get("workflow_name") or "") or name
+        result = self._workflow_result_from_response(data, workflow_name)
+        # The response may omit the pin; the definition recorded it (ADR-113 D-4).
+        result.workflow_version = result.workflow_version or str(
+            definition.get("workflow_version") or ""
+        )
+        if wait and result.execution_id:
+            return self.wait_for_completion(result.execution_id, timeout=timeout)
+        return result
+
+    def _post_definition_trigger(self, name: str) -> Dict[str, Any]:
+        """POST ``/run-definitions/{name}/trigger``; R4Error on an error status."""
         url = self._wf_url(f"/run-definitions/{name}/trigger")
         try:
             data = self._parent.http.post(url, json_body={}, timeout=self._config.timeout)
@@ -600,10 +772,7 @@ class WorkflowClient:
             raise R4Error(f"Failed to trigger run definition: {e}")
         if isinstance(data, dict) and data.get("status") == "error":
             raise R4Error(str(data.get("message", "run definition trigger failed")))
-        result = self._workflow_result_from_response(data, workflow_name or name)
-        if wait and result.execution_id:
-            return self.wait_for_completion(result.execution_id, timeout=timeout)
-        return result
+        return data
 
     def _trigger_via_zmq(
         self,
@@ -639,6 +808,8 @@ class WorkflowClient:
             payload["input_files"] = input_files
         if project_id:
             payload["project_id"] = project_id
+        if run_spec.get("version"):
+            payload["version"] = run_spec["version"]
         try:
             # ADR-105 D-5: UMRS stamps the run's job with this session
             # (spec.origin.session_id), so its terminal event finds the
@@ -740,6 +911,7 @@ class WorkflowClient:
             description=item.get("description", ""),
             parameters=item.get("parameters", []),
             **_catalog_ownership(item),
+            **_catalog_versions(item),
         )
         # The display tag is the ownership label: a row another user shared
         # with the caller reads "shared · <owner>", never the owner's "user".
@@ -767,6 +939,8 @@ class WorkflowClient:
             duration_seconds=data.get("duration_seconds"),
             error=data.get("error"),
             durable_job_id=data.get("durable_job_id"),
+            workflow_version=_run_pin(data)[0],
+            source_sha256=_run_pin(data)[1],
         )
 
     def _workflow_upload_result_from_response(
@@ -778,10 +952,13 @@ class WorkflowClient:
         return WorkflowUploadResult(
             workflow_name=resolved_name,
             status=data.get("status", "accepted"),
-            accepted=bool(data.get("accepted", data.get("status") == "ok")),
+            accepted=bool(data.get("accepted", data.get("status") in ("ok", "unchanged"))),
             source_path=data.get("source_path"),
             message=data.get("message"),
             error=data.get("error"),
+            version=str(data.get("version") or ""),
+            source_sha256=str(data.get("source_sha256") or ""),
+            warnings=_str_list(data.get("warnings")),
         )
 
     def _execution_url(self, execution_id: str, suffix: str = "") -> str:
@@ -926,11 +1103,21 @@ class WorkflowClient:
             raise R4Error(f"Failed to submit gate decision: {e}")
         return self._workflow_status_from_response(data, execution_id)
 
-    def list_workflow_triggers(self, workflow_name: str) -> Dict[str, Any]:
-        """W4: declared event trigger subscriptions for a workflow."""
+    def list_workflow_triggers(
+        self, workflow_name: str, version: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """W4: declared event trigger subscriptions for a workflow.
+
+        ADR-113: the answer also carries ``version`` (whose declarations
+        these are), ``trigger_version`` (the pin), ``triggers_disabled`` and
+        ``adopted_as``; ``version`` (or ``name@X``) shows that version's.
+        """
+        workflow_name, version = _workflow_ref(workflow_name, version)
         url = self._wf_url(f"/{workflow_name}/triggers")
         try:
-            data = self._parent.http.get(url, timeout=self._config.timeout)
+            data = self._parent.http.get(
+                url, params=_version_query(version), timeout=self._config.timeout
+            )
         except R4Error:
             raise
         except Exception as e:
@@ -942,6 +1129,7 @@ class WorkflowClient:
         *,
         tags: Optional[List[str]] = None,
         all_users: bool = False,
+        all_versions: bool = False,
     ) -> List[WorkflowDefinition]:
         """
         List available workflows.
@@ -951,19 +1139,24 @@ class WorkflowClient:
             all_users: Admin-only: list the full catalog across owners
                 (both transports honour it; the server strips the claim
                 for non-admins). Default lists own + shared + system.
+            all_versions: One row per registered version instead of one
+                row per (owner, name) carrying the default ``version`` and
+                every ``versions`` entry (ADR-113 D-3).
 
         Returns:
             List of WorkflowDefinition objects.
         """
-        filters = {}
+        filters: Dict[str, Any] = {}
         if tags:
             filters["tags"] = tags
         if all_users:
             filters["all_users"] = True
+        if all_versions:
+            filters["all_versions"] = True
 
         return self._router.execute(
             "workflow_list",
-            http_fn=lambda: self._list_workflows_via_http(tags, all_users),
+            http_fn=lambda: self._list_workflows_via_http(tags, all_users, all_versions),
             zmq_fn=lambda: self._list_workflows_via_zmq(filters),
         )
 
@@ -985,7 +1178,7 @@ class WorkflowClient:
         return workflows
 
     def _list_workflows_via_http(
-        self, tags: Optional[List[str]], all_users: bool = False
+        self, tags: Optional[List[str]], all_users: bool = False, all_versions: bool = False
     ) -> List[WorkflowDefinition]:
         """List workflows via HTTP Gateway."""
         url = self._wf_url()
@@ -994,6 +1187,8 @@ class WorkflowClient:
             params["tags"] = ",".join(tags)
         if all_users:
             params["all_users"] = "true"
+        if all_versions:
+            params["all_versions"] = "true"
         try:
             data = self._parent.http.get(url, params=params, timeout=self._config.timeout)
         except R4Error:
@@ -1049,6 +1244,8 @@ class WorkflowClient:
             finished_at=str(execution.get("finished_at")) if execution.get("finished_at") else None,
             error=execution.get("error"),
             progress=float(execution.get("progress", 0.0) or 0.0),
+            workflow_version=_run_pin(execution)[0],
+            source_sha256=_run_pin(execution)[1],
         )
 
     def lint_file(
@@ -1087,10 +1284,12 @@ class WorkflowClient:
         artifacts = [a.get("key", "") for a in (data.get("artifacts") or []) if a.get("key")]
         return WorkflowResult(
             execution_id=data.get("execution_id", execution_id),
-            workflow_name="",
+            workflow_name=str(data.get("workflow_name") or ""),
             status=data.get("execution_status") or "unknown",
             outputs=results,
             artifacts=artifacts,
             error=data.get("error"),
             durable_job_id=data.get("durable_job_id"),
+            workflow_version=_run_pin(data)[0],
+            source_sha256=_run_pin(data)[1],
         )

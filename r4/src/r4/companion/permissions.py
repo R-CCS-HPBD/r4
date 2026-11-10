@@ -117,6 +117,10 @@ SAFE_TOOLS: frozenset[str] = frozenset(
         "list_dir",
         # ADR-111: reads the user's own saved memory files; changes nothing.
         "memory_read",
+        # ADR-114: lists the user's own live sessions; clears this session's
+        # own inbox (its text is session_message taint).
+        "session_list",
+        "session_inbox",
         "search_docs",
         # K1.4: reads one passage under the retrieve verb's access rule.
         "open_passage",
@@ -235,11 +239,10 @@ RISKY_TOOLS: frozenset[str] = frozenset(
     }
 )
 
-# Tools that must NEVER be auto-approved — an explicit per-call approval is
-# mandatory even in TRUST/agent/autopilot mode and even when the tool was
-# session-approved. Recording the user's decision on a knowledge mutation is
-# the human authorization boundary: the agent must never stamp it for itself,
-# whatever the mode (closes the TRUST/autopilot bypass).
+# Tools whose local card asks in chat and plan (never a session "always").
+# Since ADR-104 amendment 3, TRUST auto-resolves those local asks with an audit
+# note and no human grant. Server-owned knowledge/loop approval rules remain
+# authoritative: the local answer does not manufacture a human decision.
 NEVER_AUTO_APPROVE: frozenset[str] = frozenset(
     {
         "knowledge_graph_decide",
@@ -300,9 +303,8 @@ _APPROVAL_FENCE: contextvars.ContextVar[str] = contextvars.ContextVar(
 )
 
 
-# What autopilot let through that a person would otherwise have been asked
-# (ADR-104 amendment 2): a tainted call, a protected path, a plan gate, a
-# decision-gate doubt, a backed-up delete. Set while a call is checked and
+# What autopilot let through automatically: a local permission ask, decision
+# doubt or protected path (amendments 2–3). Set while a call is checked and
 # drained by the agent (``take_permission_notes``), which puts each one in
 # the transcript. A context variable for the same reason as the two above.
 _PERMISSION_NOTES: contextvars.ContextVar[tuple[str, ...]] = contextvars.ContextVar(
@@ -330,7 +332,7 @@ def approval_fence() -> str:
     return _APPROVAL_FENCE.get()
 
 
-_NEVER_AUTO_DEFAULT_REASON = "human-authorization boundary — never auto-approved (ADR-036)"
+_NEVER_AUTO_DEFAULT_REASON = "local decision prompt — asked in chat and plan (ADR-036)"
 
 # ADR-092 MD-6 (maintainer, 2026-10-11): a human approval of one of these
 # tools' cards grants the work it starts the card's listed SAFE tools, for
@@ -425,12 +427,43 @@ _SHELL_NEVER_AUTO_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
         r"\.(aws|ssh|config|netrc|s3cfg|gitconfig)/[^\s]*[*?]",
         r"\bkeyring\b",
         r"\bdotenv_values?\b",
+        # The marker that makes the r4 CLI and client refuse the person's acts
+        # in this shell (ADR-112 D-8 review, 2026-11-08): a command that
+        # clears, overrides or reads it (``R4_COMPANION_SESSION=``, ``env -u``,
+        # ``unset``, ``os.environ.pop``) always asks.
+        r"\bR4_COMPANION_SESSION\b",
+    )
+)
+
+# Scanned against the command with every quote and backslash removed, so
+# ``r4 hpc 'add'`` reads as ``r4 hpc add`` (ADR-112 B1 review, 2026-11-08).
+# Each token class is disjoint from the next (an option starts with ``-``,
+# its value does not), so matching stays linear in the command length.
+_SHELL_NEVER_AUTO_FLAT_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
+    re.compile(pattern)
+    for pattern in (
         # Humans establish (CONSTITUTION §2; review of K1 part A, 2026-10-24):
         # the review CLI's decisions are the person's; the subprocess is also
         # marked (R4_COMPANION_SESSION) so the CLI and UMRS refuse them.
         r"\br4\s+knowledge\s+review\s+(-\S+\s+\S+\s+)*(approve|reject|establish)\b",
+        # Signing and the HPC account's trust anchors are the person's act
+        # (ADR-112 D-8, wave B1): the CLI and client also refuse in a companion
+        # shell and the CLI without a TTY. Global options may sit before
+        # ``hpc``; a verb that is a shell expansion (``$X``, ``$(..)``) asks.
+        # ``grant`` and ``grant-cancel`` sign (plan §6 C5); the read-only
+        # ``grants`` and ``usage`` stay unfenced.
+        r"\br4(\s+-\S+(\s+[^-\s]\S*)?)*\s+hpc(\s+-\S+(\s+[^-\s]\S*)?)*"
+        r"\s+(\$|(add|rotate|revoke|sign|grant-cancel|grant|profile)\b)",
+        # Clearing a witness fork restores signing authority; read-only witness
+        # itself stays available. ``--cl`` covers argparse's abbreviations.
+        r"\br4(\s+-\S+(\s+[^-\s]\S*)?)*\s+hpc(\s+-\S+(\s+[^-\s]\S*)?)*"
+        r"\s+status\b[^|&;]*\s--cl",
+        # A gated run is signed (ADR-112 wave B2, plan §5 B2.0 item 11): any
+        # ``--si…`` abbreviation of ``--site`` (argparse accepts prefixes).
+        r"\br4(\s+-\S+(\s+[^-\s]\S*)?)*\s+workflow\s+(\$|(trigger|run)\b[^|&;]*\s--si)",
     )
 )
+_FLATTEN_RE = re.compile(r"[\"'\\]")
 
 # Risky-untrusted shapes: inherit existing RISKY handling (prompt in AUTO_SAFE
 # and DENY), but additionally must not be short-circuited by TRUST mode or a
@@ -612,7 +645,15 @@ def _shell_command_fence(tool_name: str, arguments: dict) -> str | None:
         return None
     if _WRAPPER_UNSCANNABLE_RE.search(command):
         return "never_auto"
-    command = _normalize_wrapper(command)
+    return _scan_command(_normalize_wrapper(command))
+
+
+def _scan_command(command: str) -> str | None:
+    """The fence label of a normalized command: the flattened (quote-free)
+    rules first, then the pattern rules in order; None when none matches."""
+    flat = _FLATTEN_RE.sub("", command)
+    if any(pattern.search(flat) for pattern in _SHELL_NEVER_AUTO_FLAT_PATTERNS):
+        return "never_auto"
     for pattern, label in _COMMAND_FENCE_RULES:
         if pattern.search(command):
             return label
@@ -721,9 +762,21 @@ def touches_memory(tool_name: str, arguments: Any) -> bool:
     return any(marker in text for marker in markers)
 
 
-# Never-auto tools autopilot runs (ADR-104 amendment 2, maintainer
-# 2026-11-05): a plan gate and a plan run's budget card. The knowledge
-# decisions stay a person's (CONSTITUTION §2), in every mode.
+# ADR-114 D-5: the call that hands text to another of the user's sessions.
+RELAY_TOOLS = frozenset({"session_send"})
+
+
+def relays_untrusted(tool_name: str, arguments: Any, registry: Any) -> bool:
+    """A ``session_send`` that is not a reply, from a session that has seen
+    untrusted content (the reply's target is checked by the tool itself)."""
+    if tool_name not in RELAY_TOOLS:
+        return False
+    reply_to = arguments.get("reply_to") if isinstance(arguments, dict) else ""
+    return not reply_to and _untrusted_seen(registry)
+
+
+# Never-auto tools autopilot runs (ADR-104 amendments 2–3): plan gates and
+# budget cards carry automatic provenance. Server knowledge policy is separate.
 _AUTOPILOT_DECIDES = frozenset({"team_plan_run", GATE_TOOL})
 
 # The modes in which a read-only tool runs without asking (ADR-104 amendment 1).
@@ -734,14 +787,13 @@ class PermissionManager:
     """Decides whether a tool call runs: :meth:`decide` walks one ordered
     ladder (ADR-104 D-2), :meth:`check` acts on the answer.
 
-    Rungs 1-7 are the safety floor (deny, never-auto, fences, rules,
-    protected paths): no mode, rule or grant passes them. Then the
-    allowances: a template crew's plan card, a G14 allow rule, a read-only
-    tool (AUTO_SAFE and TRUST), a session "always", then TRUST itself, which
-    an opt-in organisation policy (the server allowlist, ADR-035) may narrow
-    (ADR-104 amendment 1, 2026-11-03: the read-only and session rungs came
-    after TRUST, so a server "no" asked even for ``file_read``). Anything
-    left asks.
+    Rungs 1-7 classify denials and local asks. Then the allowances: a template
+    crew's plan card, a G14 allow rule, a read-only tool (AUTO_SAFE and
+    TRUST), a session "always", and TRUST itself. An optional organisation
+    policy can still produce an ask for the console to render. Since ADR-104
+    amendment 3, :meth:`resolve` auto-answers every local non-deletion ask in
+    TRUST and records its source; deny decisions stay denials and every allow
+    still passes the deletion guard. Anything left in other modes asks.
     """
 
     _LADDER: tuple[str, ...] = (
@@ -750,6 +802,7 @@ class PermissionManager:
         "_rung_never_auto",
         "_rung_taint",
         "_rung_memory_taint",
+        "_rung_relay_taint",
         "_rung_fence",
         "_rung_ask_rule",
         "_rung_protected_path",
@@ -768,9 +821,8 @@ class PermissionManager:
     ):
         self.mode = mode
         self._approval_callback = approval_callback
-        # Server-side allowlist consult (ADR-035): when present, TRUST mode
-        # auto-approves ONLY rows the server has on file for this user/scope.
-        # Absent → legacy behavior (process-global TRUST).
+        # Server-side allowlist consult (ADR-035): a miss is still an ask in
+        # the decision. Resolve auto-answers that local ask in TRUST (A3).
         self._trust_checker = trust_checker
         self._trust_check_cache: dict[str, tuple[bool, float]] = {}
         # ADR-105 D-4: plan digest -> time of a HUMAN yes to its job_commit
@@ -801,11 +853,10 @@ class PermissionManager:
         """Badge honesty: what decides in TRUST mode.
 
         Derived — never stale across set_mode / set_trust_checker.
-          "server"  the organisation policy is on (ADR-104 amendment 1): the
-                    server allowlist narrows autopilot; check cache TTL bounds
-                    revocation latency (60s positive, 10s negative).
-          "local"   the default: autopilot runs every tool the safety floor
-                    lets through; nothing server-side narrows it.
+          "server"  the organisation policy is on and consulted (ADR-035).
+                    Cache TTL bounds classify-lookup latency (60s positive,
+                    10s negative); amendment 3 auto-answers its local ask.
+          "local"   the default: no server policy is consulted.
           ""        mode is not TRUST — badge moot.
         """
         if self.mode != PermissionMode.TRUST:
@@ -824,8 +875,9 @@ class PermissionManager:
     def _server_trusted(self, tool_name: str) -> bool:
         """Consult the server allowlist with a short positive-result cache.
 
-        Unreachable/rejected → False (fail closed); the caller then falls
-        through to explicit approval instead of auto-trusting.
+        Unreachable/rejected → False (fail closed in the decision); the caller
+        then falls through to an ask. Amendment 3's local resolver answers it
+        automatically in TRUST rather than blocking autopilot.
         """
         if self._trust_checker is None:
             return False
@@ -946,9 +998,9 @@ class PermissionManager:
     def _note_card_approval(self, tool_name: str, arguments: dict) -> None:
         """Record a human yes (called only from the callback invocation).
 
-        Only for a tool that is also never auto-approved: no TRUST, AUTO_SAFE
-        or session approval can resolve its card, so the record
-        exists only after the approval callback was asked and said yes.
+        Recording happens only when a real callback was asked and answered.
+        Amendment 3's automatic local resolution invokes no callback and
+        therefore never synthesizes this human grant.
         """
         if tool_name in CARD_GRANT_TOOLS and tool_name in NEVER_AUTO_APPROVE:
             self._card_approvals[_card_key(tool_name, arguments)] = time.time()
@@ -977,11 +1029,20 @@ class PermissionManager:
         return self.resolve(self.decide(tool_name, arguments), tool_name, arguments)
 
     def resolve(self, decision: Decision, tool_name: str, arguments: dict[str, Any]) -> bool:
-        """Act on a decision: refuse, run (through the decision gate when
-        ``escalate``) or ask the approval callback."""
+        """Act on a decision: refuse, run, or ask the approval callback.
+
+        ADR-104 amendment 3: in autopilot every local non-deletion ask becomes
+        an audited allow. This is deliberately resolved here, after the whole
+        ladder classified the call: deny decisions stay denials and the delete
+        guard still sees every allowed call. Backend-owned authorization is
+        outside this local decision and is not approved or fabricated here.
+        """
         if decision.behavior == "deny":
             logger.info("%s denied (%s) %s", tool_name, decision.source, decision.reason)
             return False
+        if decision.behavior != "allow" and self.mode == PermissionMode.TRUST:
+            note_permission(f"{tool_name}: {decision.source} ask auto-answered in autopilot")
+            decision = Decision("allow", "autopilot", decision.reason, escalate=True)
         if decision.behavior == "allow":
             return self._run_allowed(decision, tool_name, arguments)
         if decision.fenced:
@@ -1000,9 +1061,13 @@ class PermissionManager:
         return self._approval_callback is None and not self._auto_runs(tool_name)
 
     def _auto_runs(self, tool_name: str) -> bool:
-        """True when the mode alone runs this tool without asking."""
+        """True when the mode alone runs this tool without a blanket ask.
+
+        Deletion is argument-specific, so it never hides the whole tool; the
+        call still reaches :meth:`_deletes_recoverable` before running.
+        """
         if self.mode == PermissionMode.TRUST:
-            return tool_name not in NEVER_AUTO_APPROVE - _AUTOPILOT_DECIDES
+            return True
         return self.mode in _AUTO_SAFE_MODES and tool_name in SAFE_TOOLS
 
     def _run_allowed(self, decision: Decision, tool_name: str, arguments: dict[str, Any]) -> bool:
@@ -1014,12 +1079,20 @@ class PermissionManager:
         return self._deletes_recoverable(tool_name, arguments)
 
     def _deletes_recoverable(self, tool_name: str, arguments: dict[str, Any]) -> bool:
-        """Back up what the call deletes, or ask (per call) when R4 cannot."""
+        """Ask before autopilot deletion; otherwise back it up before running.
+
+        Amendment 3 makes every recognised user-file deletion and worktree
+        removal a person decision in TRUST, even when a backup would be
+        possible. Other automatic modes retain amendment 2's backup-and-run.
+        """
         from .delete_guard import protect, scan
 
         found = scan(tool_name, arguments)
         if not found.deletes:
             return True
+        if self.mode == PermissionMode.TRUST:
+            reason = "autopilot user-file deletion or worktree removal requires approval"
+            return self._require_fenced_approval(tool_name, arguments, reason)
         protection = protect(found)
         if protection.ok:
             if protection.note:
@@ -1061,12 +1134,12 @@ class PermissionManager:
         return Decision("deny", "rule", reason, tool_wide=not rule.prefix)
 
     def _rung_never_auto(self, tool_name: str, arguments: dict[str, Any]) -> Decision | None:
-        # The human-authorization boundary: an explicit per-call approval in
-        # every mode (TRUST and session approvals cannot short-circuit it).
+        # A local prompt in chat/plan; amendment 3 auto-answers it in TRUST.
+        # A session "always" never short-circuits its decision classification.
         if tool_name not in NEVER_AUTO_APPROVE:
             return None
         if self.mode == PermissionMode.TRUST and tool_name in _AUTOPILOT_DECIDES:
-            note_permission(f"{tool_name}: autopilot answers it (ADR-104 amendment 2)")
+            note_permission(f"{tool_name}: never_auto ask auto-answered in autopilot")
             return None
         reason = _NEVER_AUTO_REASONS.get(tool_name, _NEVER_AUTO_DEFAULT_REASON)
         return Decision("ask", "never_auto", reason)
@@ -1090,10 +1163,9 @@ class PermissionManager:
         return Decision("ask", "taint", reason, fenced=True)
 
     def _rung_memory_taint(self, tool_name: str, arguments: dict[str, Any]) -> Decision | None:
-        # ADR-111 D-4: saved memory outlives the session. Once untrusted
-        # content (RAG, document, lab, MCP or web results) entered it, a
-        # memory write is a person's decision in every mode, autopilot too:
-        # an injected instruction must not save itself for later sessions.
+        # ADR-111 D-4 + ADR-104 A3: once untrusted content entered, a memory
+        # write is a fenced prompt in chat/plan and an audited automatic call
+        # in TRUST. Secret-shaped content and execution guards still refuse.
         # The mark is sticky (``ever_tainted``: no TTL, kept across a resume)
         # and covers the other ways to a memory file: a file tool on the
         # memory folder, a shell ``r4 memory`` (review 2026-11-07).
@@ -1101,6 +1173,15 @@ class PermissionManager:
             return None
         reason = "saving memory after untrusted content entered this session (ADR-111 D-4)"
         return Decision("ask", "memory_taint", reason, fenced=True)
+
+    def _rung_relay_taint(self, tool_name: str, arguments: dict[str, Any]) -> Decision | None:
+        # ADR-114 D-5 + ADR-104 A3: after untrusted content, a new message
+        # to another session prompts in chat/plan and is logged automatically
+        # in TRUST. A reply is exempt; the tool still refuses wrong targets.
+        if not relays_untrusted(tool_name, arguments, self._taint_registry):
+            return None
+        reason = "messaging another session after untrusted content entered this one (ADR-114 D-5)"
+        return Decision("ask", "relay_taint", reason, fenced=True)
 
     def _rung_fence(self, tool_name: str, arguments: dict[str, Any]) -> Decision | None:
         # Credential / identity probes and force-pushes in shell commands,
@@ -1112,7 +1193,7 @@ class PermissionManager:
             return None
         if fence == "risky_no_trust" and self.mode == PermissionMode.TRUST:
             return None  # a plain git push: autopilot runs it (amendment 2)
-        reason = "credential/identity or force-push fence — always asks (round-6 3.2-3.4)"
+        reason = "credential/identity or force-push fence — asked in chat and plan"
         return Decision("ask", "fence", reason, fenced=True)
 
     def _rung_ask_rule(self, tool_name: str, arguments: dict[str, Any]) -> Decision | None:

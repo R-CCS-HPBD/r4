@@ -105,6 +105,12 @@ add`). Names are `[a-z0-9._-]`; text with other characters gets an 8-hex
 digest of the original, so two Japanese keys never collapse into one fact.
 The memory tools are always on: a skill filter never hides them.
 
+*2026-11-09, ADR-104 amendment 3:* in autopilot the local taint prompt is
+auto-answered with an audit note; chat/plan retains the fenced prompt. Secret
+refusal, sha conflict detection, `/memory off`, lead-session-only tools and
+server-owned review rules are unchanged. Agent-issued deletion follows the
+selected file/worktree scope, not a blanket rule for every backend store.
+
 **D-5 Promotion is a person's act with its own review.**
 `/memory promote <name> briefing` appends the fact to the current checkout's
 `R4.md` (a linked worktree's own) under `## From saved memory`, for review

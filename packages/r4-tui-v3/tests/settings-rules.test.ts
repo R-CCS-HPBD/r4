@@ -106,7 +106,8 @@ describe("/settings matrix (ADR-104 D-1 table)", () => {
     const text = notices().at(-1) ?? "";
     expect(text).toContain("chat        read-only tools run; every other tool asks");
     expect(text).toContain("plan        read-only tools only; other tools are refused");
-    expect(text).toContain("autopilot   every tool runs; it asks only before reading credentials");
+    expect(text).toContain("autopilot   local non-delete asks run with an audit note");
+    expect(text).toContain("user-file deletion, patch rename/delete sources, worktree removal");
     expect(text).toContain("current: mode:chat");
     expect(text).not.toContain("ask_always");
   });

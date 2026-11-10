@@ -192,6 +192,7 @@ def _gate_note(payload: dict[str, Any]) -> dict[str, Any] | None:
         "class": payload.get("class"),
         "approved": bool(payload.get("approved")),
         "answered": bool(payload.get("answered")),
+        "decided_by": payload.get("decided_by"),
         "reason": payload.get("reason"),
         "replayed": bool(payload.get("replayed")),
     }

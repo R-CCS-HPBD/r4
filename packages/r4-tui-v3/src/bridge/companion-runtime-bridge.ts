@@ -21,7 +21,7 @@ import { parseToolArgs } from "../lib/tool-args";
 import { isTodoToolName, parseTodoPayload } from "../lib/session-todos";
 import type { HostResources } from "../lib/resource-monitor";
 import type { KnowledgeBaseState, ScienceLoopState } from "../lib/companion-panels";
-import type { ToolSelectionRecord } from "../types";
+import type { AgentRuntime, AgentState, ToolSelectionRecord } from "../types";
 
 const COMPANION_AGENT_ROLE = "companion";
 
@@ -255,6 +255,130 @@ function ensureCompanionAgent(task: string): string {
   return created;
 }
 
+const subagentSpawnIds = new Set<string>();
+const TERMINAL_AGENT_STATES = new Set<AgentState>(["completed", "failed", "cancelled"]);
+
+function isTerminalAgent(state: AgentState): boolean {
+  return TERMINAL_AGENT_STATES.has(state);
+}
+
+function subagentAgentId(data: Record<string, unknown>): string {
+  return typeof data.agent_id === "string" ? data.agent_id.trim() : "";
+}
+
+function subagentTurn(data: Record<string, unknown>): number {
+  const turn = data.subagent_turn;
+  return typeof turn === "number" && Number.isInteger(turn) && turn >= 0 ? turn : 0;
+}
+
+function subagentSpawnKey(agentId: string, data: Record<string, unknown>): string {
+  return `${agentId}:${subagentTurn(data)}`;
+}
+
+function subagentResultIsOld(existing: AgentRuntime | undefined, data: Record<string, unknown>): boolean {
+  if (!existing) return false;
+  const turn = subagentTurn(data);
+  const currentTurn = existing.subagentTurn ?? 0;
+  if (turn < currentTurn) return true;
+  return turn === currentTurn && isTerminalAgent(existing.state);
+}
+
+function subagentLineage(data: Record<string, unknown>): Partial<AgentRuntime> {
+  const lineage: Partial<AgentRuntime> = { subagentTurn: subagentTurn(data) };
+  if (typeof data.child_session_id === "string") lineage.sessionId = data.child_session_id;
+  if (typeof data.parent_session_id === "string") lineage.parentSessionId = data.parent_session_id;
+  if (typeof data.parent_agent_id === "string") lineage.parentAgentId = data.parent_agent_id;
+  return lineage;
+}
+
+function subagentNeedsRunning(data: Record<string, unknown>, existing: AgentRuntime): boolean {
+  return !isTerminalAgent(existing.state) || subagentTurn(data) > (existing.subagentTurn ?? 0);
+}
+
+function subagentResultState(data: Record<string, unknown>): AgentState {
+  const status = String(data.status ?? "");
+  if (status === "completed") return "completed";
+  if (status === "cancelled") return "cancelled";
+  return "failed";
+}
+
+function subagentResultError(
+  raw: Record<string, unknown>,
+  data: Record<string, unknown>,
+  state: AgentState,
+): string | undefined {
+  if (state === "completed") return undefined;
+  return String(data.error ?? raw.message ?? "") || undefined;
+}
+
+function subagentTask(raw: Record<string, unknown>, data: Record<string, unknown>): string {
+  return String(data.task ?? raw.message ?? "sub-agent result").trim() || "running";
+}
+
+function createSubagentRow(
+  raw: Record<string, unknown>,
+  data: Record<string, unknown>,
+  agentId: string,
+  updates: Partial<AgentRuntime>,
+): void {
+  const name = String(raw.name ?? raw.agent ?? raw.message ?? "sub-agent");
+  agentActions.createAgent({
+    id: agentId,
+    role: name.slice(0, 32) as "companion",
+    goal: "Spawned by Companion",
+    currentTask: subagentTask(raw, data),
+    permissions: { egress: "none", filesystem: "read_only", compute: "none" },
+    budget: { maxIterations: 20 },
+    ...subagentLineage(data),
+    ...updates,
+  });
+}
+
+function onAgentSpawn(raw: Record<string, unknown>): void {
+  const data = toolEventData(raw);
+  const agentId = subagentAgentId(data);
+  const spawnKey = subagentSpawnKey(agentId, data);
+  if (!agentId || subagentSpawnIds.has(spawnKey)) return;
+  subagentSpawnIds.add(spawnKey);
+  const existing = agentActions.getAgentById(agentId);
+  if (existing) {
+    const updates: Partial<AgentRuntime> = {
+      ...subagentLineage(data),
+      currentTask: subagentTask(raw, data),
+    };
+    if (subagentNeedsRunning(data, existing)) {
+      updates.state = "running";
+      updates.progress = 5;
+      updates.errorMessage = undefined;
+    }
+    agentActions.patchAgent(agentId, updates);
+  } else {
+    createSubagentRow(raw, data, agentId, { state: "running", progress: 5 });
+  }
+  agentActions.refreshMissionControl();
+}
+
+function onAgentResult(raw: Record<string, unknown>): void {
+  const data = toolEventData(raw);
+  const agentId = subagentAgentId(data);
+  if (!agentId) return;
+  const existing = agentActions.getAgentById(agentId);
+  if (subagentResultIsOld(existing, data)) return;
+  const state = subagentResultState(data);
+  const updates: Partial<AgentRuntime> = {
+    ...subagentLineage(data),
+    state,
+    progress: state === "completed" ? 100 : existing?.progress,
+    errorMessage: subagentResultError(raw, data, state),
+  };
+  if (existing) {
+    agentActions.patchAgent(agentId, updates);
+  } else {
+    createSubagentRow(raw, data, agentId, updates);
+  }
+  agentActions.refreshMissionControl();
+}
+
 /** Exported so bridge-level tests can drive the event state machine directly. */
 export function onBridgeEvent(raw: Record<string, unknown>): void {
   const type = String(raw.type ?? "");
@@ -380,17 +504,11 @@ export function onBridgeEvent(raw: Record<string, unknown>): void {
   }
 
   if (type === "agent_spawn") {
-    const name = String(raw.name ?? raw.agent ?? raw.message ?? "sub-agent");
-    agentActions.createAgent({
-      role: name.slice(0, 32) as "companion",
-      goal: "Spawned by Companion",
-      state: "running",
-      currentTask: "running",
-      progress: 5,
-      permissions: { egress: "none", filesystem: "read_only", compute: "none" },
-      budget: { maxIterations: 20 },
-    });
-    agentActions.refreshMissionControl();
+    onAgentSpawn(raw);
+    return;
+  }
+  if (type === "agent_result") {
+    onAgentResult(raw);
   }
 }
 
@@ -801,6 +919,7 @@ export function onControlEvent(raw: unknown): void {
 /** Test helper */
 export function resetCompanionRuntimeBridgeForTests(): void {
   wired = false;
+  subagentSpawnIds.clear();
   accByTab.clear();
   acc().companionAgentId = null;
 }

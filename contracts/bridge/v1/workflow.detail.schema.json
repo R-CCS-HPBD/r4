@@ -36,6 +36,12 @@
             }
           ]
         },
+        "workflow_version": {
+          "type": "string"
+        },
+        "source_sha256": {
+          "type": "string"
+        },
         "user_id": {
           "type": "string"
         },

@@ -13,9 +13,13 @@ Your tools, your compute, your science.
 **Connected R-CCS sites** (live status; [details](https://github.com/R-CCS-HPBD/r4/blob/status/status/STATUS.md)):
 
 [![rccs](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FR-CCS-HPBD%2Fr4%2Fstatus%2Fstatus%2Frccs.json)](https://github.com/R-CCS-HPBD/r4/blob/status/status/STATUS.md)
+[![rccs models](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FR-CCS-HPBD%2Fr4%2Fstatus%2Fstatus%2Frccs-models.json)](https://github.com/R-CCS-HPBD/r4/blob/status/status/STATUS.md)
 [![ai4s](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FR-CCS-HPBD%2Fr4%2Fstatus%2Fstatus%2Fai4s.json)](https://github.com/R-CCS-HPBD/r4/blob/status/status/STATUS.md)
+[![ai4s models](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FR-CCS-HPBD%2Fr4%2Fstatus%2Fstatus%2Fai4s-models.json)](https://github.com/R-CCS-HPBD/r4/blob/status/status/STATUS.md)
 [![bdrt](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FR-CCS-HPBD%2Fr4%2Fstatus%2Fstatus%2Fbdrt.json)](https://github.com/R-CCS-HPBD/r4/blob/status/status/STATUS.md)
+[![bdrt models](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FR-CCS-HPBD%2Fr4%2Fstatus%2Fstatus%2Fbdrt-models.json)](https://github.com/R-CCS-HPBD/r4/blob/status/status/STATUS.md)
 [![octopus](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FR-CCS-HPBD%2Fr4%2Fstatus%2Fstatus%2Foctopus.json)](https://github.com/R-CCS-HPBD/r4/blob/status/status/STATUS.md)
+[![octopus models](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FR-CCS-HPBD%2Fr4%2Fstatus%2Fstatus%2Foctopus-models.json)](https://github.com/R-CCS-HPBD/r4/blob/status/status/STATUS.md)
 
 ---
 

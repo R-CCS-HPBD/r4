@@ -23,6 +23,7 @@ import type { McpServerEntry } from "../lib/mcp-report";
 import { executionRowDetail, umrsWorkflowActions, umrsWorkflowStore } from "../stores/umrs-workflow";
 import { progressSuffix } from "../lib/workflow-activity";
 import { waitingApprovalStepName } from "../lib/workflow-graph-projection";
+import { catalogRowLabel, runLabelWithDigest } from "../lib/workflow-versions";
 import { truncate } from "../lib/text";
 import { mergeSkillInventories, visibleSkillRows } from "../lib/skill-inventory";
 import { Floating } from "../ui/Floating";
@@ -565,14 +566,14 @@ export function ListOverlay() {
     const execs: OverlayRow[] = Object.values(umrsWorkflowStore.activeExecutions).map(
       (exec) => ({
         key: `exec:${exec.execution_id}`,
-        label: `${statusGlyph(exec.status)} ${exec.execution_id.slice(0, 12)} · ${exec.workflow_name ?? "workflow"} · ${exec.status}`,
+        label: `${statusGlyph(exec.status)} ${exec.execution_id.slice(0, 12)} · ${runLabelWithDigest(exec)} · ${exec.status}`,
         detail: executionRowDetail(exec),
         status: exec.status,
       }),
     );
     const catalog: OverlayRow[] = umrsWorkflowStore.catalog.map((wf) => ({
       key: `wf:${wf.workflow_name ?? wf.name ?? "?"}`,
-      label: `▸ trigger: ${wf.workflow_name ?? wf.name ?? "?"}`,
+      label: `▸ trigger: ${catalogRowLabel(wf.workflow_name ?? wf.name ?? "?", wf)}`,
       detail: wf.description ?? null,
       status: "available",
     }));

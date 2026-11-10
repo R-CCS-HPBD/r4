@@ -82,7 +82,7 @@ def _venue_answers(h: Harness) -> None:
 def _workflow_export(h: Harness) -> dict[str, Any]:
     """workflow.export into the harness tmp dir; the fake SDK writes a real zip."""
 
-    def export(name: str, dest: Path, *, overwrite: bool = False) -> Path:
+    def export(name: str, dest: Path, *, overwrite: bool = False, version=None) -> Path:
         assert not overwrite and not Path(dest).exists()
         manifest = {"workflow": name, "files": [{"path": "a.py"}], "excluded": [".env"]}
         with zipfile.ZipFile(dest, "w") as archive:

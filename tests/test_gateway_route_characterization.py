@@ -15,7 +15,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-CONF = Path(__file__).resolve().parents[1] / "gateway" / "nginx" / "conf.d" / "server.conf"
+ROOT = Path(__file__).resolve().parents[1]
+CONF = ROOT / "gateway" / "nginx" / "conf.d" / "server.conf"
 
 # Auth mode per /gw location: everything is "required" (auth_request
 # /auth/validate) except these documented probes and guards.
@@ -120,8 +121,12 @@ INTERNAL_LOCATIONS: set[str] = {"/internal/files/", "/internal/s3/"}
 
 
 def _location_blocks() -> dict[str, str]:
+    """location path → block body of server.conf."""
+    return _blocks_in(CONF.read_text())
+
+
+def _blocks_in(text: str) -> dict[str, str]:
     """location path → block body, extracted with brace matching."""
-    text = CONF.read_text()
     blocks: dict[str, str] = {}
     for match in re.finditer(r"^[ \t]*location([^{]+)\{", text, re.M):
         name = match.group(1).strip()
@@ -447,3 +452,129 @@ def test_workflows_block_forwards_workflow_author_claim():
         "proxy_set_header X-Verified-Workflow-Author-HMAC $auth_verified_workflow_author_hmac;",
     ):
         assert token in body, f"ADR-027: workflows block must forward {token}"
+
+
+# ── premise: anonymous routes outside /gw that reach an upstream ──────────
+#
+# Security review 2026-11-07 (service-model badge, item 4): the auth table
+# above covers /gw/* only, so a non-/gw location reaching UMRS or the sidecar
+# without auth would pass unnoticed. CONSTITUTION §2 says the edge
+# authenticates every request; these are its documented exceptions. Each one
+# maps to exactly what it reaches: its proxy_pass targets plus any
+# auth_request subrequest that is a probe rather than a user check. Adding
+# one is a reviewed change (the badge: ADR-106 amendment 2026-11-07).
+
+USER_AUTH_SUBREQUESTS: frozenset[str] = frozenset({"/auth/validate", "/auth/validate-optional"})
+
+ANONYMOUS_UPSTREAM_LOCATIONS: dict[str, tuple[str, ...]] = {
+    # Issue #634: fixed 200/503 from an internal probe of UMRS /health.
+    "= /health/backend": ("/_health/umrs",),
+    "/health/ready": ("http://auth_sidecar/health",),
+    # The sidecar probe gates the aggregate readiness answer.
+    "= /ready": ("/_health/auth_sidecar", "http://auth_sidecar/ready-aggregate"),
+    # The login flows themselves (SAML, OIDC CLI trampoline, web login).
+    "/saml/": ("http://auth_sidecar",),
+    "= /auth/cli-callback": ("http://auth_sidecar/auth/cli-callback",),
+    "= /auth/web-login": ("http://auth_sidecar/auth/web-login",),
+    # ADR-106 amendment 2026-11-07: the public service-model badge.
+    "= /status/models.json": ("http://umrs",),
+}
+
+
+def _is_gw_location(name: str) -> bool:
+    """Exact, prefix and regex /gw locations (covered by the tests above)."""
+    return name.split()[-1].lstrip("^").startswith("/gw/")
+
+
+def _upstream_reach(body: str) -> tuple[str, ...]:
+    """proxy_pass targets plus non-user auth_request subrequests, sorted."""
+    subrequests = re.findall(r"auth_request\s+(\S+);", body)
+    probes = [target for target in subrequests if target not in USER_AUTH_SUBREQUESTS]
+    return tuple(sorted(probes + _proxy_pass_values(body)))
+
+
+# Server-scoped fragments the deploy roles mount into ``app.d`` (server.conf
+# ``include /etc/nginx/app.d/*.conf;``): published name -> repo source. They
+# are scanned with server.conf, so an anonymous upstream added there is
+# caught too. A new mount must be listed here (pinned below).
+APP_D_INCLUDE = "include /etc/nginx/app.d/*.conf;"
+APP_D_SOURCES: dict[str, Path] = {
+    "r4-web.conf": ROOT / "deploy" / "ansible" / "roles" / "r4_web" / "templates" / "app.conf.j2",
+}
+_JINJA = re.compile(r"\{\{.*?\}\}|\{%.*?%\}|\{#.*?#\}", re.S)
+
+
+def _app_d_mounts() -> set[str]:
+    """Every file name a deploy file mounts into /etc/nginx/app.d/."""
+    names: set[str] = set()
+    for path in (ROOT / "deploy").rglob("*"):
+        if path.is_file():
+            text = path.read_text(errors="ignore")
+            names.update(re.findall(r"/etc/nginx/app\.d/([\w.-]+\.conf)", text))
+    return names
+
+
+def _app_d_blocks() -> dict[str, str]:
+    """location path -> body of every app.d source, Jinja expressions blanked."""
+    blocks: dict[str, str] = {}
+    for source in APP_D_SOURCES.values():
+        blocks.update(_blocks_in(_JINJA.sub("TEMPLATED", source.read_text())))
+    return blocks
+
+
+def _served_blocks() -> dict[str, str]:
+    """server.conf plus the app.d fragments it includes (names must not clash)."""
+    server, app_d = _location_blocks(), _app_d_blocks()
+    assert not set(server) & set(app_d), "app.d location shadows a server.conf one"
+    return {**server, **app_d}
+
+
+def _anonymous_upstream_locations(blocks: dict[str, str]) -> dict[str, tuple[str, ...]]:
+    """Non-/gw, externally reachable blocks without a *required* user check
+    that reach an upstream. validate-optional lets anonymous callers through,
+    so it counts as anonymous here."""
+    observed: dict[str, tuple[str, ...]] = {}
+    for name, body in blocks.items():
+        internal = re.search(r"^\s*internal;", body, re.M)
+        if _is_gw_location(name) or internal or _auth_mode_of(body) == "required":
+            continue
+        reach = _upstream_reach(body)
+        if reach:
+            observed[name] = reach
+    return observed
+
+
+def test_anonymous_non_gw_upstream_routes_are_exactly_the_documented_ones():
+    expected = {name: tuple(sorted(reach)) for name, reach in ANONYMOUS_UPSTREAM_LOCATIONS.items()}
+    assert _anonymous_upstream_locations(_served_blocks()) == expected
+
+
+def test_optional_auth_counts_as_anonymous_for_the_pinned_list():
+    """validate-optional answers anonymous callers, so such a route is pinned."""
+    body = (
+        "location = /probe {\n    auth_request /auth/validate-optional;\n"
+        "    proxy_pass http://umrs;\n}\n"
+    )
+    assert _anonymous_upstream_locations(_blocks_in(body)) == {"= /probe": ("http://umrs",)}
+    required = body.replace("validate-optional", "validate")
+    assert _anonymous_upstream_locations(_blocks_in(required)) == {}
+
+
+def test_app_d_fragments_are_known_and_scanned():
+    """server.conf includes app.d; every fragment a deploy role mounts there
+    has its source listed, and that source parses into location blocks."""
+    assert APP_D_INCLUDE in CONF.read_text()
+    assert _app_d_mounts() == set(APP_D_SOURCES)
+    assert "^~ /app/" in _app_d_blocks()
+
+
+def test_status_badge_is_pinned_to_one_route_with_no_client_input():
+    """The badge's exception holds only while it reaches one fixed UMRS
+    route and forwards nothing the client sent."""
+    body = _location_blocks()["= /status/models.json"]
+    assert _auth_mode_of(body) == "none"
+    assert _rewrite_target(body) == "/umrs/status/service-badge?"
+    assert _proxy_pass_values(body) == ["http://umrs"]
+    assert "proxy_pass_request_headers off;" in body
+    assert "proxy_pass_request_body off;" in body
+    assert "$http_" not in body

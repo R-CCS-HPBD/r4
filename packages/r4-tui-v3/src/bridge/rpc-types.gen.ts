@@ -2025,6 +2025,9 @@ export type WorkflowCatalogRow = {
   owner: string;
   shared: boolean;
   access: string[];
+  version?: string;
+  versions?: string[];
+  source_sha256?: string;
 };
 
 /** workflow_describe: UMRS ``GET /workflows/{name}`` body, relayed. */
@@ -2033,6 +2036,9 @@ export type WorkflowDescription = {
   contract_version?: string;
   workflow_name?: string | null;
   version?: string;
+  versions?: string[];
+  source_sha256?: string;
+  code?: string;
   description?: string;
   scope?: string;
   user_id?: string;
@@ -2051,6 +2057,8 @@ export type WorkflowDetailResult = {
 export type WorkflowExecutionRecord = {
   execution_id?: string;
   workflow_name?: string | null;
+  workflow_version?: string;
+  source_sha256?: string;
   user_id?: string;
   status?: string;
   submitted_at?: number | null;
@@ -2089,6 +2097,9 @@ export type WorkflowPackage = {
   contract_version?: string;
   workflow_name?: string | null;
   version?: string;
+  versions?: string[];
+  source_sha256?: string;
+  code?: string;
   description?: string;
   scope?: string;
   user_id?: string;
@@ -2128,6 +2139,8 @@ export type WorkflowRunResult = {
   artifacts: unknown[] | null;
   outputs: Record<string, unknown> | null;
   error: string | null;
+  workflow_version?: string;
+  source_sha256?: string;
 };
 
 /** workflow.cancel / workflow.approve_gate: the new status, acknowledged. */
@@ -2137,6 +2150,8 @@ export type WorkflowStatusAck = {
   status: string;
   progress: number | null;
   error: string | null;
+  workflow_version?: string;
+  source_sha256?: string;
   ok: boolean;
 };
 
@@ -2147,6 +2162,8 @@ export type WorkflowStatusResult = {
   status: string;
   progress: number | null;
   error: string | null;
+  workflow_version?: string;
+  source_sha256?: string;
 };
 
 /** One declared step: a catalog row (name, entrypoint) or a workflow.json step. */

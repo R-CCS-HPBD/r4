@@ -752,12 +752,13 @@ class PlanRun(EngineRun):
     async def _gate_step(
         self, phase: dict[str, Any], step: dict[str, Any], frame: _Frame
     ) -> dict[str, Any]:
-        """Ask a human, or replay the human's journalled answer (D-8).
+        """Decide a gate, or replay a human's journalled answer (D-8).
 
-        Never auto-approved: only a broker's answer from a human passes a
-        gate, and a gate the run cannot ask (no human, a spent budget, a
-        cancelled run) is refused. A gate that is not approved stops the
-        run (``cancelled``, with the gate's reason); the rest refuse.
+        Local autopilot resolves a non-deletion gate automatically; chat/plan
+        asks a person. A gate the run cannot decide (no decision lane, a
+        spent budget, a cancelled run) is refused. A gate that is not
+        approved stops the run (``cancelled``, with its reason); the rest
+        refuse. Backend-owned policies are separate.
         """
         node = frame.node(step["id"])
         when = step.get("when")
@@ -812,16 +813,29 @@ class PlanRun(EngineRun):
             "prompt": request.prompt,
             "call_key": request.call_key,
         }
-        self._emit(EventKind.HUMAN_INPUT_REQUESTED, _ENGINE_ACTOR, payload)
+        preview = getattr(self._svc.agents, "gate_is_automatic", None)
+        automatic = bool(preview(request)) if callable(preview) else False
+        if not automatic:
+            self._emit(EventKind.HUMAN_INPUT_REQUESTED, _ENGINE_ACTOR, payload)
         started = time.monotonic()
         try:
             decision = await self._gate_answer(request)
         finally:
             self._gate_wait += time.monotonic() - started
-        if decision.answered:
+        if decision.answered and decision.decided_by != "autopilot":
             self._humans += 1
             self._journal.append(
                 _gate_record(request, phase_id, decision, self._svc.run.attempt_id)
+            )
+        # Automatic answers are deliberately not replayed: a later resume in
+        # chat must ask, while a resume still in autopilot decides again.
+        for note in decision.notes:
+            self._message(
+                {
+                    "type": "log",
+                    "step": request.metadata.get("step"),
+                    "text": f"[autopilot] {note}",
+                }
             )
         self._message(_gate_note(request.gate, {"class": request.trigger_class}, decision))
         return decision
@@ -875,10 +889,11 @@ class PlanRun(EngineRun):
     async def _merge_back_step(
         self, phase: dict[str, Any], step: dict[str, Any], frame: _Frame
     ) -> dict[str, Any] | None:
-        """Apply the isolated steps' workspace changes to the project root,
-        only after a human approved exactly that change set.
+        """Apply an approved batch of isolated changes to the project root.
 
-        Never auto-approved: it asks through the gate path (``team_plan_gate``).
+        Local autopilot accepts a non-deleting batch automatically; any exact
+        structured deletion in the batch prompts a person, as chat/plan does
+        for every batch. The gate is ``team_plan_gate``.
         A done merge (applied, or declined by a human) is journalled and
         replayed by a resume, which neither asks again nor applies twice. A
         conflict, an unsafe or unsupported file, or two workspaces changing
@@ -908,8 +923,8 @@ class PlanRun(EngineRun):
     async def _merge_decision(
         self, phase: dict[str, Any], step: dict[str, Any], frame: _Frame, batch: MergeBatch
     ) -> GateDecision:
-        """The human's answer to this exact change set: journalled, so a
-        resume replays it; a different change set asks again."""
+        """The exact change set's outcome: human answers are journalled for
+        replay; automatic answers are not. A different set is decided anew."""
         node = frame.node(step["id"])
         prompt = _gate_text(merge_prompt(self._root or "?", batch))
         key = canonical_hash({"merge_back": node, "class": MERGE_BACK_CLASS, "set": batch.digest})
@@ -925,6 +940,7 @@ class PlanRun(EngineRun):
                 "step": frame.owner_of(step["id"]),
                 "phase": frame.phase_of(phase),
                 "files": batch.files(),
+                "deletions": batch.deletions(),
             },
         )
         record = self._memo.get(key)
@@ -2089,6 +2105,7 @@ def _gate_note(
         "class": step.get("class"),
         "approved": bool(decision.approved and decision.answered),
         "answered": decision.answered,
+        "decided_by": decision.decided_by or None,
         "reason": decision.reason or None,
         "replayed": replayed,
     }

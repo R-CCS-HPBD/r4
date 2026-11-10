@@ -2402,6 +2402,230 @@ class Client:
             timeout=timeout or 10,
         )
 
+    # ── my HPC account at this site (ADR-112 B1.5a wire contract) ──────────
+    # Paths are spelled out per method so the route-liveness check reads them.
+    # Every method that changes the account is the person's act (D-8): it
+    # refuses in a Companion tool subprocess, whatever called it (the CLI,
+    # ``python -c``), before any request; UMRS also refuses agent-marked ones.
+
+    @staticmethod
+    def _hpc_person_only(action: str) -> None:
+        from .knowledge import COMPANION_SHELL_ENV, companion_shell
+
+        if companion_shell():
+            raise R4Error(
+                f"hpc {action} is the person's act: run it in your own terminal, "
+                f"not through the assistant ({COMPANION_SHELL_ENV} is set)."
+            )
+
+    def hpc_transport_key(
+        self, *, rotate: bool = False, timeout: Optional[float] = None
+    ) -> dict[str, Any]:
+        """Create (or, with ``rotate``, replace) my transport key here.
+
+        Answers ``{key_id, public_key, site, domain, from, gate}``; the
+        private half never leaves the server."""
+        self._hpc_person_only("rotate" if rotate else "add")
+        return self.http.post(
+            f"{self._config.gateway_url}{self._api_prefix}/sites/me/hpc/transport-key",
+            json_body={"rotate": bool(rotate)},
+            timeout=timeout or 30,
+        )
+
+    def hpc_verify(
+        self,
+        login: str,
+        *,
+        signers: list[str],
+        uv_required: bool,
+        allow_non_sk: bool,
+        timeout: Optional[float] = None,
+    ) -> dict[str, Any]:
+        """Ask the site to reach my gate (``probe`` then ``hello``) and store
+        what the site reports. ``signers`` are public fingerprints only."""
+        self._hpc_person_only("verify")
+        payload = {
+            "login": login,
+            "signers": list(signers),
+            "uv_required": bool(uv_required),
+            "allow_non_sk": bool(allow_non_sk),
+        }
+        return self.http.post(
+            f"{self._config.gateway_url}{self._api_prefix}/sites/me/hpc/verify",
+            json_body=payload,
+            timeout=timeout or 90,
+        )
+
+    def hpc_account(self, *, timeout: Optional[float] = None) -> dict[str, Any]:
+        """My account here and my project links: ``{account, links}``."""
+        return self.http.get(
+            f"{self._config.gateway_url}{self._api_prefix}/sites/me/hpc",
+            timeout=timeout or 10,
+        )
+
+    def hpc_link(
+        self, project_id: str, slurm_account: str, *, timeout: Optional[float] = None
+    ) -> dict[str, Any]:
+        """Link a project to one of my verified allocations here."""
+        self._hpc_person_only("link")
+        return self.http.post(
+            f"{self._config.gateway_url}{self._api_prefix}/sites/me/hpc/links",
+            json_body={"project_id": project_id, "slurm_account": slurm_account},
+            timeout=timeout or 30,
+        )
+
+    def hpc_unlink(self, project_id: str, *, timeout: Optional[float] = None) -> dict[str, Any]:
+        """Remove a project's link to my allocation here."""
+        from urllib.parse import quote
+
+        self._hpc_person_only("unlink")
+        pid = quote(project_id, safe="")
+        return self.http.delete(
+            f"{self._config.gateway_url}{self._api_prefix}/sites/me/hpc/links/{pid}",
+            timeout=timeout or 30,
+        )
+
+    def hpc_revoke(self, *, timeout: Optional[float] = None) -> dict[str, Any]:
+        """Revoke my account here: the server destroys my transport key."""
+        self._hpc_person_only("revoke")
+        return self.http.delete(
+            f"{self._config.gateway_url}{self._api_prefix}/sites/me/hpc",
+            timeout=timeout or 30,
+        )
+
+    # ── gated runs (ADR-112 wave B2, plan §5 B2.0 items 2, 10.3 and 11) ─────
+
+    def hpc_site_profile(self, *, timeout: Optional[float] = None) -> dict[str, Any]:
+        """The site's gate profile, read only: ``{profile, sha256, bytes_b64}``."""
+        return self.http.get(
+            f"{self._config.gateway_url}{self._api_prefix}/sites/me/hpc/site-profile",
+            timeout=timeout or 30,
+        )
+
+    def hpc_gate(self, *, timeout: Optional[float] = None) -> dict[str, Any]:
+        """A live ``hello`` of my gate with no state change: its version, sha,
+        site profile sha, log head and whether both are current."""
+        return self.http.get(
+            f"{self._config.gateway_url}{self._api_prefix}/sites/me/hpc/gate",
+            timeout=timeout or 60,
+        )
+
+    # ── grants and usage (plan §6, the C/D.0 wire contract, C4 and D4) ──────
+
+    def hpc_grant_proposal(
+        self, body: dict[str, Any], *, timeout: Optional[float] = None
+    ) -> dict[str, Any]:
+        """Read only: the server's digests, images and budget for a grant
+        (``{project_id, workflows: [{name, version?}]}``). r4 recomputes
+        every digest from the exports before it signs anything."""
+        return self.http.post(
+            f"{self._config.gateway_url}{self._api_prefix}/sites/me/hpc/grant-proposal",
+            json_body=body,
+            timeout=timeout or 60,
+        )
+
+    def hpc_grant_store(
+        self, envelope: dict[str, Any], *, timeout: Optional[float] = None
+    ) -> dict[str, Any]:
+        """Store a grant the person signed (``{payload, signature}``)."""
+        self._hpc_person_only("grant")
+        return self.http.post(
+            f"{self._config.gateway_url}{self._api_prefix}/sites/me/hpc/grants",
+            json_body=envelope,
+            timeout=timeout or 90,
+        )
+
+    def hpc_grants(
+        self, *, refresh: bool = True, timeout: Optional[float] = None
+    ) -> dict[str, Any]:
+        """My grants here: ``{grants: [<view>]}``; ``refresh`` asks the gate
+        for the live usage of the active ones first."""
+        return self.http.get(
+            f"{self._config.gateway_url}{self._api_prefix}/sites/me/hpc/grants",
+            params={"refresh": "1"} if refresh else None,
+            timeout=timeout or 120,
+        )
+
+    def hpc_grant_cancel(
+        self, grant_id: str, envelope: dict[str, Any], *, timeout: Optional[float] = None
+    ) -> dict[str, Any]:
+        """Relay my signed ``grant-cancel`` control to my gate."""
+        from urllib.parse import quote
+
+        self._hpc_person_only("grant-cancel")
+        gid = quote(grant_id, safe="")
+        return self.http.post(
+            f"{self._config.gateway_url}{self._api_prefix}/sites/me/hpc/grants/{gid}/cancel",
+            json_body=envelope,
+            timeout=timeout or 60,
+        )
+
+    def hpc_usage(
+        self,
+        *,
+        project: Optional[str] = None,
+        since: Optional[str] = None,
+        limit: Optional[int] = None,
+        timeout: Optional[float] = None,
+    ) -> dict[str, Any]:
+        """My usage-ledger rows at this site: ``{venue, rows, totals}``."""
+        params = {"project": project, "since": since, "limit": limit}
+        return self.http.get(
+            f"{self._config.gateway_url}{self._api_prefix}/sites/me/hpc/usage",
+            params={k: v for k, v in params.items() if v is not None} or None,
+            timeout=timeout or 30,
+        )
+
+    def project_hpc_usage(
+        self,
+        project_id: str,
+        *,
+        since: Optional[str] = None,
+        venue: Optional[str] = None,
+        timeout: Optional[float] = None,
+    ) -> dict[str, Any]:
+        """A project's HPC usage and lifetime GPU-hour budget (members)."""
+        from urllib.parse import quote
+
+        pid = quote(project_id, safe="")
+        params = {"since": since, "venue": venue}
+        return self.http.get(
+            f"{self._config.gateway_url}{self._api_prefix}/projects/{pid}/hpc-usage",
+            params={k: v for k, v in params.items() if v is not None} or None,
+            timeout=timeout or 30,
+        )
+
+    def workflow_intent_proposal(
+        self, workflow_name: str, body: dict[str, Any], *, timeout: Optional[float] = None
+    ) -> dict[str, Any]:
+        """The server's proposed intent for one gated run (nothing runs):
+        ``{intent_b64, intent_id, site_profile_sha256, summary}``. The server
+        may hash inputs for up to 300 s, hence the 330 s timeout."""
+        from urllib.parse import quote
+
+        name = quote(workflow_name, safe="")
+        return self.http.post(
+            f"{self._config.gateway_url}{self._api_prefix}/workflows/{name}/intent-proposal",
+            json_body=body,
+            timeout=timeout or 330,
+        )
+
+    def workflow_trigger_signed(
+        self, workflow_name: str, body: dict[str, Any], *, timeout: Optional[float] = None
+    ) -> dict[str, Any]:
+        """Trigger a run with the intent the person signed (``intent`` and
+        ``signature`` in ``body``). The person's act: refused in a Companion
+        tool subprocess, whatever called it."""
+        from urllib.parse import quote
+
+        self._hpc_person_only("workflow trigger --site")
+        name = quote(workflow_name, safe="")
+        return self.http.post(
+            f"{self._config.gateway_url}{self._api_prefix}/workflows/{name}/trigger",
+            json_body=body,
+            timeout=timeout or 120,
+        )
+
     def create_grant(
         self,
         asset_kind: str,
@@ -2742,9 +2966,11 @@ class Client:
     def site_capabilities(self) -> dict[str, Any]:
         """Fetch site deployment capabilities from the UMRS /health endpoint.
 
-        Returns a dict with keys like ``scheduler_kind``, ``slurm_delegation``,
-        ``site_name``, and (when delegation is ``per_user_ssh``)
-        ``service_pubkey_path`` and ``slurm_proxy_path``.
+        Returns a dict with keys like ``scheduler_kind``, ``site_name`` and
+        ``hpc_access`` (``default_mode``, ``modes_allowed``, ``personal``;
+        ADR-112 D-1). The client only reads it: r4 never enrols a key for a
+        shared site account. Servers older than ADR-112 wave A may still send
+        ``slurm_delegation`` and key paths; r4 ignores them (2026-11-08).
 
         Returns an empty dict on failure.
         """

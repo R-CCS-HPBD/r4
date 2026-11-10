@@ -141,7 +141,8 @@ def test_input_schemas_carry_no_identity_input():
 def test_mvp_only_body_identity_and_legacy_alias_are_hidden():
     by_name = {op.name: op for op in gen.build_operations(*_contract())[0]}
     run = by_name["workflow_run"].input_schema
-    assert set(run["properties"]) == {"workflow_name", "parameters", "input_files"}
+    # 2026-11-09: ADR-113 D-3 (#810): every surface takes an optional `version`.
+    assert set(run["properties"]) == {"workflow_name", "version", "parameters", "input_files"}
     assert run["required"] == ["workflow_name"]
     assert run["properties"]["parameters"]["type"] == "object"
     assert run["properties"]["input_files"] == {

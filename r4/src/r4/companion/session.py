@@ -30,6 +30,7 @@ from .endpoint_state import format_active_endpoints_prompt
 from .env_switch import autonomous, autopilot_server_policy
 from .permissions import SAFE_TOOLS, PermissionManager, PermissionMode
 from .plan_reply import UNCLEAR_REPLY_NOTICE, classify_plan_reply
+from .session_bus_tools import build_session_bus_tools, inbox_reminder
 from .session_flow import (
     evaluate_turn_endpoint_guard as evaluate_session_turn_endpoint_guard,
 )
@@ -356,6 +357,10 @@ class CompanionSession:
         from .memory_tools import build_memory_tools
 
         self.tools.extend(build_memory_tools(self))
+        # ADR-114 D-3: session messaging, lead session only; the console
+        # bridge puts the session on the local bus (``bus_presence``).
+        self.bus_presence: Any = None
+        self.tools.extend(build_session_bus_tools(self))
         # H15: the availability gate reads the session's choice per turn and
         # does not offer a web tool that would only refuse.
         for tool in self.tools:
@@ -1315,7 +1320,13 @@ class CompanionSession:
             active_endpoints_prompt=self._active_endpoints_as_prompt(),
             logger=logger,
         )
-        turn_parts = join_parts(turn_parts, self._user_hook_inject, _build_contract_orientation())
+        turn_parts = join_parts(
+            turn_parts,
+            self._user_hook_inject,
+            _build_contract_orientation(),
+            # ADR-114 D-4: counts and names only; the text comes via a tool.
+            inbox_reminder(self),
+        )
         return self.skills.active_system_prompt(), turn_parts
 
     def _run_prompt_hooks(self, user_message: str) -> str:

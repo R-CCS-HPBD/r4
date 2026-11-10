@@ -48,6 +48,12 @@ class AsyncAgentRecord:
     child: object | None = None
     history: list[dict[str, str]] = field(default_factory=list)
     system_prompt: str = ""
+    # S2: live execution inputs and the recorder view; the pool remains only
+    # execution authority, never the transcript/store authority.
+    execution: Any = None
+    tools: list[dict[str, Any]] | None = None
+    model: str | None = None
+    on_start_error: Callable[[BaseException], None] | None = None
 
     def duration_ms(self) -> int:
         return int((time.monotonic() - self.started_at) * 1000)
@@ -82,9 +88,13 @@ class AsyncAgentPool:
     # -- lifecycle -----------------------------------------------------------
 
     def spawn(
-        self, task: str, runner: Callable[[AsyncAgentRecord], str]
+        self,
+        task: str,
+        runner: Callable[[AsyncAgentRecord], str],
+        *,
+        before_start: Callable[[AsyncAgentRecord], None] | None = None,
     ) -> AsyncAgentRecord | dict[str, str]:
-        """Start a background agent, or return an error dict over the cap."""
+        """Accept durably, then start; over-cap refusal has no registration side effects."""
         with self._condition:
             running = sum(1 for r in self._records.values() if r.status == "running")
             limit = self._max if self._max is not None else _max_running()
@@ -95,9 +105,21 @@ class AsyncAgentPool:
                 }
             record = AsyncAgentRecord(agent_id=uuid.uuid4().hex[:12], task=task)
             record.thread = self._thread(record, runner)
+            if before_start is not None:
+                before_start(record)
             self._records[record.agent_id] = record
-            record.thread.start()
+            try:
+                record.thread.start()
+            except BaseException as exc:
+                self._records.pop(record.agent_id, None)
+                self._notify_start_error(record, exc)
+                raise
             return record
+
+    @staticmethod
+    def _notify_start_error(record: AsyncAgentRecord, error: BaseException) -> None:
+        if record.on_start_error is not None:
+            record.on_start_error(error)
 
     def _thread(
         self, record: AsyncAgentRecord, runner: Callable[[AsyncAgentRecord], str]
@@ -151,20 +173,38 @@ class AsyncAgentPool:
             return self._records.get(agent_id)
 
     def resume(
-        self, agent_id: str, runner: Callable[[AsyncAgentRecord], str]
+        self,
+        agent_id: str,
+        runner: Callable[[AsyncAgentRecord], str],
+        *,
+        before_start: Callable[[AsyncAgentRecord], None] | None = None,
     ) -> dict[str, str] | AsyncAgentRecord:
-        """G17b: a follow-up turn on a finished agent's accumulated context."""
+        """Register a follow-up before its thread can produce another result."""
         with self._condition:
             record = self._records.get(agent_id)
             if record is None:
                 return {"error": f"unknown background agent {agent_id!r}"}
             if record.status == "running":
                 return {"error": f"{agent_id} is still running; wait for its notification"}
+            previous_started = record.started_at
+            record.started_at = time.monotonic()
+            try:
+                if before_start is not None:
+                    before_start(record)
+            except Exception:
+                record.started_at = previous_started
+                raise
             record.status = "running"
             record.error = ""
-            record.started_at = time.monotonic()
+            record.delivered = False
             record.thread = self._thread(record, runner)
-            record.thread.start()
+            try:
+                record.thread.start()
+            except BaseException as exc:
+                record.status = "failed"
+                record.error = str(exc)
+                self._notify_start_error(record, exc)
+                raise
             return record
 
     def wait_idle(self, timeout: float = 10.0) -> bool:
@@ -187,6 +227,7 @@ class AsyncAgentPool:
                     "status": r.status,
                     "duration_ms": r.duration_ms(),
                     "delivered": r.delivered,
+                    "child_session_id": getattr(r.execution, "child_session_id", None),
                     **({"result_head": r.result[:500]} if r.status == "completed" else {}),
                     **({"error": r.error[:500]} if r.error else {}),
                 }

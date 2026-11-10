@@ -121,7 +121,10 @@ def effective_agent_settings(
         "interaction_mode": interaction,
         "write_requires_plan": bool(metadata.get("write_requires_plan")),
         "workflow_armed": bool(metadata.get("workflow_armed")),
-        "ask_user_mode": normalize_ask_user_mode(ask_user_mode),
+        # ADR-104 amendment 3: autopilot does not stop for ask_user either.
+        "ask_user_mode": (
+            "auto" if interaction == "autopilot" else normalize_ask_user_mode(ask_user_mode)
+        ),
         "approval_ttl_s": int(_remembered_approval_ttl()),
         "session_approved_tools": _approved_tools(session),
     }

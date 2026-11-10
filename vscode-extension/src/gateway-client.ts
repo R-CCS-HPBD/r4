@@ -12,6 +12,7 @@
 import * as vscode from "vscode";
 import * as http from "http";
 import * as https from "https";
+import { parseWorkflowRef, triggerBody } from "./workflow-versions";
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -346,11 +347,20 @@ export interface Workflow {
   description?: string;
   parameters?: Record<string, unknown>[];
   tags?: string[];
+  /** ADR-113 D-3: the default version, every registered one (SemVer-desc)
+   * and the default's code digest. Absent from older servers. */
+  version?: string;
+  versions?: string[];
+  source_sha256?: string;
 }
 
 export interface WorkflowExecution {
   execution_id: string;
   workflow_id: string;
+  /** ADR-113 D-4: what the run pinned (absent from older servers). */
+  workflow_name?: string;
+  workflow_version?: string;
+  source_sha256?: string;
   status: string;
   started_at?: string;
   finished_at?: string;
@@ -361,6 +371,9 @@ export interface WorkflowExecution {
 export interface WorkflowResult {
   execution_id: string;
   workflow_id: string;
+  workflow_name?: string;
+  workflow_version?: string;
+  source_sha256?: string;
   status: string;
   outputs?: Record<string, unknown>;
   artifacts?: string[];
@@ -975,15 +988,19 @@ export class GatewayClient {
     return data.workflows ?? data.data ?? [];
   }
 
+  /** Trigger a workflow; `version` runs that exact version (ADR-113 D-3),
+   * absent runs the server's default. A `name@X` name is split here. */
   async triggerWorkflow(
     workflowName: string,
     parameters?: Record<string, unknown>,
+    version?: string,
   ): Promise<WorkflowExecution> {
     this.assertPlatform("Workflow triggering");
+    const ref = parseWorkflowRef(workflowName);
     return this.request<WorkflowExecution>(
       "POST",
-      `/gw/workflows/${encodeURIComponent(workflowName)}/trigger`,
-      { parameters: parameters ?? {} },
+      `/gw/workflows/${encodeURIComponent(ref.name)}/trigger`,
+      triggerBody(parameters, version || ref.version),
     );
   }
 

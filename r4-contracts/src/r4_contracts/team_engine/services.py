@@ -103,12 +103,13 @@ class AgentTurnResult:
 
 @dataclass(frozen=True)
 class GateRequest:
-    """A plan ``gate`` step asking a human (ADR-092 slice 2, ADR-066 classes).
+    """A plan ``gate`` decision (ADR-092 slice 2, ADR-066 classes).
 
     ``trigger_class`` is the ADR-066 class (``cost``, ``competing_hypotheses``,
-    ``physical_action``, ``direction_change``); ``prompt`` is the rendered
-    question, agent-written parts inside untrusted envelopes. A gate is never
-    auto-approved: a broker with no human to ask refuses it.
+    ``physical_action``, ``direction_change``); ``prompt`` is rendered with
+    agent-written parts in untrusted envelopes. Local interactive autopilot
+    resolves non-deletion gates automatically (ADR-104 A3); otherwise a broker
+    needs a human lane. Backend-owned gate policies are independent.
     """
 
     call_key: str
@@ -121,11 +122,16 @@ class GateRequest:
 
 @dataclass(frozen=True)
 class GateDecision:
-    """A gate's outcome. ``answered`` is True only when a human answered:
-    a refusal for want of a human (``reason`` says why) is never an answer,
-    so it is not journalled as one and a resume asks again."""
+    """A gate's outcome, answered by a person or named automatic policy.
+
+    A refusal for want of someone able to decide (``reason`` says why) is not
+    an answer. Only human answers are journalled for replay; an autopilot
+    answer is recomputed on resume so returning to chat cannot inherit it.
+    """
 
     approved: bool
     answered: bool = False
     reason: str = ""
     decided_by: str = ""
+    # Additive audit trail for automatic local resolution (ADR-104 A3).
+    notes: tuple[str, ...] = ()

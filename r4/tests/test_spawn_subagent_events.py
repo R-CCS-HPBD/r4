@@ -14,6 +14,7 @@ import pytest
 
 from r4.companion import agent as agent_module
 from r4.companion.agent import CompanionEventType, ResearchCompanion
+from r4.companion.permissions import PermissionManager, PermissionMode
 
 
 def _main_companion() -> ResearchCompanion:
@@ -77,6 +78,22 @@ def test_spawn_event_carries_task_and_verbatim_prompt(monkeypatch):
         and captured["extra_system"] == "You are careful."
         and captured["init_kwargs"]["call_type"] == "subagent"
     )
+
+
+def test_subagent_inherits_an_isolated_view_of_the_parent_permissions(monkeypatch):
+    main = _main_companion()
+    main._permissions = PermissionManager(PermissionMode.TRUST)
+    captured = _patch_sub(monkeypatch)
+
+    main._new_subagent()
+    first = captured["init_kwargs"]["permission_manager"]
+    main._new_subagent()
+    second = captured["init_kwargs"]["permission_manager"]
+
+    assert first.mode is PermissionMode.TRUST
+    assert first.check("shell_exec", {"command": "hostname"}) is True
+    assert first is not second
+    assert first.taint_registry is not second.taint_registry
 
 
 def test_spawn_default_prompt_is_the_documented_default(monkeypatch):

@@ -279,6 +279,7 @@ def test_workflow_run_rpc_triggers_workflow() -> None:
         input_files=None,
         project_id=None,
         wait=False,
+        version=None,
     )
 
 

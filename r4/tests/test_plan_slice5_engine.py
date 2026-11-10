@@ -340,6 +340,81 @@ async def test_two_equal_map_items_never_share_a_workspace(plain, run_dir) -> No
 # ── merge-back ──────────────────────────────────────────────────────────────
 
 
+class _AutopilotGates(MemoryAgentBroker):
+    """Automatic non-delete gates, with deletion answers coming from a person."""
+
+    def __init__(self, script: dict[str, Any], *, approve_deletes: bool = False) -> None:
+        super().__init__(script)
+        self.approve_deletes = approve_deletes
+
+    def gate_is_automatic(self, request: GateRequest) -> bool:
+        return not bool(request.metadata.get("deletions"))
+
+    async def ask_gate(self, request: GateRequest) -> GateDecision:
+        self.gate_calls.append(request)
+        if request.metadata.get("deletions"):
+            return GateDecision(approved=self.approve_deletes, answered=True, decided_by="human")
+        return GateDecision(
+            approved=True,
+            answered=True,
+            decided_by="autopilot",
+            notes=("never_auto ask auto-answered in autopilot",),
+        )
+
+
+def _is_autopilot_log(event: Any) -> bool:
+    if event.kind is not EventKind.AGENT_MESSAGE:
+        return False
+    if event.payload.get("type") != "log":
+        return False
+    return "[autopilot] never_auto ask auto-answered" in event.payload.get("text", "")
+
+
+async def _autopilot_merge(repo: Path, run_dir: Path):
+    broker = _AutopilotGates({"impl": _per_replica})
+    run, events = await _run(_plan(_fan("worktree", count=1), _merge()), repo, run_dir, broker)
+    return run, broker, events
+
+
+async def test_non_delete_merge_back_autopilot_runs_without_human_provenance(repo, run_dir) -> None:
+    run, broker, events = await _autopilot_merge(repo, run_dir)
+
+    result = await run.result()
+    output = _result(run_dir)["output"]["merge"]
+    assert (result.status, result.metrics.human_interventions) == ("success", 0)
+    assert broker.gate_calls[0].metadata["deletions"] == []
+    assert output["decided_by"] == "autopilot"
+    assert [r for r in events if r.kind is EventKind.HUMAN_INPUT_REQUESTED] == []
+
+
+async def test_autopilot_merge_back_logs_its_decision_without_a_gate_replay(repo, run_dir) -> None:
+    _run_, _broker, events = await _autopilot_merge(repo, run_dir)
+
+    assert any(_is_autopilot_log(event) for event in events)
+    records = PlanJournal(run_dir).records()
+    assert [r for r in records if r.get("kind") == "gate"] == []
+
+
+async def test_merge_back_deletion_carries_only_exact_deleted_paths(plain, run_dir) -> None:
+    def script(request: AgentTurnRequest) -> str:
+        root = Path(request.metadata["workspace"])
+        (root / "app.py").write_text("print('v2')\n")
+        (root / "new.txt").write_text("new\n")
+        (root / "gone.txt").unlink()
+        return "changed"
+
+    (plain / "gone.txt").write_text("bye\n")
+    broker = _AutopilotGates({"impl": script})
+    raw = _plan(_fan("copy", count=1), _merge())
+    run, _ = await _run(raw, plain, run_dir, broker)
+
+    assert (await run.result()).status == "cancelled"
+    assert broker.gate_calls[0].metadata["deletions"] == ["gone.txt"]
+    assert set(broker.gate_calls[0].metadata["files"]) == {"app.py", "new.txt", "gone.txt"}
+    assert (plain / "app.py").read_text() == "print('v1')\n"
+    assert (plain / "gone.txt").exists() and not (plain / "new.txt").exists()
+
+
 async def test_an_approved_merge_back_applies_the_diffs_and_asks_once(repo, run_dir) -> None:
     raw = _plan(_fan("worktree", count=2), _merge())
     broker = MemoryAgentBroker({"impl": _per_replica}, gate_answers={"merge": True})

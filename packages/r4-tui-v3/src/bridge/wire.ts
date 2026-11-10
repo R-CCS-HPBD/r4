@@ -102,6 +102,7 @@ export type BridgeChannel =
   | "search_server_event"
   | "worktree_event"
   | "session_title"
+  | "session_inbox"
   | "approval"
   | "ask_user"
   | "turn_stopped"
@@ -122,6 +123,8 @@ const OBJECT_CHANNELS: ReadonlyArray<[string, BridgeChannel]> = [
   ["search_server_event", "search_server_event"],
   ["worktree_event", "worktree_event"],
   ["session_title", "session_title"],
+  // ADR-114 D-6: messages from another R4 session reached this tab's inbox.
+  ["session_inbox", "session_inbox"],
 ];
 
 const TRUTHY_CHANNELS: ReadonlyArray<[string, BridgeChannel]> = [

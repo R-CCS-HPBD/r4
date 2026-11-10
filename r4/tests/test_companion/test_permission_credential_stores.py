@@ -60,8 +60,10 @@ def test_credential_reads_ask_in_auto_safe(
     assert _asked(PermissionMode.AUTO_SAFE, tool, args)
 
 
-def test_reading_r4_stores_in_a_shell_asks_even_in_trust(home: Path) -> None:
-    assert _asked(PermissionMode.TRUST, "shell_exec", {"command": "cat ~/.config/r4/sources.json"})
+def test_reading_r4_stores_in_a_shell_auto_answers_in_trust(home: Path) -> None:
+    assert not _asked(
+        PermissionMode.TRUST, "shell_exec", {"command": "cat ~/.config/r4/sources.json"}
+    )
 
 
 @pytest.mark.parametrize(

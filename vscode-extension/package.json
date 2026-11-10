@@ -472,7 +472,7 @@
         },
         {
           "command": "r4.triggerWorkflow",
-          "when": "view == r4.workflows && viewItem == workflow",
+          "when": "view == r4.workflows && viewItem =~ /^workflow(-version)?$/",
           "group": "inline"
         }
       ],
@@ -620,7 +620,7 @@
     "lint": "eslint src --ext ts",
     "test": "npm run package && vscode-test",
     "test:bundle": "./node_modules/.bin/esbuild webview-ui/src/lib/mgmt-slash.ts --bundle --format=cjs --outfile=test/mgmt-slash-parser.bundle.cjs && ./node_modules/.bin/esbuild src/mgmt-card-map.ts --bundle --format=cjs --outfile=test/mgmt-card.bundle.cjs && ./node_modules/.bin/esbuild src/prompt-history.ts --bundle --format=cjs --platform=node --outfile=test/prompt-history.bundle.cjs",
-    "test:unit": "npm run test:bundle && node --test test/manifest.test.mjs test/acp-client.test.mjs test/agent-tools.test.mjs test/agent-view.test.mjs test/agent-engine.test.mjs test/think-filter.test.mjs test/thinking-routing.test.mjs test/reasoning-roundtrip.test.mjs test/vision-proxy.test.mjs test/max-tokens.test.mjs test/auth-sources.test.mjs test/edit-session-core.test.mjs test/topic-graph.test.mjs test/store-catalog-scoping.test.mjs test/store-knowledge-scoping.test.mjs test/store-tool-selection.test.mjs test/store-stream-boundary.test.mjs test/mgmt-slash-parser.test.mjs test/mgmt-card.test.mjs test/prompt-history.test.mjs test/parity-matrix.test.mjs test/shared-modules.test.mjs test/companion-bridge.test.mjs test/companion-bridge-live.test.mjs test/bridge-agent-host.test.mjs test/bridge-view-router.test.mjs test/store-asks.test.mjs test/store-vp2b.test.mjs test/shell-runner.test.mjs test/chat-panels.test.mjs test/venue-host.test.mjs test/remote-turn.test.mjs test/store-agent-event-filter.test.mjs test/chat-verbs.test.mjs test/console-tools.test.mjs test/model-mode.test.mjs test/ops-verbs.test.mjs test/store-thinking.test.mjs test/teamup-verbs.test.mjs test/teamup-live.test.mjs test/work-verbs.test.mjs",
+    "test:unit": "npm run test:bundle && node --test test/manifest.test.mjs test/acp-client.test.mjs test/agent-tools.test.mjs test/agent-view.test.mjs test/agent-engine.test.mjs test/think-filter.test.mjs test/thinking-routing.test.mjs test/reasoning-roundtrip.test.mjs test/vision-proxy.test.mjs test/max-tokens.test.mjs test/auth-sources.test.mjs test/edit-session-core.test.mjs test/topic-graph.test.mjs test/store-catalog-scoping.test.mjs test/store-knowledge-scoping.test.mjs test/store-tool-selection.test.mjs test/store-stream-boundary.test.mjs test/mgmt-slash-parser.test.mjs test/mgmt-card.test.mjs test/prompt-history.test.mjs test/parity-matrix.test.mjs test/shared-modules.test.mjs test/companion-bridge.test.mjs test/companion-bridge-live.test.mjs test/bridge-agent-host.test.mjs test/bridge-view-router.test.mjs test/store-asks.test.mjs test/store-vp2b.test.mjs test/shell-runner.test.mjs test/chat-panels.test.mjs test/venue-host.test.mjs test/remote-turn.test.mjs test/store-agent-event-filter.test.mjs test/chat-verbs.test.mjs test/console-tools.test.mjs test/model-mode.test.mjs test/ops-verbs.test.mjs test/store-thinking.test.mjs test/teamup-verbs.test.mjs test/teamup-live.test.mjs test/work-verbs.test.mjs test/workflow-versions.test.mjs",
     "webview:dev": "cd webview-ui && npm run dev",
     "webview:build": "cd webview-ui && npm run build",
     "webview:check-types": "cd webview-ui && npm run typecheck",

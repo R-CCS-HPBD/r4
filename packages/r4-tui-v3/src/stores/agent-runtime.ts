@@ -152,8 +152,8 @@ export { agentRuntime };
 export const agentActions = {
   // ── Agent Lifecycle ────────────────────────────────────────────────────
 
-  createAgent(agent: Omit<AgentRuntime, "id" | "createdAt" | "updatedAt" | "state"> & { state?: AgentState }): string {
-    const id = ulid();
+  createAgent(agent: Omit<AgentRuntime, "id" | "createdAt" | "updatedAt" | "state"> & { id?: string; state?: AgentState }): string {
+    const id = agent.id ?? ulid();
     const now = new Date().toISOString();
     const newAgent: AgentRuntime = {
       id,
@@ -169,6 +169,10 @@ export const agentActions = {
       permissions: agent.permissions,
       progress: agent.progress,
       errorMessage: agent.errorMessage,
+      sessionId: agent.sessionId,
+      parentSessionId: agent.parentSessionId,
+      parentAgentId: agent.parentAgentId,
+      subagentTurn: agent.subagentTurn,
       createdAt: now,
       updatedAt: now,
     };

@@ -1544,27 +1544,28 @@ def _agent_count(row: dict[str, Any]) -> str:
 
 
 def _gate_lines(summary: dict[str, Any]) -> list[str]:
-    """Where the run will stop and ask you (slice 2): never auto-approved."""
+    """Where a gate asks a person or is auto-decided by policy."""
     lines = []
     for gate in summary.get("gates") or []:
         when = f" (only if {gate['when']} is set)" if gate.get("when") else ""
         lines.append(
             _one_line(
-                f"  asks you at gate {gate.get('gate')} ({gate.get('class')}){when}: "
-                "never auto-approved; a no stops the run"
+                f"  decision at gate {gate.get('gate')} ({gate.get('class')}){when}: "
+                "chat/plan asks; non-delete autopilot decides with an audit note; "
+                "a no stops the run"
             )
         )
     return lines
 
 
 def _merge_back_lines(summary: dict[str, Any]) -> list[str]:
-    """Where the run will stop and ask before writing to the project (slice 5)."""
+    """Where the run will merge changes, asking if they delete files."""
     return [
         _one_line(
-            f"  asks you at merge_back {row.get('step')} before writing the workspaces of "
+            f"  merge_back {row.get('step')} writes the workspaces of "
             f"{', '.join(str(s) for s in row.get('from') or [])} into the project root "
-            "(text diffs only; a conflict is refused, never resolved): never auto-approved; "
-            "a no stops the run"
+            "(text diffs only; a conflict is refused): chat/plan asks; "
+            "autopilot accepts non-deletes and always asks before deletion; a no stops the run"
         )
         for row in summary.get("merge_backs") or []
     ]

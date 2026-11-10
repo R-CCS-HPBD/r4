@@ -259,10 +259,10 @@ def test_scenario_d_insufficient_triggers_proposal_not_mutation() -> None:
     # No mutation happened anywhere
     assert server.ingest_calls == []
 
-    # Even in TRUST mode without an approval callback, decide must be denied
+    # Local autopilot auto-answers the permission prompt (amendment 3)...
     mgr = PermissionManager(mode=PermissionMode.TRUST)
-    assert mgr.check("knowledge_graph_decide", {"proposal_id": "gp-1", "approved": True}) is False
-    # And the server guard blocks agent-actor ingest without approval
+    assert mgr.check("knowledge_graph_decide", {"proposal_id": "gp-1", "approved": True}) is True
+    # ...but it cannot manufacture a human actor or bypass the server guard.
     server.actor = "agent"  # companion marks the actor at mutation time
     try:
         server.ingest_sources("fwi-project", [{"kind": "local_file", "uri": "exp-zeta.json"}])
@@ -316,7 +316,7 @@ def test_scenario_f_approve_executes_with_provenance() -> None:
 
     prompts: list[tuple[str, str]] = []
     mgr = _prompt_recording_manager(prompts)
-    # 1. Decision (always prompted, never auto-approved)
+    # 1. Decision (prompted here; local autopilot is tested separately)
     assert mgr.check("knowledge_graph_decide", {"proposal_id": "gp-1", "approved": True}) is True
     decision = _run(tools, "knowledge_graph_decide", proposal_id="gp-1", approved=True)
     assert decision["proposal"]["status"] == "approved"

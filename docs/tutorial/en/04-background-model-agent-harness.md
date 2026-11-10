@@ -456,21 +456,22 @@ tuple and its `_rung_*` methods; ADR-104, 2026-10-31):
 |---|---|---|---|---|
 | 1 | DENY mode? | block | General · R4 settings | `_rung_deny_mode` |
 | 2 | Your rule file says deny? | block | General · R4 settings | `_rung_deny_rule`; `permission_rules.py` |
-| 3 | A tool that always asks (knowledge-graph and research-loop decisions; in chat and plan also team plans and plan gates)? | ask you, every call | R4-specific | `_rung_never_auto` |
+| 3 | A tool that asks in chat/plan (knowledge-graph and research-loop decisions, team plans and gates)? | ask you (autopilot logs and runs; backend policy still applies) | R4-specific | `_rung_never_auto` |
 | 4 | Do the arguments copy ≥ 24 characters from a `search_docs` / RAG / `web_*` / MCP / lab result, or from data a command downloaded? (taint fence) | ask you (chat, plan; autopilot runs it and notes it) | R4-specific | `_rung_taint`; `r4-contracts/src/r4_contracts/taint.py`; `companion/taint_exec.py` |
-| 5 | A shell command or path touching credentials or identity (`~/.ssh`, keys, tokens, force-push)? | ask you, every mode | R4-specific | `_rung_fence` |
-| 6 | Your rule file says ask? | ask you | General · R4 settings | `_rung_ask_rule` |
+| 5 | A shell command or path touching credentials or identity (`~/.ssh`, keys, tokens, force-push)? | ask you (chat, plan; autopilot logs and runs) | R4-specific | `_rung_fence` |
+| 6 | Your rule file says ask? | ask you (chat, plan; autopilot logs and runs; deny always blocks) | General · R4 settings | `_rung_ask_rule` |
 | 7 | A write to a protected path (`.git/`, `.bashrc`, `.ssh/`, `.mcp.json`, `.r4/hooks.json`, the rule files …; `apply_patch` read from its patch)? | ask you (chat, plan; autopilot runs it and notes it) | General · R4 settings | `_rung_protected_path`; `permission_rules.dangerous_path_reason` |
 | 8 | A template crew's `teamup_start` (its plan card asks)? | run | R4-specific | `_rung_plan_card` |
 | 9 | Your rule file says allow? | run | General · R4 settings | `_rung_allow_rule` |
 | 10 | A read-only tool (chat, plan or autopilot)? | run | General pattern | `_rung_safe` |
 | 11 | You answered **a** for this tool in this session? | run | General · R4 settings | `_rung_session` |
-| 12 | Autopilot? (any tool; with an organisation policy on, only tools on its allowlist) | run | General · R4 settings | `_rung_trust` |
+| 12 | Autopilot? (any tool; an organisation policy's local miss is logged and auto-answered) | run | General · R4 settings | `_rung_trust` |
 | 13 | Otherwise — e.g. a write or a command not yet approved | ask you | General pattern | `decide()` default |
 
-Rungs 1–7 are the floor no rule or answer gets past; autopilot (amendment 2,
-below) passes only rungs 4 and 7 and the team-plan part of rung 3; only then do the
-allowances (8–12) apply. The slide groups the 13 rungs into seven rows: the
+Rungs 1–7 are the classification floor. Deny still blocks in every mode;
+since amendment 3 (2026-11-09), autopilot auto-answers every local non-delete
+ask from rungs 3–7 with an audit note, then applies allowances (8–12).
+Backend-owned authorization is separate and still applies. The slide groups the 13 rungs into seven rows: the
 floor (rows 1–4), "you already said yes" (allow rules and earlier
 "always" answers, row 5), "the mode allows it" (row 6), otherwise ask
 (row 7).
@@ -484,14 +485,13 @@ docstring at `_LADDER`). There is no per-call approval cache any more (the
 
 - **One mode** (`companion/agent_mode.py`): **chat** (the default: read-only
   tools such as `file_read`, `list_dir`, `search_docs` run, the rest ask),
-  **plan** (read-only tools only, a plan first) and **autopilot** (runs
-  everything; it asks only for credential access and force-push, knowledge
-  decisions, your `ask` rules, and a delete it cannot back up first — a delete
-  nobody approved is copied to `~/.local/share/r4/trash` unless git holds the
-  file committed (ADR-104 amendment 2, `companion/delete_guard.py`); an
-  organisation can narrow it to its server
-  allowlist with `R4_AUTOPILOT_SERVER_POLICY=1`, ADR-035, and the badge then
-  reads `autopilot(policy)`). *(2026-11-03, ADR-104 amendment 1: autopilot
+  **plan** (read-only tools only, a plan first) and **autopilot** (every local
+  non-deletion prompt is auto-answered with an audit note; recognised
+  user-file deletion, patch rename sources, worktree removal and deleting
+  merge-backs ask; `ask_user` continues with a stated assumption; ADR-104
+  amendment 3). An organisation policy can be consulted with
+  `R4_AUTOPILOT_SERVER_POLICY=1` (badge `autopilot(policy)`), but its local
+  prompt no longer blocks autopilot; backend authorization still applies. *(2026-11-03, ADR-104 amendment 1: autopilot
   used to come before rungs 10–11 and, signed in, asked the server for every
   tool, so `autopilot(server)` asked even for `file_read`.)*
   **Shift+Tab** cycles them; the permission mode (`AUTO_SAFE` / `TRUST`)
@@ -523,8 +523,9 @@ docstring at `_LADDER`). There is no per-call approval cache any more (the
   `_require_fenced_approval`, `approval_answers.normalize_decision`).
   Still open: an ask the decision model adds (below) is not fenced.
 - **Why rung 4 exists:** text from documents, MCP servers and the web can
-  carry hidden instructions (prompt injection), so a call built from it
-  always asks. No comparable harness tracks where arguments came from.
+  carry hidden instructions (prompt injection), so a call built from it asks in
+  chat/plan; autopilot records the provenance and runs it (amendment 3). No
+  comparable harness tracks where arguments came from.
   The results of `mcp.<server>.<tool>` calls count as MCP output, and a
   `shell_exec` / `python_exec` call that reads the network (curl, wget,
   `git clone`, urllib, requests …) counts as web content, together with the

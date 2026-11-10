@@ -32,6 +32,15 @@ _RUN_INPUT_FILES_PARAM: dict[str, Any] = {
     "items": {"type": "string"},
     "description": "Input file keys",
 }
+# ADR-113 D-3 (2026-11-08): one optional version on every tool that names a
+# workflow; workflow_name may also carry it as NAME@VERSION.
+VERSION_PARAM: dict[str, Any] = {
+    "type": "string",
+    "description": (
+        "Workflow version (workflow_list `versions`); default: the highest "
+        "registered. workflow_name may also be NAME@VERSION"
+    ),
+}
 
 
 def _tool(name: str, description: str, parameters: dict[str, Any], execute) -> dict[str, Any]:
@@ -99,7 +108,11 @@ def _parse_workflow_run_inputs(
 
 
 def _precheck_params(
-    client: "Client", workflow_name: str, params: dict[str, Any], files: list[Any] | None
+    client: "Client",
+    workflow_name: str,
+    params: dict[str, Any],
+    files: list[Any] | None,
+    version: str | None = None,
 ) -> str | None:
     """ADR-105 D-3: check params against the workflow's parameter_schema.
 
@@ -110,7 +123,7 @@ def _precheck_params(
     if _policy_guard(client, "describe") is not None:
         return None
     try:
-        schema = client.workflows.describe(workflow_name).get("parameter_schema")
+        schema = client.workflows.describe(workflow_name, version=version).get("parameter_schema")
     except Exception:
         return None
     merged = dict(params)
@@ -190,8 +203,18 @@ def _result_json(result: Any, target: Any, **extra: Any) -> str:
         "artifacts": result.artifacts,
         "outputs": result.outputs,
         "error": result.error,
+        **_run_pin(result),
     }
     return _tagged_json(payload, target, result.execution_id)
+
+
+def _run_pin(run: Any) -> dict[str, str]:
+    """The version and code digest a run pinned (ADR-113 D-4); empty
+    strings from servers before versions."""
+    return {
+        "workflow_version": str(getattr(run, "workflow_version", "") or ""),
+        "source_sha256": str(getattr(run, "source_sha256", "") or ""),
+    }
 
 
 def _catalog_tool_row(wf: Any) -> dict[str, Any]:
@@ -199,6 +222,9 @@ def _catalog_tool_row(wf: Any) -> dict[str, Any]:
     user shared with the caller from the caller's own (2026-10-23)."""
     return {
         "workflow_name": wf.workflow_id or wf.name,
+        # ADR-113 D-3: the default version and every registered one.
+        "version": str(getattr(wf, "version", "") or ""),
+        "versions": list(getattr(wf, "versions", None) or []),
         "description": wf.description,
         "tags": wf.tags,
         "owner": str(getattr(wf, "owner", "") or ""),
@@ -235,12 +261,12 @@ def build_workflow_tools(client: "Client") -> list[dict[str, Any]]:  # noqa: C90
         )
     )
 
-    def _workflow_describe(workflow_name: str) -> str:
+    def _workflow_describe(workflow_name: str, version: str | None = None) -> str:
         denied = _policy_guard(client, "describe")
         if denied:
             return denied
         try:
-            data = client.workflows.describe(workflow_name)
+            data = client.workflows.describe(workflow_name, version=version)
             return json.dumps(data, indent=2, default=str)
         except Exception as exc:
             return _structured_error("workflow_describe_failed", str(exc))
@@ -253,6 +279,7 @@ def build_workflow_tools(client: "Client") -> list[dict[str, Any]]:  # noqa: C90
                 "type": "object",
                 "properties": {
                     "workflow_name": {"type": "string", "description": "Workflow name"},
+                    "version": VERSION_PARAM,
                 },
                 "required": ["workflow_name"],
             },
@@ -266,6 +293,7 @@ def build_workflow_tools(client: "Client") -> list[dict[str, Any]]:  # noqa: C90
         input_files: Any = None,
         wait: bool = False,
         site: str | None = None,
+        version: str | None = None,
     ) -> str:
         target, refused = _site_target(client, site, act=True)
         if target is None:
@@ -276,7 +304,7 @@ def build_workflow_tools(client: "Client") -> list[dict[str, Any]]:  # noqa: C90
         params, files, parse_error = _parse_workflow_run_inputs(parameters, input_files)
         if parse_error is not None:
             return parse_error
-        invalid = _precheck_params(target.client, workflow_name, params, files)
+        invalid = _precheck_params(target.client, workflow_name, params, files, version)
         if invalid is not None:
             return invalid
         try:
@@ -285,6 +313,7 @@ def build_workflow_tools(client: "Client") -> list[dict[str, Any]]:  # noqa: C90
                 parameters=params,
                 input_files=files,
                 wait=wait,
+                version=version,
             )
             return _result_json(result, target)
         except Exception as exc:
@@ -298,6 +327,7 @@ def build_workflow_tools(client: "Client") -> list[dict[str, Any]]:  # noqa: C90
                 "type": "object",
                 "properties": {
                     "workflow_name": {"type": "string"},
+                    "version": VERSION_PARAM,
                     "parameters": _RUN_PARAMETERS_PARAM,
                     "input_files": _RUN_INPUT_FILES_PARAM,
                     "wait": {"type": "boolean", "default": False},
@@ -335,8 +365,9 @@ def build_workflow_tools(client: "Client") -> list[dict[str, Any]]:  # noqa: C90
         workflow_name: str,
         parameters: str | None = None,
         description: str = "",
+        version: str | None = None,
     ) -> str:
-        """Persist (workflow, params) once for exact-replay later."""
+        """Persist (workflow, version, params) once for exact-replay later."""
         denied = _policy_guard(client, "run")
         if denied:
             return denied
@@ -345,7 +376,7 @@ def build_workflow_tools(client: "Client") -> list[dict[str, Any]]:  # noqa: C90
             if not isinstance(params, dict):
                 return _structured_error("invalid_parameters", "parameters must be a JSON object")
             data = client.workflows.save_run_definition(
-                name, workflow_name, params=params, description=description
+                name, workflow_name, params=params, description=description, version=version
             )
             return json.dumps(data, indent=2, default=str)
         except json.JSONDecodeError:
@@ -360,13 +391,15 @@ def build_workflow_tools(client: "Client") -> list[dict[str, Any]]:  # noqa: C90
                 "Save a named run template (registered workflow + params) so the "
                 "exact call can be replayed later WITHOUT an LLM call. Use when "
                 "a workflow will recur (nightly runs, weekly analysis, ablation "
-                "suites). The definition is stored server-side per user."
+                "suites). The definition is stored server-side per user and "
+                "pins the workflow version, so a replay runs the same code."
             ),
             {
                 "type": "object",
                 "properties": {
                     "name": {"type": "string", "description": "Template name"},
                     "workflow_name": {"type": "string"},
+                    "version": VERSION_PARAM,
                     "parameters": {
                         "type": "string",
                         "description": "JSON object of parameters",
@@ -429,6 +462,7 @@ def build_workflow_tools(client: "Client") -> list[dict[str, Any]]:  # noqa: C90
                 "status": status.status,
                 "progress": status.progress,
                 "error": status.error,
+                **_run_pin(status),
             }
             # Live step rows for the TUI status card — additive only; failures
             # in the detail fetch never hide the top-level status.
@@ -551,6 +585,10 @@ def build_workflow_tools(client: "Client") -> list[dict[str, Any]]:  # noqa: C90
             return json.dumps(
                 {
                     "workflow_name": result.workflow_name or result.workflow_id,
+                    # ADR-113 D-1/D-2: the registered version and the advice.
+                    "version": str(getattr(result, "version", "") or ""),
+                    "source_sha256": str(getattr(result, "source_sha256", "") or ""),
+                    "warnings": list(getattr(result, "warnings", None) or []),
                     "status": result.status,
                     "accepted": result.accepted,
                     "source_path": result.source_path,

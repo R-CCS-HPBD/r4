@@ -289,6 +289,19 @@ preferences verb, not the pane.
 | **Infrastructure** | `/infra` | Endpoints, Jobs and Models columns, counts and a load sparkline. Tab switches Endpoints ↔ Jobs; ↑↓ select; `s` stop endpoint, `c` cancel job, `r` retry failed job, `l` job details/logs. | The 8 s CLI poll (`endpoint list`, `job list`, `model list`). |
 | **Settings** | palette → "Open pane: Settings" | **Preferences** first: completion bell and ambient event cards (this session; Enter or a click toggles), theme (saved; opens the `/theme` picker), model (this session; opens `/models`), permission mode (Enter shows `/settings matrix`), project approval rules (saved per project; `/settings rules`), status line (saved; `/statusline`). Each row names where its value lives; a line under the list says what Enter does. Then backend source, connection (gateway / UMRS / HPC), inventory counts, selectable Skills and MCP servers (↑↓, Enter detail), live keymap rows. With the pane focused, Tab cycles Preferences → Skills → MCP; Esc or a click leaves the pane. *(2026-10-27, issue #217: before, the pane was status and shortcuts only, and its "Tab panel" hint never worked because the global Tab took the key.)* | `list_skills`, `list_mcp_servers`, the keymap registry; the workspace store, `<configRoot>/theme.json`, project rules files, `<configRoot>/statusline`. |
 
+**Subagent Work rows (2026-11-10, D-70 S1/S2).** Ordinary background and
+synchronous Companion children use the backend `agent_id`, not a synthetic
+console runtime ID. `agent_result` updates that same row to completed, failed
+or cancelled; duplicate events are idempotent and a result that arrives before
+its spawn creates one defensive terminal row which another spawn in the same
+execution turn cannot reopen. A genuine follow-up increments `subagent_turn`,
+updates the task and may run again; stale or duplicate results from an earlier
+turn stay ignored. The runtime also retains child/parent session lineage. This
+is only the existing Work-row correlation fix: the read-only child transcript inspector
+and open-session action are S3/S4, not yet available. Child session rows and
+redacted tool history are durable locally; ordinary session resume excludes
+them so opening one cannot create a second writer.
+
 **Parallel hypothesis tracks (ADR-066 amendment 2, surfaced 2026-09-27).**
 A loop started with `--tracks N` shows a `t<N>` chip on its Work row, and
 `/loops detail <id>` (or Enter there) lists each track with its hypothesis,
@@ -669,33 +682,32 @@ every tool, read-only ones included.)* `/settings matrix` prints:
 |---|---|
 | chat (default) | read-only tools; every other tool asks |
 | plan | read-only tools only, other calls are refused; the first reply is a plan, then the plan card: `a` accept → **autopilot** and run, `m` accept → **chat** and run, `n`/`Esc` keep planning, `e` edit. Typing "yes" is `m`. A stopped run returns to plan with the plan pending |
-| autopilot | every tool. It asks only before reading credentials (keys, tokens, keychain, `printenv`) or force-pushing, for a knowledge decision (`knowledge_graph_decide`, `research_loop_decide`), at your own `ask` rules, and for a delete it could not back up first (below). What used to ask — untrusted-content arguments, protected paths, plan gates and team-plan budget cards, decision-model doubts — runs and shows as an `[autopilot] …` line. With an organisation policy on, other tools also need the organisation's allowlist |
+| autopilot | every local non-deletion permission prompt is auto-answered: taint, credential/force-push fences, knowledge/research decision prompts, your `ask` rules, organisation-policy prompts, plan gates and team-plan cards. The original decision appears as an `[autopilot] …` line, never as a fabricated human grant. `ask_user` also chooses a reasonable answer, states its assumption and continues. Recognised user-file deletion/worktree removal still asks (below); explicit denies and backend/sandbox refusals remain |
 
 **What asks or refuses**, in this order (the ladder in
 `r4/src/r4/companion/permissions.py`, `PermissionManager.decide`): a `deny`
-rule refuses; `knowledge_graph_decide`, `research_loop_decide` ask per call
-in every mode; `team_plan_run` and plan gates ask in chat and plan;
-arguments tainted by untrusted tool output ask in chat and plan;
-credential/identity probes and force-pushes in `shell_exec`, and file tools
-touching credential paths, ask in every mode; an `ask` rule asks; a write to
-a protected path (`.git/`, shell rc files, hook configs, key material, the
-rule files themselves — `apply_patch` included, read from its patch) asks
-in chat and plan. Only then do allowances apply: a template crew's plan card,
-an `allow` rule, a read-only tool, a session "always", then autopilot. A refused
-tool disappears from the agent's tool list only while a deny holds for the
-whole tool (a `deny` rule with no pattern, or no one to ask); your "no" on
-one call never hides it.
+rule refuses in every mode. The never-auto, taint, credential/force-push,
+user-`ask`, protected-path and organisation-policy rungs still classify the
+call. In chat/plan those classifications ask; in autopilot
+`PermissionManager.resolve` turns a non-deletion ask into an audited allow
+(*2026-11-09, amendment 3*). Local automatic answers do not manufacture a
+human actor, card grant or gate provenance: UMRS knowledge/loop/workflow
+policy, compute thresholds, HPC signing, tool availability and sandbox
+restrictions still decide whether the action may execute. A refused tool
+disappears only while its deny is tool-wide; your "no" on one call never
+hides it.
 
-**Deletes nobody approved are backed up first** (*2026-11-05,
-[ADR-104](../adr/104-one-mode-one-permission-decision.md) amendment 2*). When
-a call runs without a card (autopilot, an `allow` rule, a session "always")
-and deletes files — `apply_patch` `Delete File`, `rm`/`rmdir`/`unlink`/
-`git rm` in a shell, `os.remove`/`shutil.rmtree`/`Path(…).unlink()` in
-Python — R4 first copies every target that git does not hold committed and
-unchanged to `~/.local/share/r4/trash/<time>-<id>/`, notes where, then runs
-the call. It asks instead when it cannot copy: globs or variables in the
-targets, `git clean`, `find -delete`, a computed path, a target outside the
-workspace, more than 512 MiB.
+**Autopilot deletion always asks** (*2026-11-09, amendment 3*). Recognised
+user-file deletion (`apply_patch` Delete File or a rename's old path,
+`rm`/`rmdir`/`unlink`/`shred`/`git rm`, `git clean`/`find -delete`/runtime
+paths, Python delete calls), `worktree_exit(action="remove")`, and a
+merge-back whose structured change set contains deletions require your yes
+even when a backup would be possible. Non-deleting merge-backs run. R4's
+R4-owned temporary cleanup and backend resource deletion are outside this
+rule; textual recognition is best-effort, not a guarantee for arbitrary code
+or MCP side effects. In other automatic modes, amendment 2 still copies
+recoverable targets into `~/.local/share/r4/trash/<time>-<id>/` before the
+call or asks when it cannot.
 
 **Approval card** (inline, bordered, always fully shown). The companion
 says which answers the card offers; the console never answers by itself:

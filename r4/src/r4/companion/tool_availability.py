@@ -296,7 +296,22 @@ def _web_off(tool: dict[str, Any], client: "Client | None") -> str | None:
     return "web access off for this session (the user's choice; /web or r4 --web)"
 
 
+#: ADR-114: a messaging tool carries a getter for its session's bus presence.
+SESSION_BUS_KEY = "session_bus_presence"
+
+
+def _off_session_bus(tool: dict[str, Any], client: "Client | None") -> str | None:
+    """ADR-114 D-2: the messaging tools are offered only while the session is
+    on the local session bus (console sessions); headless runs, the REPL and
+    venue workers never see tools that could only refuse."""
+    getter = tool.get(SESSION_BUS_KEY)
+    if not callable(getter) or getter() is not None:
+        return None
+    return "not on the local session bus (console sessions only)"
+
+
 _CHECKS = (
+    _off_session_bus,
     _retired_route,
     _upload_unavailable,
     _unwired,

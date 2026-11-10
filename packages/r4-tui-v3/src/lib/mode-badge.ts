@@ -3,10 +3,10 @@
  * autopilot); what runs without a card is derived from it by the companion
  * (`r4/companion/agent_mode.py`), so the console shows the mode only.
  *
- * ADR-104 amendment 1: autopilot runs every tool the safety floor lets
- * through (`mode:autopilot`); `mode:autopilot(policy)` = an organisation
- * policy narrows it to the server allowlist (ADR-035, opt-in). The older
- * "legacy" source is the plain default now.
+ * ADR-104 amendment 3: autopilot auto-answers local non-deletion permission
+ * prompts (`mode:autopilot`); `mode:autopilot(policy)` records that the
+ * optional organisation policy was consulted, not that its prompt blocks
+ * autopilot. Recognised user-file deletion/worktree removal still asks.
  */
 
 const TRUST_SUFFIX: Record<string, string> = {
@@ -25,8 +25,8 @@ export const MODE_MATRIX_LINES: readonly string[] = [
   "mode        what runs without a card",
   "  chat        read-only tools run; every other tool asks (card)",
   "  plan        read-only tools only; other tools are refused (not asked); the first reply is a plan → plan card",
-  "  autopilot   every tool runs; it asks only before reading credentials or force-pushing, a knowledge decision,",
-  "              your own ask rules, and a delete R4 could not back up first (copies go to ~/.local/share/r4/trash)",
-  "              autopilot(policy): your organisation's allowlist narrows it (R4_AUTOPILOT_SERVER_POLICY, ADR-035)",
+  "  autopilot   local non-delete asks run with an audit note; ask_user continues with a stated assumption",
+  "              user-file deletion, patch rename/delete sources, worktree removal, deleting merge-backs ask",
+  "              denies and backend/sandbox refusals still apply; autopilot(policy) names the policy consulted",
   "switch: Shift+Tab or /mode chat|plan|autopilot (/trust = /mode autopilot) · plan card: a → autopilot, m → chat",
 ];

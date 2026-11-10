@@ -187,8 +187,8 @@ def _workflows() -> SimpleNamespace:
         trigger=lambda *_a, **_k: result,
         get_results=lambda _id: result,
         get_execution_detail=lambda _id: dict(_EXECUTION_RECORD),
-        describe=lambda _name: describe,
-        definition_package=lambda _name: package,
+        describe=lambda _name, **_k: describe,
+        definition_package=lambda _name, **_k: package,
     )
 
 

@@ -13,6 +13,7 @@ These are non-negotiable rules enforced at all times:
 | **RAG inside mini-RiVault** | All RAG indexing and retrieval runs inside mini-RiVault containers. |
 | **MCP inside mini-RiVault** | All MCP servers run inside mini-RiVault containers. |
 | **Presigned URLs** | Never exposed to external clients — they exist solely for compute-node S3 access. |
+| **HPC account custody** *(added 2026-11-08, ADR-112)* | UMRS holds nothing that can act in a user's own HPC account without that user's signature: the restricted key UMRS holds reaches only the gate in the user's HPC home. No lane ever retries under another identity. Platform lanes run only under the site's platform login. See [HPC account custody](#hpc-account-custody-adr-112). |
 
 ## EgressGuard
 
@@ -140,6 +141,39 @@ files cannot set either key.
   targeted denies, and the macOS backend has not yet been run live.
 - Server (frontend) sessions do not use it: they run in the server's own
   sandbox.
+
+## HPC account custody (ADR-112)
+
+*Added 2026-11-08.* How UMRS reaches a researcher's **own** login at an HPC site.
+The full user guide is [Chapter 31](31-own-hpc-accounts.md); the decision is
+[ADR-112](../adr/112-user-hpc-accounts-gated-delegation.md).
+
+| Rule | What it means |
+|------|---------------|
+| The transport key reaches only the gate | For each person and site, UMRS creates one Ed25519 **restricted key** and keeps its private half on the UMRS server, outside the database (the database holds only its id and fingerprint). The user's `authorized_keys` line pins it with `restrict`, an optional `from=` and `command=` to the **gate**, a small stdlib-only program in the user's HPC home. Before an account is activated, UMRS proves the gate itself answers: its `probe` must come back refused by the gate, by name |
+| Signatures come from a dedicated user key | Anything that asks the gate to change state (the gate's `revoke` and `rotate` of the restricted key, installed in wave B1; job requests from wave B2) must be signed with the user's **signing key**: dedicated, never the login key, never forwarded, kept on the user's computer, a FIDO2 security key with a PIN where possible. The gate checks the OpenSSH signature, the security key's touch flag (and the PIN flag where required), strict canonical JSON, the site, the user, a 10-minute expiry for control requests (with two minutes of clock difference allowed at each end) and a single-use nonce, then writes a hash-chained log in the user's HPC home. Signing and account commands refuse in an agent's companion shell (the CLI and r4's client both), signing also without a terminal; UMRS refuses requests an agent marked; chat/plan asks before such a command runs through the shell; autopilot auto-answers only that local prompt, while the signature and companion-shell guards still refuse it (2026-11-09, ADR-104 amendment 3). These guards catch mistakes and ordinary misuse, not a determined program, which is why the gate trusts only the signature *(2026-11-08 review: this cell said agent tools cannot run them)* |
+| UMRS's call to the gate offers only the restricted key | UMRS calls the gate with `ssh -F none`: its own SSH configuration never adds a platform identity to the call (only the host's address, port, known-hosts files and jump host are taken from it), with no agent, no forwarding and a minimal environment. A gate session ends after 60 seconds; requests without a valid signature are logged with a short fixed entry, and no longer once the log reaches 8 MiB *(added 2026-11-08, review)* |
+| No fallback | Each site declares its access modes (`service_account`, `user_account`). A request that cannot be served under its resolved identity is refused with an `hpcaccess.*` name. UMRS never quietly runs it under another account |
+| Platform lanes stay on the platform login | Serving endpoints, the service relay, tunnels, the janitor, the reaper and health checks run only under the site's platform login, never under a user's account, because their job environments carry operator secrets |
+| A grant is bounded, and the gate counts it *(added 2026-11-09, waves C and D)* | Unattended work runs only under a **grant** the user signed for one site: exact workflow versions (code and step-graph digests), the images, parameter bounds that refuse code, paths and commands, an input rule (`listed`, `chained` or `any`), limits on jobs, GPU-hours, core-hours and concurrent steps, and at most 30 days. At every step the gate checks the run against the grant and reserves the step's largest cost against counters in the user's HPC home, under a lock; it settles from `sacct` for the actual measured allocation; Slurm over-allocation can exceed the reservation, while a completed job `sacct` cannot report charges its reservation. UMRS cannot widen, extend or pass on a grant. A signed `grant-cancel` ends one; revoking the account ends all of them, and the gate refuses grants issued before a later reconnect. Under a grant UMRS still chooses when runs start, parameter values within bounds, the data by the input rule, and each step's resources within the site profile; every grant summary lists this. The gate's log checkpoint is witnessed by r4, which reports a fork loudly and then refuses to sign anything but a cancel or a revoke |
+| Usage is recorded append-only *(added 2026-11-09, wave D)* | Every job of user work on an HPC site, under a user's account or the platform login, is written to a usage ledger before submit (an estimate) and settled after it (from the gate's `usage` verb or `sacct`). If the ledger cannot be written, nothing is submitted. The database refuses updates and deletes to it; corrections are new rows. A project's GPU-hour budget is enforced before each step's submit (lifetime, across all sites). Members see their own rows and the project totals; owners see other members' rows without their HPC login, job ids or audit columns |
+
+**Honest scope.** UMRS stores nothing that can act as you without your
+signature. Under a standing permission you give, UMRS chooses the data your
+approved workflows run on. Outputs that pass through UMRS stay visible to its
+operators, and the same team publishes r4 and the gate (pin the gate's hash,
+Chapter 31 §31.5).
+
+**Status (2026-11-08).** Wave B1 (connect, verify, link, revoke, rotate) is
+being built and comes first on bdrt; in B1 nothing runs under a user's account,
+and `r4 hpc revoke` / `rotate` edit the user's `authorized_keys` over the user's
+own SSH (no UMRS route sends a signed request to the gate yet).
+Running jobs under your account comes with wave B2.
+
+**Status (2026-11-09).** Grants (wave C) and the usage ledger with budgets
+(wave D) are being built; neither is merged or deployed. Until they are, the
+two rows above added on 2026-11-09 describe the design that waves C and D
+implement, not running behaviour. Chapter 31 §31.7 and §31.8 give the details.
 
 ## Custom MCP Server Security
 

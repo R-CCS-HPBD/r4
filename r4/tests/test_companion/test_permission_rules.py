@@ -127,8 +127,8 @@ def test_dangerous_path_asks_over_a_session_always() -> None:
 
 
 def test_autopilot_writes_a_protected_path_and_notes_it() -> None:
-    """ADR-104 amendment 2 (maintainer, 2026-11-05): only credential access
-    and deletes without a backup still ask in autopilot."""
+    """ADR-104 amendment 3: a protected path runs with noted provenance;
+    only recognised file/worktree deletion prompts in autopilot."""
     from r4.companion.permissions import take_permission_notes
 
     manager = PermissionManager(mode=PermissionMode.TRUST)

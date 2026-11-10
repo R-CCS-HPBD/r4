@@ -1,8 +1,8 @@
-"""ADR-104 amendment 2: true autopilot, except a delete without a full backup.
+"""Delete recognition and backup, through ADR-104 amendment 3.
 
-Maintainer, 2026-11-05: "we need true autopilot mode (except file delete if
-no full backup exists)". A delete nobody approved runs only once every target
-is recoverable: committed unchanged in git, or copied to R4's trash first.
+Autopilot asks before every recognised deletion (2026-11-09). Other automatic
+allow paths retain amendment 2: a delete runs only once every target is
+recoverable, committed unchanged in git, or copied to R4's trash first.
 """
 
 from __future__ import annotations
@@ -67,6 +67,58 @@ class TestScan:
     def test_shell_unknown_targets(self, command):
         assert scan("shell_exec", {"command": command}).unresolved
 
+    def test_quoted_remote_control_operators_are_not_deleters(self):
+        command = (
+            'ssh -o BatchMode=yes -o ConnectTimeout=15 AI4S \'printf "%s\\n" '
+            '"--- /etc/slurm ---"; ls -la /etc/slurm; for f in /etc/slurm/*; '
+            'do [ -f "$f" ] && { echo "### $f"; sed -n "1,100p" "$f"; }; done; '
+            'printf "%s\\n" "--- routes/controllers ---"; getent hosts sv08 sv09 '
+            'slurmctld 2>&1 || true; printf "%s\\n" "--- processes ---"; '
+            'ps -ef | grep -E "slurm|munge" | grep -v grep || true\''
+        )
+        found = scan("shell_exec", {"command": command})
+        assert not found.deletes, found
+
+    @pytest.mark.parametrize(
+        ("command", "paths", "unresolved"),
+        [
+            ("echo before\nrm victim", ("victim",), ""),
+            ("printf ok\nfind . -delete", (), "find may delete files it matches"),
+            ("ssh host 'printf ok; ps -ef | grep x || true'\nrm victim", ("victim",), ""),
+            ("printf 'before\nrm victim'", (), ""),
+            ("printf before\\\nrm victim", (), ""),
+            (r"echo \; rm victim", (), ""),
+            ("echo ';' rm victim", (), ""),
+            ("echo ok |& rm victim", ("victim",), ""),
+            ("printf ok |& find . -delete", (), "find may delete files it matches"),
+            ("echo before # user's\nrm victim\necho after # team's", ("victim",), ""),
+            ("echo ok # rm not_a_command\nprintf fine", (), ""),
+        ],
+    )
+    def test_real_newlines_split_commands_but_quoted_or_escaped_newlines_do_not(
+        self, command, paths, unresolved
+    ):
+        found = scan("shell_exec", {"command": command})
+        assert found.paths == paths
+        assert found.unresolved == unresolved
+
+    def test_pipe_ampersand_before_a_deletion_requires_approval(self):
+        asked: list[str] = []
+        manager = PermissionManager(
+            PermissionMode.TRUST, approval_callback=lambda tool, *_a: asked.append(tool) or False
+        )
+        assert manager.check("shell_exec", {"command": "echo ok |& rm victim"}) is False
+        assert asked == ["shell_exec"]
+
+    def test_newline_after_a_harmless_remote_script_still_requires_delete_approval(self):
+        asked: list[str] = []
+        manager = PermissionManager(
+            PermissionMode.TRUST, approval_callback=lambda tool, *_a: asked.append(tool) or False
+        )
+        command = "ssh host 'printf ok; ps -ef | grep x || true'\nrm victim"
+        assert manager.check("shell_exec", {"command": command}) is False
+        assert asked == ["shell_exec"]
+
     def test_python_literal_and_computed(self):
         assert scan("python_exec", {"code": "import os\nos.remove('a.txt')"}).paths == ("a.txt",)
         assert scan("python_exec", {"code": "Path('d/x.bin').unlink()"}).paths == ("d/x.bin",)
@@ -78,6 +130,18 @@ class TestScan:
         assert scan("apply_patch", {"patch_text": patch}).paths == ("old.py",)
         update = "*** Begin Patch\n*** Update File: a.py\n@@\n-x\n+y\n*** End Patch\n"
         assert not scan("apply_patch", {"patch_text": update}).deletes
+
+    def test_apply_patch_rename_deletes_the_source_path(self):
+        patch = (
+            "*** Begin Patch\n*** Update File: old.py\n*** Move to: new.py\n"
+            "@@\n-x\n+y\n*** End Patch\n"
+        )
+        assert scan("apply_patch", {"patch_text": patch}).paths == ("old.py",)
+
+    def test_worktree_exit_remove_is_a_delete_but_keep_is_not(self):
+        assert scan("worktree_exit", {"action": "remove"}).deletes
+        assert scan("worktree_exit", {"action": "remove", "discard": True}).deletes
+        assert not scan("worktree_exit", {"action": "keep"}).deletes
 
     def test_other_tools_delete_nothing(self):
         assert not scan("file_write", {"path": "a", "content": ""}).deletes
@@ -139,13 +203,26 @@ class TestProtect:
 
 
 class TestLadder:
-    def test_autopilot_deletes_after_the_backup_and_notes_it(self, workspace):
+    def test_autopilot_asks_before_a_delete_even_when_a_backup_is_possible(self, workspace):
         (workspace / "scratch.txt").write_text("y")
-        manager = PermissionManager(PermissionMode.TRUST, approval_callback=lambda *_a: False)
-        assert manager.check("shell_exec", {"command": "rm scratch.txt"}) is True
-        notes = take_permission_notes()
-        assert any("backed up 1 path" in note for note in notes)
-        assert [p.name for p in _trash(workspace)] == ["scratch.txt"]
+        asked: list[tuple] = []
+        manager = PermissionManager(
+            PermissionMode.TRUST, approval_callback=lambda *a: asked.append(a) or False
+        )
+        assert manager.check("shell_exec", {"command": "rm scratch.txt"}) is False
+        assert len(asked) == 1 and "deletion" in asked[0][1]
+        assert _trash(workspace) == []
+        take_permission_notes()
+
+    def test_autopilot_worktree_remove_asks_but_keep_runs(self):
+        asked: list[str] = []
+        manager = PermissionManager(
+            PermissionMode.TRUST,
+            approval_callback=lambda tool, *_a: asked.append(tool) or False,
+        )
+        assert manager.check("worktree_exit", {"action": "keep"}) is True
+        assert manager.check("worktree_exit", {"action": "remove"}) is False
+        assert asked == ["worktree_exit"]
 
     def test_autopilot_asks_for_a_delete_it_cannot_back_up(self, workspace):
         asked: list[tuple] = []
@@ -153,7 +230,7 @@ class TestLadder:
             PermissionMode.TRUST, approval_callback=lambda *a: asked.append(a) or False
         )
         assert manager.check("shell_exec", {"command": "rm -rf *"}) is False
-        assert asked and "cannot back up" in asked[0][1]
+        assert asked and "deletion" in asked[0][1]
 
     def test_a_session_always_is_guarded_too(self, workspace):
         (workspace / "a.log").write_text("a")
@@ -168,15 +245,15 @@ class TestLadder:
         assert manager.check("shell_exec", {"command": "rm b.log"}) is True
         assert _trash(workspace) == []
 
-    def test_autopilot_still_asks_for_credentials_and_knowledge_decisions(self, workspace):
+    def test_autopilot_auto_answers_credentials_and_knowledge_decisions(self, workspace):
         asked: list[str] = []
         manager = PermissionManager(
             PermissionMode.TRUST, approval_callback=lambda tool, *_a: asked.append(tool) or False
         )
-        assert manager.check("shell_exec", {"command": "cat ~/.ssh/id_ed25519"}) is False
-        assert manager.check("knowledge_graph_decide", {"proposal_id": "p"}) is False
+        assert manager.check("shell_exec", {"command": "cat ~/.ssh/id_ed25519"}) is True
+        assert manager.check("knowledge_graph_decide", {"proposal_id": "p"}) is True
         assert manager.check("team_plan_run", {"template": "t"}) is True
-        assert asked == ["shell_exec", "knowledge_graph_decide"]
+        assert asked == []
 
 
 def _git(root: Path, *args: str) -> None:

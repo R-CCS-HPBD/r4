@@ -35,6 +35,7 @@ This manual covers everything needed to use, administer, and extend the R4 platf
 | [27. Knowledge Management](27-knowledge-management.md) | End users | Unified query, multigraph, explorer TUI, `.kb` bundle export/restore with integrity + retarget |
 | [28. Knowledge & Catalogue — Planes & Visibility](28-knowledge-catalogue-visibility.md) | All users | Deep design: planes, visibility families (project/system/ambient), write flows, operation modes, ontology contract |
 | [24. A2L — Artifact and Agent Lineage](24-a2l.md) | End users, agent developers | Scientific provenance tracking: artifact registration, lineage graphs, and agent execution records |
+| [31. Your Own HPC Accounts](31-own-hpc-accounts.md) | Researchers, site operators | Run jobs under your own HPC login and allocation: the gate, signing key and grants (gated delegation, ADR-112), what UMRS operators can and cannot do, accounting, revocation (added 2026-11-08; commands land in stages) |
 | [30. Frontend-Venue Sessions](30-frontend-venue.md) | End users | Remote companion sessions on the cluster front-end: what the CPU-only worker can and cannot do, pushing a source, starting a session, web policy, audit (renumbered 2026-10-18 from a second chapter 20, which it shared with User & Access Management, and indexed) |
 
 ### Part III — CLI & SDK Reference

@@ -55,6 +55,12 @@
               "type": "null"
             }
           ]
+        },
+        "workflow_version": {
+          "type": "string"
+        },
+        "source_sha256": {
+          "type": "string"
         }
       },
       "required": [

@@ -147,7 +147,7 @@ as a scheduler.
    - research, code, paper-writing, kakenhi-report, peer-review — each is a
      team plan template (ADR-092 slice 4; see the team_plans skill): the
      call runs it exactly as team_plan_run(template=...) would. The user
-     approves the plan's card first, in every mode; then it runs in the
+     approves the plan's card first in chat/plan; autopilot auto-answers locally without a human grant; then it runs in the
      background and you read it with team_plan_result(run_id), not with the
      teamup_* tools (team_plan_cancel(run_id) stops it). models={"reviewer":
      ...} sets its reviewer_model (research also takes "producer";

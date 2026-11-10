@@ -5,11 +5,10 @@ same executor the lead agent's chat tools use (``team_plan_tools``), so the
 two surfaces cannot drift:
 
 - ``team.plan_templates`` (safe): the built-in templates and their params.
-- ``team.plan_run`` (never-auto, MD-5): validated first, so an invalid plan
-  returns every problem and spends nothing; then the session's permission
-  manager asks the human with the plan's card (D-9), in every mode, and only
-  a human yes starts the run, with the card's SAFE tools granted to its
-  agents for that run only (MD-6). The reply lands as soon as the run has
+- ``team.plan_run`` (never-auto classification): validated first, so an
+  invalid plan spends nothing. Chat/plan asks with the plan's card; autopilot
+  auto-answers locally without creating a human-card grant (ADR-104 A3).
+  The reply lands as soon as the run has
   started (``wait_sec`` is 0 here); progress streams as ``team_event``.
   ``goal`` binds free text to the template's first required string
   parameter (``/teamup on plan:<template>``).
@@ -92,7 +91,7 @@ class TeamPlanBridgeMixin:
         return json.loads(self._plan_executor().templates())
 
     def team_plan_run(self, params: dict[str, Any]) -> dict[str, Any]:
-        """Validate, ask the human with the plan's card, then start (MD-5, MD-6)."""
+        """Validate, resolve through the local permission ladder, then start."""
         executor = self._plan_executor()
         arguments, problem = _run_arguments(params)
         if problem is not None:

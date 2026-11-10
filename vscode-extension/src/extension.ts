@@ -22,6 +22,13 @@ import { ModelTreeProvider, ModelItem } from "./views/models";
 import { MCPTreeProvider, MCPToolItem } from "./views/mcp";
 import { WorkflowTreeProvider, WorkflowItem } from "./views/workflows";
 import {
+  needsVersionPick,
+  parseWorkflowRef,
+  runLabel,
+  versionPickItems,
+  workflowRefLabel,
+} from "./workflow-versions";
+import {
   CompanionTreeProvider,
   CompanionCapabilityItem,
   type CompanionCapability,
@@ -1369,14 +1376,20 @@ async function handleTriggerWorkflow(
     return;
   }
 
-  const name = item?.workflowName ?? await vscode.window.showInputBox({
+  const typed = item?.workflowName ?? await vscode.window.showInputBox({
     title: "Trigger Workflow",
-    prompt: "Workflow name",
+    prompt: "Workflow name (name@version runs that version)",
   });
-  if (!name) { return; }
+  if (!typed) { return; }
+  const ref = parseWorkflowRef(typed);
+  const name = ref.name;
+  const choice = await chooseWorkflowVersion(item, ref.version);
+  if (choice.cancelled) { return; }
+  const version = choice.version;
+  const label = workflowRefLabel(name, version);
 
   const paramsStr = await vscode.window.showInputBox({
-    title: `Parameters for ${name}`,
+    title: `Parameters for ${label}`,
     prompt: "JSON parameters (or leave empty for {})",
     placeHolder: '{"key": "value"}',
   });
@@ -1395,18 +1408,41 @@ async function handleTriggerWorkflow(
     const execution = await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: `R4: Triggering workflow ${name}…`,
+        title: `R4: Triggering workflow ${label}…`,
         cancellable: false,
       },
-      () => c.triggerWorkflow(name, params),
+      () => c.triggerWorkflow(name, params, version),
     );
+    // ADR-113 D-4: name the version (and digest) the run pinned.
+    const ran = runLabel({ workflow_name: name, workflow_version: version, ...execution });
     vscode.window.showInformationMessage(
-      `R4: Workflow triggered — execution ${execution.execution_id}`,
+      `R4: Workflow ${ran} triggered — execution ${execution.execution_id}`,
     );
     workflowTree.refresh();
   } catch (err) {
     showGatewayError(err);
   }
+}
+
+/**
+ * The version a trigger runs (ADR-113 WV4): a version child's own version,
+ * a typed `name@X`, else a quick pick (default first) when the workflow row
+ * lists several; a workflow with one version (or an older server) asks
+ * nothing and runs the server's default. Esc on the pick cancels.
+ */
+async function chooseWorkflowVersion(
+  item: WorkflowItem | undefined,
+  typedVersion: string | undefined,
+): Promise<{ version?: string; cancelled?: boolean }> {
+  const fixed = item?.workflowVersion ?? typedVersion;
+  if (fixed) return { version: fixed };
+  const workflow = item?.workflow;
+  if (!workflow || !needsVersionPick(workflow)) return {};
+  const picked = await vscode.window.showQuickPick(versionPickItems(workflow), {
+    title: `Version of ${workflow.name} to run`,
+    placeHolder: "The default is the highest release",
+  });
+  return picked ? { version: picked.version } : { cancelled: true };
 }
 
 // ── Helpers ────────────────────────────────────────────────────

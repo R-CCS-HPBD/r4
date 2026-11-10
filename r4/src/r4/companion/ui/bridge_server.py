@@ -84,6 +84,7 @@ from .sandbox_bridge import (
     sandbox_state,
 )
 from .search_server_bridge import SearchServerBridgeMixin
+from .session_bus_bridge import attach_bridge_session, detach_bridge_bus, start_bridge_bus
 from .slash_manifest import surface_local_commands, v3_local_rows, v3_slash_names
 from .team_plan_bridge import TeamPlanBridgeMixin
 from .turn_save_bridge import TurnSaveBridgeMixin
@@ -750,6 +751,8 @@ class CompanionBridgeServer(
             logger.exception("failed to wire ask_user callback")
         self._register_main_agent(session)
         self._subscribe_events(session)
+        # ADR-114: the active session is the one on the local session bus.
+        attach_bridge_session(self, session)
 
     def _apply_knowledge_acquisition(self, session: CompanionSession) -> None:
         """Mirror the session-scoped acquisition mode onto the shared client.
@@ -1248,10 +1251,12 @@ class CompanionBridgeServer(
 
         The user's ``ask_user_mode=auto`` answers without asking, with the
         same text a remote session uses (ADR-099 D-8)."""
+        from ..agent_mode import session_mode
         from ..agent_settings import ask_user_auto_answer, configured_ask_user_mode
 
         config = getattr(getattr(self, "_client", None), "config", None)
-        if configured_ask_user_mode(config) == "auto":
+        automatic = session_mode(getattr(self, "_session", None)) == "autopilot"
+        if automatic or configured_ask_user_mode(config) == "auto":
             return ask_user_auto_answer()
         with self.__dict__.setdefault("_seq_lock", threading.Lock()):
             self._ask_user_seq += 1
@@ -3180,7 +3185,7 @@ class CompanionBridgeServer(
         workflow_name = str(params.get("workflow_name") or "")
         if not workflow_name:
             raise ValueError("workflow_name is required")
-        return self.session.client.workflows.describe(workflow_name)
+        return self.session.client.workflows.describe(workflow_name, version=_version_param(params))
 
     def workflow_package(self, params: dict[str, Any]) -> dict[str, Any]:
         """Definition + registered code rows for the work-pane card (2026-10-01).
@@ -3191,7 +3196,9 @@ class CompanionBridgeServer(
         workflow_name = str(params.get("workflow_name") or "")
         if not workflow_name:
             raise ValueError("workflow_name is required")
-        return self.session.client.workflows.definition_package(workflow_name)
+        return self.session.client.workflows.definition_package(
+            workflow_name, version=_version_param(params)
+        )
 
     def workflow_export(self, params: dict[str, Any]) -> dict[str, Any]:
         """Save one visible workflow as a verified zip (2026-11-07).
@@ -3855,6 +3862,7 @@ class CompanionBridgeServer(
             "status": status.status,
             "progress": getattr(status, "progress", None),
             "error": getattr(status, "error", None),
+            **_run_pin(status),
         }
 
     @staticmethod
@@ -3866,6 +3874,7 @@ class CompanionBridgeServer(
             "artifacts": getattr(result, "artifacts", None),
             "outputs": getattr(result, "outputs", None),
             "error": getattr(result, "error", None),
+            **_run_pin(result),
         }
 
     def workflow_status(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -3896,6 +3905,7 @@ class CompanionBridgeServer(
             input_files=input_files,
             project_id=project_id,
             wait=wait,
+            version=_version_param(params),
         )
         return self._serialize_workflow_result(result)
 
@@ -4850,6 +4860,7 @@ class CompanionBridgeServer(
 
     def shutdown(self, _params: dict[str, Any]) -> dict[str, Any]:
         self._cancel_all_project_jobs()
+        detach_bridge_bus(self)
         if self._session is not None:
             self._store.save(self._session)
         self.should_exit = True
@@ -5626,12 +5637,30 @@ def _session_identity_hint(session: Any) -> tuple[str, str]:
         return "", "none"
 
 
+def _version_param(params: dict[str, Any]) -> str | None:
+    """Optional ``version`` of a workflow verb (ADR-113 D-3); None = default."""
+    value = str(params.get("version") or "").strip()
+    return value or None
+
+
+def _run_pin(run: Any) -> dict[str, str]:
+    """The version and code digest a run pinned (ADR-113 D-4)."""
+    return {
+        "workflow_version": str(getattr(run, "workflow_version", "") or ""),
+        "source_sha256": str(getattr(run, "source_sha256", "") or ""),
+    }
+
+
 def _workflow_catalog_row(workflow: Any) -> dict[str, Any]:
     """One ``workflow.list`` row; the ownership fields let the TUI label a
     row shared with the caller as shared (2026-10-23), not by the owner's scope."""
     return {
         "workflow_name": workflow.name or workflow.workflow_id,
         "name": workflow.name,
+        # ADR-113 D-3: the default version and every registered one.
+        "version": str(getattr(workflow, "version", "") or ""),
+        "versions": list(getattr(workflow, "versions", None) or []),
+        "source_sha256": str(getattr(workflow, "source_sha256", "") or ""),
         "description": workflow.description,
         "tags": list(workflow.tags),
         "scope": str(getattr(workflow, "scope", "") or ""),
@@ -6359,6 +6388,8 @@ def main(argv: list[str] | None = None) -> int:
     # ADR-092 slice 3: every team plan run of this process streams as
     # run-keyed team_event lines (a plan the lead started in chat too).
     server._start_plan_event_stream()
+    # ADR-114: presence on the local session bus and the inbox watcher.
+    start_bridge_bus(server)
     _serve(server, mux)
     return 0
 

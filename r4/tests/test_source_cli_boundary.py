@@ -374,7 +374,6 @@ def _quiet_login_side_effects(monkeypatch) -> None:
         "_sync_umrs_client_profile",
         "_ensure_umrs_user_config",
         "_try_zmq_session_bootstrap_with_profile",
-        "_maybe_enroll_hpc_after_login",
     ):
         monkeypatch.setattr(login, name, lambda *a, **k: None)
 

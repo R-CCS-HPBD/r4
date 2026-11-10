@@ -21,6 +21,7 @@ import { clipOneLine } from "../lib/team-live";
 import { progressSuffix } from "../lib/workflow-activity";
 import { buildExecDag } from "../lib/workflow-exec-graph";
 import { statusForStep } from "../lib/workflow-graph-projection";
+import { runDefinitionKey, runLabelWithDigest, type VersionedRun } from "../lib/workflow-versions";
 import { Floating } from "../ui/Floating";
 
 interface StepRow {
@@ -116,8 +117,9 @@ export function WorkflowExecOverlay() {
    * overlay-open in the work route): undefined until it lands, absent on
    * error — buildExecDag degrades to the honestly labeled linear chain. */
   const dagModel = createMemo(() => {
-    const name = exec()?.workflow_name;
-    const definition = typeof name === "string" ? umrsWorkflowStore.definitions[name] : undefined;
+    const e = exec();
+    const key = e ? runDefinitionKey(e as VersionedRun) : undefined;
+    const definition = key ? umrsWorkflowStore.definitions[key] : undefined;
     const width = Math.max(30, Math.floor(dims().width * 0.72) - 4);
     return buildExecDag({ rows: rows(), definitionSteps: definition?.steps ?? null, width });
   });
@@ -126,7 +128,8 @@ export function WorkflowExecOverlay() {
   const header = createMemo(() => {
     const e = exec();
     if (!e) return undefined;
-    const name = String(e.workflow_name ?? "workflow");
+    // ADR-113 D-4: the version and code digest this run pinned.
+    const name = runLabelWithDigest(e as VersionedRun);
     const status = String(e.status ?? "?");
     const progress = progressSuffix(e.progress, " · ");
     return {

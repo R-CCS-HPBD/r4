@@ -42,6 +42,7 @@ export interface PlanEventLine {
   prompt?: string;
   approved?: boolean;
   answered?: boolean;
+  decided_by?: string | null;
   status?: string;
   error?: string | null;
   spent_tokens?: number | null;
@@ -155,8 +156,11 @@ export function planEventLine(event: PlanEventLine): string {
       return `${agent}${event.tool ?? "tool"} ${event.state ?? ""}`.trim();
     case "gate_requested":
       return `gate ${event.gate ?? "?"} [${event.class ?? "?"}] asks you — ${clip(event.prompt ?? "")}`;
-    case "gate_answered":
-      return `gate ${event.gate ?? "?"} → ${event.approved ? "approved" : event.answered ? "rejected" : `refused${event.reason ? ` (${event.reason})` : ""}`}`;
+    case "gate_answered": {
+      const outcome = event.approved ? "approved" : event.answered ? "rejected" : `refused${event.reason ? ` (${event.reason})` : ""}`;
+      const source = event.decided_by === "autopilot" ? " · autopilot" : "";
+      return `gate ${event.gate ?? "?"} → ${outcome}${source}`;
+    }
     case "budget_warning":
       return "budget: 80% of the token ceiling spent";
     case "budget_exhausted":

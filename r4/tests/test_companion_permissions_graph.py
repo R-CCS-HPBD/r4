@@ -1,4 +1,4 @@
-"""Permission gate tests: knowledge_graph_decide is never auto-approved."""
+"""Permission classification for knowledge decisions and local autopilot."""
 
 from __future__ import annotations
 
@@ -23,18 +23,18 @@ class TestNeverAutoApprove:
     def test_decide_is_registered_never_auto(self):
         assert "knowledge_graph_decide" in NEVER_AUTO_APPROVE
 
-    def test_trust_mode_still_prompts_for_decide(self):
+    def test_trust_mode_auto_answers_the_local_decide_prompt(self):
         mgr, prompts = _mgr(PermissionMode.TRUST)
         assert (
             mgr.check("knowledge_graph_decide", {"proposal_id": "gp-1", "approved": True}) is True
         )
-        assert prompts == ["knowledge_graph_decide"]  # prompt happened
+        assert prompts == []
 
-    def test_trust_mode_deny_without_callback(self):
+    def test_trust_mode_decide_needs_no_callback(self):
         mgr = PermissionManager(mode=PermissionMode.TRUST)
-        # no approval callback → deny closed even in TRUST
+        # Local automatic approval does not weaken the server actor guard.
         assert (
-            mgr.check("knowledge_graph_decide", {"proposal_id": "gp-1", "approved": True}) is False
+            mgr.check("knowledge_graph_decide", {"proposal_id": "gp-1", "approved": True}) is True
         )
 
     def test_session_approval_cannot_shortcircuit_decide(self):

@@ -148,11 +148,11 @@ def test_trust_mode_mutating_shell_is_still_escalated_once_per_turn():
     turn = ["t1"]
     manager, asked, client, log = _trust_with_real_gate(turn)
     for _ in range(3):
-        manager.check("shell_exec", {"command": "rm -rf build"})
+        manager.check("shell_exec", {"command": "make deploy"})
     assert client.calls == 1  # one decision call; the repeats reuse the verdict
-    assert asked == []  # ADR-104 amendment 2: autopilot notes the doubt, never asks
+    assert asked == []  # amendment 3: non-delete doubt is a note, never an ask
     turn[0] = "t2"
-    manager.check("shell_exec", {"command": "rm -rf build"})
+    manager.check("shell_exec", {"command": "make deploy"})
     assert client.calls == 2  # a new turn asks again
     assert [e["outcome"] for e in log] == ["asked", "cached", "cached", "asked"]
 

@@ -39,6 +39,18 @@
           "items": {
             "type": "string"
           }
+        },
+        "version": {
+          "type": "string"
+        },
+        "versions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "source_sha256": {
+          "type": "string"
         }
       },
       "required": [

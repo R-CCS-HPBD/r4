@@ -439,8 +439,8 @@ def test_the_chat_session_threads_its_usage_hooks_to_the_plan_tools(monkeypatch)
 def _cards(manager: PermissionManager) -> list[str]:
     """Record every approval card ``manager`` asks, denying each call.
 
-    MD-5 (2026-10-11): ``team_plan_run`` is never auto-approved, so its card
-    opens with the never-auto fence line; these pins read the card body
+    MD-5 (2026-10-11): ``team_plan_run`` is in the never-auto classification,
+    so a human-mode card opens with that fence line; these pins read the body
     (``test_team_plan_run_card_names_the_md5_fence`` pins the line itself).
     """
     cards: list[str] = []

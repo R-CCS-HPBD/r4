@@ -5,6 +5,15 @@
  */
 
 import { workflowScopeLabel } from "./workflow-sharing";
+import {
+  codeUnavailable,
+  defaultVersionOf,
+  runRefLabel,
+  shortDigest,
+  versionCountLabel,
+  versionListLabel,
+  type VersionedRun,
+} from "./workflow-versions";
 
 export type WfListEntry = {
   workflow_name?: string;
@@ -16,6 +25,9 @@ export type WfListEntry = {
   owner?: string;
   shared?: boolean;
   access?: string[];
+  /** ADR-113 D-3 (absent from older servers). */
+  version?: string;
+  versions?: string[];
 };
 
 export type MgmtRow = { key: string; value: string };
@@ -41,7 +53,8 @@ export function wfListRows(payload: unknown): { rows: string[][]; total: number 
   const rows = items.slice(0, 12).map((w) => {
     const name = w.workflow_name ?? w.name ?? "(unnamed)";
     const desc = trunc(w.description ?? "", 48);
-    return [name, workflowScopeLabel(w), desc];
+    // [3]: `v1.2.0 (+2)`, the default version and how many others exist.
+    return [name, workflowScopeLabel(w), desc, versionCountLabel(w)];
   });
   return { rows, total: body.count ?? items.length };
 }
@@ -54,7 +67,9 @@ export function wfStatusRows(payload: unknown): MgmtRow[] {
     rows.push({ key, value: trunc(String(value), 64) });
   };
   push("execution", p.execution_id);
-  push("workflow", p.workflow_name);
+  // ADR-113 D-4: `name@version` and the code digest the run pinned.
+  if (p.workflow_name) push("workflow", runRefLabel(p as VersionedRun));
+  push("digest", shortDigest(typeof p.source_sha256 === "string" ? p.source_sha256 : ""));
   push("status", p.status);
   if (typeof p.progress === "number") push("progress", `${Math.round(p.progress * 100)}%`);
   push("error", p.error);
@@ -307,11 +322,28 @@ export function knowledgeGraphContentRows(payload: unknown): { header: MgmtRow[]
 }
 
 /** Flatten the freeform describe payload into display rows. */
+/** ADR-113 describe fields read as words, not raw values: the version list
+ * (default marked, the shown one pointed at), a short digest, and code that
+ * is gone marked. */
+const DESCRIBE_FIELDS: Record<string, (p: Record<string, unknown>) => string> = {
+  versions: (p) => {
+    const versions = (Array.isArray(p.versions) ? p.versions : []).map(String);
+    return versionListLabel(versions, defaultVersionOf(versions), typeof p.version === "string" ? p.version : null);
+  },
+  source_sha256: (p) => shortDigest(String(p.source_sha256)),
+  code: (p) => (codeUnavailable(p as { code?: string }) ? "unavailable — this version cannot run" : String(p.code)),
+};
+
 export function wfDescribeRows(payload: unknown): MgmtRow[] {
   const rows: MgmtRow[] = [];
   const p = (payload ?? {}) as Record<string, unknown>;
   for (const [key, value] of Object.entries(p)) {
     if (value === undefined || value === null) continue;
+    const field = Object.hasOwn(DESCRIBE_FIELDS, key) ? DESCRIBE_FIELDS[key] : undefined;
+    if (field) {
+      rows.push({ key, value: trunc(field(p), 60) });
+      continue;
+    }
     if (Array.isArray(value)) {
       rows.push({ key, value: `${value.length} item(s)` });
       continue;

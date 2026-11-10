@@ -38,13 +38,18 @@
 Every `/gw/<family>/` block rewrites to `/umrs/<family>/` and forwards the
 verified identity headers; rate zones are `llm_limit` (10 r/s),
 `upload_limit` (5 r/s), `general_limit` (50 r/s) from `gateway/nginx/nginx.conf`,
-plus `health_backend` (5 r/s, burst 10, one bucket per gateway) for
-`/health/backend` only (2026-10-30).
+plus `health_backend` (5 r/s, burst 10) for `/health/backend` only
+(2026-10-30) and `status_badge_limit` (5 r/s, burst 20, one bucket per
+gateway) for `/status/models.json` only (2026-11-07). `health_backend` keeps
+two buckets per gateway since 2026-11-07: "edge" (requests through Apache,
+which always adds `X-Forwarded-For`) and "direct" (the converge's probe on
+`127.0.0.1:<port>`), so a public flood cannot fail a deploy verdict.
 
 | Edge location | Target / behaviour |
 |---|---|
 | `/health` | the gateway's own liveness: static 200, never asks the backend (container HEALTHCHECK, k8s liveness, the converge's gateway-start wait) |
 | `/health/backend` | backend-aware probe: 200 only when this gateway's UMRS answers its `/health` (2 s timeouts), else a fixed 503; the backend's body is not relayed; rate-limited (`health_backend`, a JSON 429 past the burst). What "is the platform serving" probes use: `scripts/e2e-canary.sh`, the converge's "Platform serving" tasks, the demo-suite preflight |
+| `/status/models.json` | public service-model badge (shields.io endpoint JSON, [ADR-106 amendment 2026-11-07](../../adr/106-amendment-2026-11-07-public-service-badge.md)): anonymous, GET/HEAD only, no client header, body or query string forwarded; → `/umrs/status/service-badge`; 30 s micro-cache under one fixed key; UMRS errors replaced by fixed answers (5xx → red `down`, 429 → grey `rate limited`, other 4xx → grey `unknown`) |
 | `/health/ready` | the auth sidecar's own `/health` |
 | `/ready` | aggregate readiness: 200 only when UMRS `/readiness` (required stores) answers 200, via the sidecar's `/ready-aggregate` |
 | `/saml/`, `/auth/cli-callback`, `/auth/web-login` | login flows (no `auth_request`) |
@@ -64,9 +69,15 @@ plus `health_backend` (5 r/s, burst 10, one bucket per gateway) for
 | `/gw/stream/`, `/gw/web/dashboard/`, `/gw/egress/` | streaming, web dashboard, egress-audit sink |
 | `/gw/v1/(endpoints|models|llm)`, `/gw/v1beta/(knowledge|k2|loops|research)` | lane-prefixed aliases; bare `/gw/v1/`, `/gw/v1beta/` return 404 |
 
+The public README does not link its shields to `/status/models.json` (ADR-106
+D-7, 2026-11-10). The `service-status` runner validates that answer privately
+and publishes `status/<site>-models.json` through #796's address-free
+publisher; the overlay and public STATUS.md use only those fixed documents.
+
 `tests/test_gateway_route_characterization.py` asserts every `/gw/*`
 location authenticates except the documented probes and that rewrites match
-their targets.
+their targets, and (2026-11-07) pins every non-`/gw` location that reaches an
+upstream without auth (`ANONYMOUS_UPSTREAM_LOCATIONS`).
 
 *2026-10-30 (issue #634): the health rows were one line, "edge liveness;
 aggregate readiness via the sidecar", and `/health/ready` is not the

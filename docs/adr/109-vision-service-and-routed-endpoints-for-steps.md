@@ -198,6 +198,13 @@ Nothing landed yet. The slices, each its own wave:
   - **Unchecked on GB10 (podman 4.9.3 on Lustre):** a Unix socket file under `/lvs0`, and `--network=host` with `--cgroups=disabled`. If Lustre refuses the socket, the fallback is a node-local socket directory.
   - **SAM3 image input.** The vision service takes images only as s3 or presigned URLs. A staged step can pass only images the sidecar can read itself; inline image bytes are a service change (V6).
 
+## Rollout-status (2026-11-08) — V6, HMAE half
+
+- **The HMAE workflow follows D-6.** It was rewritten for the staged lane (private repository): one GPU step runs the HMAE model inside the step from an allow-listed image (the model code ships in the bundle; the weights are a weights-only state dict staged from the project's bucket), one CPU step writes the report. No vision endpoint is involved.
+- **Image.** `umrs-step-torch:<platform sha12>-<lock sha8>` (torch cu130, COPY-only on the platform step image) is allow-listed on rccs (umrs `4187cc05`), until ADR-110 user images open there (I0).
+- **Receipts.** Local CPU run on the project's six test slices: the masked loss matches the training loss. The rccs receipt in `example-project-c` is recorded in wave ledger (240).
+- **The segmentation workflow half** still waits for the V3 live leg (the vision image staged, `svc-vision2` serving); its workflows are owner-only until then.
+
 ## Related
 
 - [ADR-074](074-uploaded-step-code-runs-sandboxed.md), [ADR-076](076-decision-model-role.md), [ADR-078](078-endpoint-access-scopes.md), [ADR-080](080-one-access-guard-shareable-resources.md), [ADR-106](106-service-model-tier.md), [ADR-110](110-self-service-step-images.md)

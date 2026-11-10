@@ -18,7 +18,12 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from .workflow_tools import _parse_workflow_run_inputs, _precheck_params, _structured_error
+from .workflow_tools import (
+    VERSION_PARAM,
+    _parse_workflow_run_inputs,
+    _precheck_params,
+    _structured_error,
+)
 
 COMMIT_HELP = (
     "Run a plan that workflow_plan returned: pass the plan object as-is "
@@ -54,15 +59,24 @@ def _plan_payload(plan: Any) -> tuple[str, dict[str, Any], str] | str:
 def build_plan_commit_tools(client: Any, permission_manager: Any = None) -> list[dict[str, Any]]:
     """``workflow_plan`` (SAFE) and ``job_commit`` (RISKY, D-4)."""
 
-    def _workflow_plan(workflow_name: str, parameters: Any = None, input_files: Any = None) -> str:
+    def _workflow_plan(
+        workflow_name: str,
+        parameters: Any = None,
+        input_files: Any = None,
+        version: str | None = None,
+    ) -> str:
         params, files, error = _parse_workflow_run_inputs(parameters, input_files)
         if error is not None:
             return error
-        invalid = _precheck_params(client, workflow_name, params, files)
+        invalid = _precheck_params(client, workflow_name, params, files, version)
         if invalid is not None:
             return invalid
         try:
-            data = client.workflows.plan(workflow_name, parameters=params, input_files=files)
+            # ADR-113 D-3: the plan names the exact version (and UMRS signs
+            # its digest), so job_commit runs what the user approved.
+            data = client.workflows.plan(
+                workflow_name, parameters=params, input_files=files, version=version
+            )
         except Exception as exc:
             return _structured_error("workflow_plan_failed", str(exc))
         return json.dumps(data, indent=2, default=str)
@@ -91,6 +105,7 @@ def build_plan_commit_tools(client: Any, permission_manager: Any = None) -> list
                 "type": "object",
                 "properties": {
                     "workflow_name": {"type": "string"},
+                    "version": VERSION_PARAM,
                     "parameters": {
                         "type": "object",
                         "description": "Parameters (workflow_describe parameter_schema)",

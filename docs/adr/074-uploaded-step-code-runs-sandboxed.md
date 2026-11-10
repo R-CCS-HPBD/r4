@@ -417,6 +417,20 @@ not reachable from the cluster at all. So on HPC lanes:
 - **D-5 phase 2 is implemented** (umrs `1c1e5bdd`; [ADR-109](109-vision-service-and-routed-endpoints-for-steps.md) V5 block): a per-step Unix-socket forwarder that holds the credential. The step pod keeps `--network=none`. Not yet deployed.
 - **Amendment 2's env list.** The fixed step env names gain `UMRS_STEP_ENDPOINT_SOCKET`, present only when the step has a routed endpoint. Since ADR-110 I1, the pod also carries fixed platform env values (PATH, HOME, LANG, PYTHONUNBUFFERED, PYTHONDONTWRITEBYTECODE) under `--unsetenv-all`.
 
+## Rollout-status (2026-11-08): D-6 extended by ADR-112 (payload direction, gated lanes)
+
+- **D-6, extended.** [ADR-112](112-user-hpc-accounts-gated-delegation.md) D-6 adds the mirror image of this ADR's D-6: on a gated lane (a step run in the user's own HPC account), step code never unpickles server-supplied bytes. The gate builds a JSON payload in place of today's pickle.
+- **When.** Wave B2 of the gated-delegation plan. The pool and ZMQ worker modes are unchanged.
+- **Nothing changes yet.** Wave A (declared access modes, the interim project allow-list) does not touch the payload, the batch script or the step pod posture. D-6 as written above still holds on every lane.
+
+## Rollout-status (2026-11-08, later): the gated lane (ADR-112 wave B2) in progress
+
+- **No payload pickle on the gated lane.** On a site that offers ADR-112 `user_account`, a staged step of a person with an active account and an active project link runs through that person's gate. The gate writes the step input itself, as JSON (`input.json`), from fields the user signed and from the replies of parent steps that the gate recorded itself. The worker reads it in a new JSON mode, checks the entrypoint against the signed one before importing anything, rebuilds parent results through the reply checker, and never calls `pickle.loads`.
+- **It runs under the user's own account.** The job is submitted by the gate under the user's login and charged to the user's allocation, not to `<operator-account>`. The batch script is composed by the gate from its own template (no `venue.sh` sourced, no operator script, `--export=NONE`); the pod posture of D-4 and the D-5 data plane are kept, and a shared-vector test keeps the posture identical to this lane's.
+- **D-6's mirror holds there:** step code never unpickles server-supplied bytes.
+- **Unchanged elsewhere.** `service_account` sites, the helper lane, `input.pkl`, and the pool and ZMQ worker modes keep today's behaviour; D-6 as written above holds on them.
+- **Not live.** The platform step image gains the label `org.umrs.step-payload="pickle,json"`; it must be rebuilt and re-staged by a converge before the gate accepts it. The change is in progress on `wave/gated-b2-intents` (plan §5 B2.0), not merged and not deployed. The first lane receipt is a maintainer leg.
+
 ## Related
 
 - [ADR-027](027-workflow-upload-authorization.md)

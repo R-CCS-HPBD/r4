@@ -40,7 +40,6 @@ def xdg(tmp_path, monkeypatch):
         "_sync_umrs_client_profile",
         "_ensure_umrs_user_config",
         "_try_zmq_session_bootstrap_with_profile",
-        "_maybe_enroll_hpc_after_login",
         "_sync_projects_from_server",
     ):
         monkeypatch.setattr(login, name, lambda *a, **k: None)

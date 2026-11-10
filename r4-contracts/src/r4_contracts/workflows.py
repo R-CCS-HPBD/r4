@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-WORKFLOW_CONTRACT_VERSION = "1.1.0"
+WORKFLOW_CONTRACT_VERSION = "1.2.0"  # 1.2.0: ADR-113 workflow versions (additive)
 
 # Canonical operation names exposed by Companion tools and MCP adapters.
 WORKFLOW_OPERATIONS = (
@@ -65,6 +65,52 @@ WORKFLOW_TOOL_HELP = {
     "cancel": "Cancel an in-flight workflow run.",
 }
 
+# ── Workflow references (ADR-113 D-3, 2026-11-08) ─────────────────────────
+#: Separator of the ``name@version`` shorthand every surface accepts.
+WORKFLOW_REF_SEPARATOR = "@"
+
+
+def parse_workflow_ref(ref: str) -> tuple[str, str | None]:
+    """``"name@1.2.3"`` -> ``("name", "1.2.3")``; ``"name"`` -> ``("name", None)``.
+
+    The version is not checked against SemVer here: entries registered
+    before ADR-113 keep versions like ``0.1`` and stay selectable; UMRS
+    answers an unknown version by name. ValueError when the name or the
+    version after ``@`` is empty, or the version holds whitespace.
+    """
+    text = str(ref or "").strip()
+    if WORKFLOW_REF_SEPARATOR not in text:
+        if not text:
+            raise ValueError("workflow name is empty")
+        return text, None
+    name, _, version = text.rpartition(WORKFLOW_REF_SEPARATOR)
+    name, version = name.strip(), version.strip()
+    if not name or not version or any(ch.isspace() for ch in version):
+        raise ValueError(f"{ref!r} is not a workflow reference: use NAME or NAME@VERSION")
+    return name, version
+
+
+def resolve_workflow_ref(ref: str, version: str | None = None) -> tuple[str, str | None]:
+    """``(name, version)`` from ``name[@X]`` plus an explicit *version*.
+
+    Both may name the version only when they agree; a conflict is a
+    ValueError naming both, never a silent pick.
+    """
+    name, ref_version = parse_workflow_ref(ref)
+    explicit = str(version).strip() if version is not None else ""
+    if not explicit:
+        return name, ref_version
+    if ref_version is not None and ref_version != explicit:
+        raise ValueError(
+            f"{ref!r} names version {ref_version} but version {explicit} was also given"
+        )
+    return name, explicit
+
+
+def workflow_ref_label(name: str, version: str | None) -> str:
+    """``name@version`` for display; the bare name when no version is known."""
+    return f"{name}{WORKFLOW_REF_SEPARATOR}{version}" if name and version else (name or "")
+
 
 @dataclass
 class RunDefinitionRecord:
@@ -84,11 +130,17 @@ class RunDefinitionRecord:
     description: str = ""
     created_at: str = ""
     updated_at: str = ""
+    # ADR-113 D-4: the version a replay runs and its code digest ("" on
+    # definitions saved before versions existed: replay takes the default).
+    workflow_version: str = ""
+    source_sha256: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "workflow_name": self.workflow_name,
+            "workflow_version": self.workflow_version,
+            "source_sha256": self.source_sha256,
             "params": self.params,
             "user_id": self.user_id,
             "project_id": self.project_id,
@@ -124,6 +176,11 @@ class WorkflowStructuredError:
         return payload
 
 
+def _optional_str(value: Any) -> str | None:
+    """*value* when it is a string, else None (a payload field of another type)."""
+    return value if isinstance(value, str) else None
+
+
 @dataclass
 class WorkflowTriggerRequest:
     """Public workflow trigger request (Gateway /gw/workflows/{name}/trigger)."""
@@ -134,6 +191,8 @@ class WorkflowTriggerRequest:
     input_files: list[str] = field(default_factory=list)
     # Deprecated alias accepted at SDK boundary only.
     project_id: str | None = None
+    # ADR-113 D-3: the exact version to run; None = the default version.
+    version: str | None = None
 
     def to_umrs_body(self, *, user_id: str) -> dict[str, Any]:
         params = dict(self.parameters)
@@ -141,7 +200,10 @@ class WorkflowTriggerRequest:
             params.setdefault("input_files", list(self.input_files))
         if self.project_id:
             params.setdefault("project_id", self.project_id)
-        return {"user_id": user_id, "params": params}
+        body: dict[str, Any] = {"user_id": user_id, "params": params}
+        if self.version:
+            body["version"] = self.version
+        return body
 
     @classmethod
     def from_public_payload(
@@ -155,14 +217,12 @@ class WorkflowTriggerRequest:
         input_files = payload.get("input_files")
         if not isinstance(input_files, list):
             input_files = []
-        project_id = payload.get("project_id")
-        if project_id is not None and not isinstance(project_id, str):
-            project_id = None
         return cls(
             workflow_name=workflow_name,
             parameters=dict(parameters),
             input_files=[str(item) for item in input_files],
-            project_id=project_id,
+            project_id=_optional_str(payload.get("project_id")),
+            version=_optional_str(payload.get("version")) or None,
         )
 
 
@@ -178,12 +238,17 @@ class WorkflowDescribeResponse:
     parameter_schema: dict[str, Any] = field(default_factory=dict)
     steps: list[dict[str, Any]] = field(default_factory=list)
     requirements: list[Any] = field(default_factory=list)
+    # ADR-113 D-3: every registered version (SemVer-descending) + the digest.
+    versions: list[str] = field(default_factory=list)
+    source_sha256: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "contract_version": WORKFLOW_CONTRACT_VERSION,
             "workflow_name": self.workflow_name,
             "version": self.version,
+            "versions": list(self.versions),
+            "source_sha256": self.source_sha256,
             "description": self.description,
             "scope": self.scope,
             "user_id": self.user_id,
@@ -205,6 +270,9 @@ class WorkflowStatus:
     error: str | None = None
     progress: float | None = None
     workflow_id: str | None = None  # deprecated alias
+    # ADR-113 D-4: what the run pinned ("" from servers before versions).
+    workflow_version: str = ""
+    source_sha256: str = ""
 
     def __post_init__(self) -> None:
         if self.workflow_id is None:
@@ -229,6 +297,9 @@ class WorkflowResult:
     error: str | None = None
     durable_job_id: str | None = None
     workflow_id: str | None = None  # deprecated alias
+    # ADR-113 D-4: what the run pinned ("" from servers before versions).
+    workflow_version: str = ""
+    source_sha256: str = ""
 
     def __post_init__(self) -> None:
         if self.workflow_id is None:
@@ -253,6 +324,13 @@ class WorkflowCatalogItem:
     owner: str = ""
     shared: bool = False
     access: list[str] = field(default_factory=list)
+    # ADR-113 D-3 (2026-11-08): ``version`` is the row's version (the
+    # default one in the grouped list), ``versions`` every registered one
+    # (SemVer-descending), ``source_sha256`` the row version's code digest.
+    # Empty on servers before versions.
+    version: str = ""
+    versions: list[str] = field(default_factory=list)
+    source_sha256: str = ""
 
     def __post_init__(self) -> None:
         if self.workflow_id is None:
@@ -278,6 +356,11 @@ class WorkflowUploadResult:
     message: str | None = None
     error: str | None = None
     workflow_id: str | None = None  # deprecated alias
+    # ADR-113 D-1/D-2: the registered version, its digest and the server's
+    # upload warnings (status "unchanged" = same version + digest re-sent).
+    version: str = ""
+    source_sha256: str = ""
+    warnings: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if self.workflow_id is None:

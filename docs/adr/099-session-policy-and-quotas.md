@@ -1335,6 +1335,7 @@ remembered choice (one notice line), else exits 2 with "choose web access:
   - the worker's `ask_user` creates a question, returns the owner's answer,
     and expires on timeout with the no-answer text (old code: auto-answer);
   - `ask_user_mode=auto` gives the auto-answer locally and remotely;
+  - *2026-11-09, ADR-104 amendment 3:* autopilot also auto-continues `ask_user` locally, through ACP and on the worker, even when the saved setting is `ask`; chat keeps the setting above. Deletion still uses durable approval.
   - the worker applies `auto_safe` and `autopilot` → `trust` (old: always
     `ask_always`);
   - a settings change between turns applies at the next pop;

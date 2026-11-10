@@ -33,7 +33,7 @@ class _FakeWorkflows:
         self.calls: list[tuple[str, Path, bool]] = []
         self.manifest = manifest if manifest is not None else {"files": [{}, {}], "excluded": ["x"]}
 
-    def export(self, name: str, dest: Path, *, overwrite: bool = False) -> Path:
+    def export(self, name: str, dest: Path, *, overwrite: bool = False, version=None) -> Path:
         self.calls.append((name, Path(dest), overwrite))
         return _zip(Path(dest), self.manifest)
 
@@ -150,7 +150,7 @@ def test_concurrent_exports_never_pick_the_same_file(tmp_path):
     started, release = threading.Event(), threading.Event()
 
     class _Slow(_FakeWorkflows):
-        def export(self, name: str, dest: Path, *, overwrite: bool = False) -> Path:
+        def export(self, name: str, dest: Path, *, overwrite: bool = False, version=None) -> Path:
             if not self.calls:
                 self.calls.append((name, Path(dest), overwrite))
                 started.set()

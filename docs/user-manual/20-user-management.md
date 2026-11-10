@@ -150,6 +150,22 @@ umrs-server admin slurm accounts
 
 > **Important:** Users cannot provision endpoints without a configured Slurm account. The Gateway forwards `X-User-ID` to UMRS, which resolves the user's account and passes `--account=` to sbatch.
 
+> **Note (2026-11-08):** the Slurm account is *attribution* (which allocation is charged). It does not choose the login a job runs under. That is now declared per site in `scheduler.hpc_access` ([ADR-112](../adr/112-user-hpc-accounts-gated-delegation.md) D-1, D-2), and the older per-user SSH delegation (`slurm_delegation: per_user_ssh`) is retired. There is no fallback from one login to another: work that cannot run under the site's declared identity is refused with an `hpcaccess.*` code. On a site whose login belongs to the operator, user work (staged steps, `hpc_script`, cluster loops) runs only for admins and listed projects:
+>
+> ```yaml
+> scheduler:
+>   hpc_access:
+>     modes_allowed: [service_account]
+>     default_mode: service_account
+>     service_account:
+>       login: <operator-account>     # must equal extra.ssh_user
+>       personal: true
+>       consent_ref: ""               # empty = interim
+>       allowed_projects: [<project>] # empty list = admins only
+> ```
+>
+> Registering your own HPC account, and what UMRS can and cannot do with it: [chapter 31](31-own-hpc-accounts.md).
+
 ## Project Membership
 
 ```bash

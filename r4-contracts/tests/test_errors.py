@@ -54,6 +54,45 @@ class TestFamilies:
         # 2026-10-23: the failing re-provision cap refuses with Retry-After.
         assert PlatformError.endpoints("provision_capped", "m").http_status == 429
 
+    def test_hpcaccess_family_is_registered(self):
+        # ADR-112 (2026-11-08): the typed refusals of declared HPC access.
+        from r4_contracts.errors import HPCACCESS_ERRORS
+
+        expected = {
+            "hpcaccess.mode_undeclared": 403,
+            "hpcaccess.project_not_allowed": 403,
+            "hpcaccess.not_enrolled": 403,
+            "hpcaccess.allocation_not_linked": 403,
+            "hpcaccess.allocation_not_at_site": 403,
+            "hpcaccess.gate_refused": 403,
+            "hpcaccess.gate_version": 409,
+            "hpcaccess.signature_required": 428,
+            "hpcaccess.person_required": 403,
+            "hpcaccess.intent_invalid": 422,
+            "hpcaccess.intent_used": 409,
+            "hpcaccess.lane_not_gated": 403,
+            "hpcaccess.grant_invalid": 422,
+            "hpcaccess.grant_not_found": 404,
+            "hpcaccess.budget_exceeded": 403,
+            "hpcaccess.ledger_unavailable": 503,
+        }
+        assert expected == HPCACCESS_ERRORS
+        codes = known_error_codes()
+        assert {code: codes[code] for code in expected} == expected
+
+    def test_hpcaccess_constructor_uses_registry(self):
+        err = PlatformError.hpcaccess("project_not_allowed", "m", site="rccs-front")
+        assert (err.code, err.http_status) == ("hpcaccess.project_not_allowed", 403)
+        assert err.detail == {"site": "rccs-front"}
+        assert PlatformError.hpcaccess("signature_required", "m").http_status == 428
+        # Waves C and D (2026-11-09): grants, the budget and the ledger.
+        assert PlatformError.hpcaccess("grant_invalid", "m", reason="bad_schema").http_status == 422
+        assert PlatformError.hpcaccess("grant_not_found", "m").http_status == 404
+        assert PlatformError.hpcaccess("budget_exceeded", "m").http_status == 403
+        assert PlatformError.hpcaccess("ledger_unavailable", "m").http_status == 503
+        with pytest.raises(KeyError):
+            PlatformError.hpcaccess("made_up", "m")
+
     def test_unknown_family_member_fails_loud(self):
         with pytest.raises(KeyError):
             PlatformError.session("made_up", "m")

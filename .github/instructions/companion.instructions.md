@@ -53,6 +53,8 @@ companion/
   memory_store.py          — saved memory, one private file per fact, user + project scopes (2026-11-07, ADR-111)
   memory_tools.py          — memory_read / memory_write / memory_forget, attached by the lead session only (ADR-111 D-4)
   memory_commands.py       — /memory and `r4 memory` verbs: list, add, forget, lessons, promote, off/on
+  session_bus.py           — local session bus: live-session presence + one-file-per-message inboxes, private per user (2026-11-08, ADR-114)
+  session_bus_tools.py     — session_list / session_send / session_inbox + the unread reminder, attached by the lead session only (ADR-114 D-3)
   context_budget.py        — budget resolved from the active model
   skills.py                — SkillRegistry + unified SKILL.md parser (all sources)
   builtin/                 — 27 built-in skill groups, Agent Skills format (<name>/SKILL.md)
@@ -84,6 +86,7 @@ companion/
   session_models.py        — message + usage data structures
   session_state.py         — session metadata serialization
   session_store.py         — SQLite persistence + compatibility path handling
+  subagent_sessions.py     — existing-store/event-log child recording, stable lineage and terminal lifecycle (2026-11-10, D-70 S1/S2); local-only child writes never use the parent snapshot rail
   session_ops.py           — on-demand session operations shared by the bridge and ACP rails
   persistence.py           — persistence protocol
   event_log.py · replay.py · checkpoint.py — SQLite event log (`event_log` table), replay, checkpoints (`checkpoints` table)
@@ -103,6 +106,7 @@ companion/
     command_bridge.py      — slash commands bridged into the companion UIs
     project_bridge.py      — typed project_* RPCs for the console
     sandbox_bridge.py      — session.sandbox_get / session.sandbox_set, snapshot key session.sandbox (2026-10-30, ADR-101)
+    session_bus_bridge.py  — the bridge's active session on the session bus: register/withdraw, heartbeat, `session_inbox` notices (ADR-114)
     repl.py                — Rich REPL fallback (always available)
 ```
 

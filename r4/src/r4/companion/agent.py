@@ -4476,24 +4476,119 @@ class ResearchCompanion:
         records = self._async_pool.status()
         return _json.dumps(records or {"background_agents": "none"}, indent=2)
 
-    def _emit_agent_ended_early(self, record: Any, started: float) -> None:
+    def _emit_subagent_success(
+        self,
+        *,
+        execution: Any,
+        agent_id: str,
+        result: str,
+        started: float,
+        parent_agent_id: str | None = None,
+        follow_up: bool = False,
+    ) -> None:
+        """Finalize durable state before publishing one bounded parent result."""
+        if execution is not None:
+            execution.complete(result)
+        result_data = self._subagent_event_data(
+            execution,
+            agent_id=agent_id,
+            status="completed",
+            follow_up=follow_up,
+            result_preview=result[:1200],
+            result_truncated=len(result) > 1200,
+            result_chars=len(result),
+            duration_ms=int((time.monotonic() - started) * 1000),
+        )
+        if parent_agent_id is not None:
+            result_data["parent_agent_id"] = parent_agent_id
+        self._emit(CompanionEventType.AGENT_RESULT, result[:200], data=result_data)
+
+    def _emit_agent_ended_early(
+        self, record: Any, started: float, error: BaseException | None = None
+    ) -> None:
+        from .cancellation import TurnCancelledError
+
+        cancelled = isinstance(error, TurnCancelledError)
+        execution = getattr(record, "execution", None)
+        if execution is not None:
+            execution.fail(error or RuntimeError("background agent ended early"))
+        result_data = self._subagent_event_data(
+            execution,
+            agent_id=record.agent_id,
+            status="cancelled" if cancelled else "error",
+            error=str(error) if error is not None else "",
+            duration_ms=int((time.monotonic() - started) * 1000),
+        )
         self._emit(
             CompanionEventType.AGENT_RESULT,
             f"Background sub-agent {record.agent_id} ended early.",
-            data={
-                "agent_id": record.agent_id,
-                "status": "error",
-                "duration_ms": int((time.monotonic() - started) * 1000),
-            },
+            data=result_data,
+        )
+
+    def _follow_subagent(self, record: Any, message: str) -> str:
+        """Run a registered follow-up on the retained child and its tools."""
+        child = None
+        execution = getattr(record, "execution", None)
+        started = record.started_at
+        try:
+            child = record.child or self._new_subagent(getattr(record, "model", None))
+            if execution is not None:
+                execution.attach(child)
+            if self._turn_cancel is not None:
+                child.set_turn_cancel(self._turn_cancel)
+            result = child.send(
+                message,
+                history=list(record.history),
+                extra_system=record.system_prompt or "",
+                tools=getattr(record, "tools", None),
+            )
+        except Exception as exc:
+            self._emit_agent_ended_early(record, started, exc)
+            raise
+        finally:
+            if child is not None and execution is not None:
+                execution.detach(child)
+        self._emit_subagent_success(
+            execution=execution,
+            agent_id=record.agent_id,
+            result=result,
+            started=started,
+            follow_up=True,
+        )
+        record.child = child
+        record.history.extend(
+            [
+                {"role": "user", "content": message},
+                {"role": "assistant", "content": result},
+            ]
+        )
+        return result
+
+    def _register_subagent_follow_up(self, record: Any, message: str) -> None:
+        """Append and announce a follow-up before resume can start its thread."""
+        execution = getattr(record, "execution", None)
+        from functools import partial
+
+        record.on_start_error = partial(self._emit_agent_ended_early, record, record.started_at)
+        if execution is not None:
+            execution.follow_up(message)
+        spawn_data = self._subagent_event_data(
+            execution,
+            agent_id=record.agent_id,
+            task=message,
+            system_prompt=record.system_prompt,
+            model=self._subagent_label(getattr(record, "model", None)),
+            execution_kind="async",
+            follow_up=True,
+        )
+        self._emit(
+            CompanionEventType.AGENT_SPAWN,
+            f"Follow-up to background agent {record.agent_id}: {message[:80]}…",
+            data=spawn_data,
         )
 
     def message_subagent(self, agent_id: str, message: str) -> str:
-        """G17b: send a follow-up into a finished agent's accumulated context.
-
-        The same agent id resumes (the child and its reconstructed history
-        were retained at completion); running agents reject with a clear
-        error (queue-while-running is a later wave).
-        """
+        """Resume one finished child, preserving its identity, tools and durable history."""
         import json as _json
 
         record = self._async_pool.get(agent_id)
@@ -4501,49 +4596,13 @@ class ResearchCompanion:
             return _json.dumps({"error": f"unknown background agent {agent_id!r}"})
         if record.status == "running":
             return _json.dumps({"error": f"{agent_id} is still running; wait for its notification"})
+        from functools import partial
 
-        def _follow(r: Any) -> str:
-            child = r.child or self._new_subagent()
-            if self._turn_cancel is not None:
-                child.set_turn_cancel(self._turn_cancel)
-            started = r.started_at
-            try:
-                result = child.send(
-                    message,
-                    history=list(r.history),
-                    extra_system=r.system_prompt or "",
-                )
-            except Exception:
-                self._emit_agent_ended_early(r, started)
-                raise
-            self._emit(
-                CompanionEventType.AGENT_RESULT,
-                result[:200],
-                data={
-                    "agent_id": r.agent_id,
-                    "status": "completed",
-                    "follow_up": True,
-                    "result_preview": result[:1200],
-                    "duration_ms": int((time.monotonic() - started) * 1000),
-                },
-            )
-            r.child = child
-            r.history.extend(
-                [
-                    {"role": "user", "content": message},
-                    {"role": "assistant", "content": result},
-                ]
-            )
-            return result
-
-        resumed = self._async_pool.resume(agent_id, _follow)
+        follow = partial(self._follow_subagent, message=message)
+        register = partial(self._register_subagent_follow_up, message=message)
+        resumed = self._async_pool.resume(agent_id, follow, before_start=register)
         if isinstance(resumed, dict):
             return _json.dumps(resumed)
-        self._emit(
-            CompanionEventType.AGENT_SPAWN,
-            f"Follow-up to background agent {agent_id}: {message[:80]}…",
-            data={"agent_id": agent_id, "task": message, "follow_up": True},
-        )
         return (
             f"Follow-up sent to background agent {agent_id}; its reply arrives as a "
             "<subagent-notification> in a later round."
@@ -4557,37 +4616,35 @@ class ResearchCompanion:
         tools: list[dict[str, Any]] | None = None,
         model: str | None = None,
     ) -> str:
-        """G9: start a background sub-agent; results drain into later rounds.
-
-        The child shares this companion's client and cancellation token, runs
-        with half the round budget (same shape as ``spawn_subagent``), and its
-        completion becomes a ``<subagent-notification>`` user-role block at the
-        parent's next round boundary. ``model`` (G17a) overrides the child's
-        model for cheaper or stronger legs.
-        """
+        """Accept and register a background child before its thread can emit results."""
         system_prompt = system or "You are a sub-agent. Be concise. Return only results."
+        selected_model = self._subagent_model(model) or ""
+        label = self._subagent_label(model)
 
         def _runner(record: Any) -> str:
-            sub = self._new_subagent(model)
-            if self._turn_cancel is not None:
-                sub.set_turn_cancel(self._turn_cancel)
+            sub = None
+            execution = getattr(record, "execution", None)
             started = record.started_at
             try:
+                sub = self._new_subagent(model)
+                if execution is not None:
+                    execution.attach(sub)
+                if self._turn_cancel is not None:
+                    sub.set_turn_cancel(self._turn_cancel)
                 result = sub.send(task, extra_system=system_prompt, tools=tools)
-            except Exception:
-                self._emit_agent_ended_early(record, started)
+            except Exception as exc:
+                self._emit_agent_ended_early(record, started, exc)
                 raise
-            self._emit(
-                CompanionEventType.AGENT_RESULT,
-                result[:200],
-                data={
-                    "agent_id": record.agent_id,
-                    "status": "completed",
-                    "result_preview": result[:1200],
-                    "duration_ms": int((time.monotonic() - started) * 1000),
-                },
+            finally:
+                if sub is not None and execution is not None:
+                    execution.detach(sub)
+            self._emit_subagent_success(
+                execution=execution,
+                agent_id=record.agent_id,
+                result=result,
+                started=started,
             )
-            # G17b: the child and its conversation survive for follow-ups.
+            # G17b: the live child and conversation remain follow-up execution state.
             record.child = sub
             record.system_prompt = system_prompt
             record.history.extend(
@@ -4598,17 +4655,42 @@ class ResearchCompanion:
             )
             return result
 
-        spawned = self._async_pool.spawn(task, _runner)
+        def _register(record: Any) -> None:
+            execution = self._begin_subagent_execution(
+                agent_id=record.agent_id,
+                task=task,
+                system_prompt=system_prompt,
+                model=selected_model,
+                execution_kind="async",
+                tools=tools,
+            )
+            record.execution = execution
+            record.tools = tools
+            record.model = selected_model
+            record.system_prompt = system_prompt
+            from functools import partial
+
+            record.on_start_error = partial(self._emit_agent_ended_early, record, record.started_at)
+            spawn_data = self._subagent_event_data(
+                execution,
+                agent_id=record.agent_id,
+                task=task,
+                system_prompt=system_prompt,
+                execution_kind="async",
+                declared_tools=getattr(execution, "declared_tools", None),
+                **{"async": True, "model": label},
+            )
+            self._emit(
+                CompanionEventType.AGENT_SPAWN,
+                f"Background delegation to {label}: {task[:80]}…",
+                data=spawn_data,
+            )
+
+        spawned = self._async_pool.spawn(task, _runner, before_start=_register)
         if isinstance(spawned, dict):
             import json as _json
 
             return _json.dumps(spawned)
-        label = self._subagent_label(model)
-        self._emit(
-            CompanionEventType.AGENT_SPAWN,
-            f"Background delegation to {label}: {task[:80]}…",
-            data={"agent_id": spawned.agent_id, "task": task, "async": True, "model": label},
-        )
         return (
             f"Background agent {spawned.agent_id} started on the task. Its result will "
             "arrive as a <subagent-notification> in a later round — keep working; do not "
@@ -4644,50 +4726,59 @@ class ResearchCompanion:
         agent_id = uuid.uuid4().hex[:12]
         system_prompt = system or "You are a sub-agent. Be concise. Return only results."
         label = self._subagent_label()
+        execution = self._begin_subagent_execution(
+            agent_id=agent_id,
+            task=task,
+            system_prompt=system_prompt,
+            model=self._subagent_model() or "",
+            execution_kind="sync",
+            tools=tools,
+        )
+        spawn_data = self._subagent_event_data(
+            execution,
+            model=label,
+            agent_id=agent_id,
+            parent_agent_id=getattr(self, "agent_id", None),
+            task=task,
+            system_prompt=system_prompt,
+            execution_kind="sync",
+            declared_tools=getattr(execution, "declared_tools", None),
+        )
         self._emit(
-            CompanionEventType.AGENT_SPAWN,
-            f"Delegating to {label}: {task[:80]}…",
-            data={
-                "model": label,
-                "agent_id": agent_id,
-                "parent_agent_id": getattr(self, "agent_id", None),
-                "task": task,
-                "system_prompt": system_prompt,
-            },
+            CompanionEventType.AGENT_SPAWN, f"Delegating to {label}: {task[:80]}…", data=spawn_data
         )
 
-        sub = self._new_subagent()
+        sub = None
         started = time.monotonic()
         try:
-            result = sub.send(
-                task,
-                history=history,
-                extra_system=system_prompt,
-                tools=tools,
-            )
+            sub = self._new_subagent()
+            if execution is not None:
+                execution.attach(sub)
+            result = sub.send(task, history=history, extra_system=system_prompt, tools=tools)
         except Exception as exc:
+            if execution is not None:
+                execution.fail(exc)
+            result_data = self._subagent_event_data(
+                execution,
+                agent_id=agent_id,
+                parent_agent_id=getattr(self, "agent_id", None),
+                status=self._subagent_status_for_error(exc),
+                error=str(exc),
+                duration_ms=int((time.monotonic() - started) * 1000),
+            )
             self._emit(
-                CompanionEventType.AGENT_RESULT,
-                f"Sub-agent failed: {exc}",
-                data={
-                    "agent_id": agent_id,
-                    "parent_agent_id": getattr(self, "agent_id", None),
-                    "status": "error",
-                    "error": str(exc),
-                    "duration_ms": int((time.monotonic() - started) * 1000),
-                },
+                CompanionEventType.AGENT_RESULT, f"Sub-agent failed: {exc}", data=result_data
             )
             raise
-        self._emit(
-            CompanionEventType.AGENT_RESULT,
-            result[:200],
-            data={
-                "agent_id": agent_id,
-                "parent_agent_id": getattr(self, "agent_id", None),
-                "status": "completed",
-                "result_preview": result[:1200],
-                "duration_ms": int((time.monotonic() - started) * 1000),
-            },
+        finally:
+            if sub is not None and execution is not None:
+                execution.detach(sub)
+        self._emit_subagent_success(
+            execution=execution,
+            agent_id=agent_id,
+            parent_agent_id=getattr(self, "agent_id", None),
+            result=result,
+            started=started,
         )
         return result
 
@@ -5174,6 +5265,8 @@ class ResearchCompanion:
                 data={
                     "name": name,
                     "result": result_str[:2000],
+                    "result_truncated": len(result_str) > 2000,
+                    "result_chars": len(result_str),
                     "tool_call_id": tool_call_id,
                 },
             )
@@ -5513,7 +5606,14 @@ class ResearchCompanion:
         self._emit(
             CompanionEventType.TOOL_RESULT,
             reason.split("\n", 1)[0][:200],
-            data={"name": name, "tool_call_id": call_id, "status": status, "result": reason[:2000]},
+            data={
+                "name": name,
+                "tool_call_id": call_id,
+                "status": status,
+                "result": reason[:2000],
+                "result_truncated": len(reason) > 2000,
+                "result_chars": len(reason),
+            },
         )
 
     def _end_open_tool_calls(self, status: str, reason: str) -> None:
@@ -5622,6 +5722,46 @@ class ResearchCompanion:
         2026-10-21, w3-py#2: it got the marker alone)."""
         return "\n\n".join(text.strip() for text in self._turn_rounds if text.strip())
 
+    def _begin_subagent_execution(
+        self,
+        *,
+        agent_id: str,
+        task: str,
+        system_prompt: str,
+        model: str,
+        execution_kind: str,
+        tools: list[dict[str, Any]] | None,
+    ) -> Any:
+        """Start the existing store binding when this is a product session.
+
+        Bare companions used by embedders retain their historical no-DB path;
+        store-created/loaded sessions always have a recorder and therefore
+        persist the child before this method returns.
+        """
+        recorder = getattr(self, "_subagent_sessions", None)
+        if recorder is None:
+            return None
+        return recorder.begin(
+            agent_id=agent_id,
+            task=task,
+            system_prompt=system_prompt,
+            model=model,
+            execution_kind=execution_kind,
+            tools=tools,
+        )
+
+    @staticmethod
+    def _subagent_event_data(execution: Any, **fields: Any) -> dict[str, Any]:
+        if execution is None:
+            return fields
+        return cast("dict[str, Any]", execution.event_data(**fields))
+
+    @staticmethod
+    def _subagent_status_for_error(error: BaseException) -> str:
+        from .cancellation import TurnCancelledError
+
+        return "cancelled" if isinstance(error, TurnCancelledError) else "error"
+
     def _subagent_model(self, model: str | None = None) -> str | None:
         """The model a sub-agent runs on: ``model``, else the platform's live
         ``fast`` role, else this companion's model (ADR-106 D-10)."""
@@ -5640,6 +5780,9 @@ class ResearchCompanion:
         source), else this one's model. On the same model it inherits the
         limits the session synced to this companion (the served window,
         2026-10-30), which nothing else hands it."""
+        permissions = getattr(self, "_permissions", None)
+        fork = getattr(permissions, "fork_for_agent", None)
+        child_permissions = fork("subagent") if callable(fork) else permissions
         sub = ResearchCompanion(
             self.client,
             model=self._subagent_model(model),
@@ -5648,6 +5791,7 @@ class ResearchCompanion:
             usage_callback=self._usage_callback,
             pre_llm_call=self._pre_llm_call,
             call_type="subagent",
+            permission_manager=child_permissions,
         )
         if not model or model == self.model:
             sub.model_context_window = self.model_context_window

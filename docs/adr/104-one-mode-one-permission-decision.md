@@ -1,6 +1,6 @@
 # ADR-104: One agent mode, one permission decision, approvals answered by the companion
 
-**Status:** Accepted (2026-10-31, maintainer: "yes i approve ADR-104. merge 660"; amendment 1 2026-11-03, maintainer "good. please proceed for implementation"; amendment 2 2026-11-05, maintainer "we need true autopilot mode (except file delete if no full backup exists)"; first Proposed 2026-10-31; number 104 because PR #659 holds 103; maintainer request: "r4's implementation for tool call allowance and mode (chat/plan/auto) and approv etc are now redundant/confusing/mis-implemented with bugs. please verify whole structure and detail implementations and have a clean and good stracture as claude and opencode2 etc."; open questions decided by the agent under the 2026-09-24 delegation, reasons below; `wave/permission-modes`)
+**Status:** Accepted (2026-10-31, maintainer: "yes i approve ADR-104. merge 660"; amendment 1 2026-11-03, maintainer "good. please proceed for implementation"; amendment 2 2026-11-05, maintainer "we need true autopilot mode (except file delete if no full backup exists)"; amendment 3 2026-11-09, maintainer chose "only file deletion asks" for autopilot and recognised "user files and worktrees" as its scope; first Proposed 2026-10-31; number 104 because PR #659 holds 103; maintainer request: "r4's implementation for tool call allowance and mode (chat/plan/auto) and approv etc are now redundant/confusing/mis-implemented with bugs. please verify whole structure and detail implementations and have a clean and good stracture as claude and opencode2 etc."; open questions decided by the agent under the 2026-09-24 delegation, reasons below; `wave/permission-modes`)
 **Date:** 2026-10-31
 **Relates to:** [ADR-035](035-enforcement-point-matrix.md) (server trust allowlist in TRUST); [ADR-039](039-untrusted-content-provenance-taint.md) (taint fence); [ADR-076](076-decision-model-role.md) (decision gate); [ADR-092](092-team-plans-declarative-orchestration.md) (MD-5 never-auto, MD-6 card grants, D-6 forks); [ADR-099](099-session-policy-and-quotas.md) D-8 (one settings rule local and remote); G14 (persistent rules, wave (102), `docs/development/r4-harness-gap-vs-claude-2026-10-28.md` §3.4)
 
@@ -344,3 +344,67 @@ Amends ADR-092 MD-5 (plan runs and gates in autopilot), ADR-105 D-4
 (`job_commit` in autopilot without a checker), ADR-076 D-3 (the gate's
 question becomes a note in autopilot) and ADR-039 (the taint fence asks
 outside autopilot only); CONSTITUTION §2 unchanged.
+
+## Amendment 3 (2026-11-09): literal local autopilot; filesystem/worktree deletion asks
+
+**Maintainer decision.** In answer to the renewed request for truly automatic
+work, the maintainer selected **“only file deletion asks”**, explicitly
+including the other local prompts that amendment 2 retained, and selected
+**“user files and worktrees”** rather than every destructive backend operation.
+Backend authorization and sandbox constraints were explicitly kept.
+
+**Decision.** `PermissionManager.resolve` converts every non-deletion local
+`ask` in TRUST into an audited allow after the complete ladder has classified
+it. This includes local prompts for:
+
+- `knowledge_graph_decide` and `research_loop_decide`;
+- credential/identity probes and force-push;
+- user `ask` rules, organisation-allowlist misses/errors, saved-memory and
+  inter-session taint, protected paths and decision-model doubts;
+- local team-plan runs and gates, including callback-free autopilot.
+
+Explicit denials still deny. The `[autopilot] …` transcript note records the
+original decision source. Automatic resolution creates no human-approval
+record, MD-6 card grant, human compute-commit claim or human gate provenance.
+Automatic plan-gate answers are not journalled for replay: a resumed chat
+session must ask again; autopilot simply decides again without a card.
+
+**Backend ownership is unchanged.** These local answers do not manufacture a
+human actor or approval. UMRS's agent-knowledge decision guard and proposal
+state, research-loop policy/durable inbox, compute auto-commit threshold,
+HPC signature/person-presence checks, workflow gates, pre-tool blocks, tool
+availability, agent-only deny sets and OS/workspace sandboxes remain in force
+and may still refuse execution. `R4_AUTOPILOT_SERVER_POLICY` may still produce
+a policy decision and the `autopilot(policy)` badge, but its local prompt is
+automatically answered rather than blocking autopilot.
+
+**`ask_user` follows the same mode.** Local bridge, ACP and remote-worker
+autopilot return the existing bounded auto-answer instruction: choose the
+most reasonable option, state the assumption and continue. Chat still follows
+`ask_user_mode`; remote deletion approvals continue through the durable
+venue-approval lane.
+
+**Deletion is different.** In TRUST every recognised user-file deletion and
+agent-issued worktree removal asks, even when the target is git-recoverable
+or R4 could copy it. No backup is created before that yes. Other automatic
+allow paths retain amendment 2's backup-and-run behaviour. Recognition covers
+the existing shell/Python/patch patterns, patch rename sources,
+`worktree_exit(action="remove")`, and merge-back batches through their exact
+structured `Change(kind="delete")` paths—not removed diff lines. Non-deleting
+merge-backs run automatically. Internal temporary-workspace cleanup and
+backend resource/memory deletion are outside this amendment's selected scope.
+The textual guard remains best-effort, not a claim to recognise arbitrary code
+or MCP side effects; OS sandbox containment is unchanged.
+
+**Subagents inherit the lead's effective permission view.** Ordinary spawned
+children receive an isolated permission fork, fixing the previous unwired
+fail-closed child without widening its tool allowlist or the `TEAM_AGENT_DENY`
+set. Child-session transcript persistence is planned separately in
+the subagent visibility plan.
+
+**Supersedes and preserves.** This supersedes amendment 2's backup-and-run
+rule in TRUST and its remaining local prompts, and qualifies ADR-092 MD-5's
+local interactive gates, ADR-099's `ask_user` default, ADR-108's agent-issued
+worktree removal, and ADR-111/114's every-mode local taint prompts. It does
+not amend CONSTITUTION §2 or any server-owned knowledge, loop, HPC or workflow
+authorization rule.

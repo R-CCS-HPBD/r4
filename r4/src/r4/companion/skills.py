@@ -196,6 +196,14 @@ ALWAYS_ON_TOOL_NAMES: frozenset[str] = frozenset(
         "memory_read",
         "memory_write",
         "memory_forget",
+        # ADR-114: session messaging is lead-session harness plumbing too.
+        # A domain skill must not block a console wake's session_inbox (or the
+        # matching list/send); off-bus sessions still lose them at the
+        # availability gate. Team roles, plan agents and recipes never carry
+        # these builders (CompanionSession adds them to the lead only).
+        "session_list",
+        "session_send",
+        "session_inbox",
         # G9: background-agent orchestration metas (like todo_write, they are
         # harness plumbing, not skill domain tools).
         "async_agent_spawn",

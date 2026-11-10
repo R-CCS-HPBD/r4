@@ -478,6 +478,51 @@ class CompanionSessionStore:
             session, row["messages"], row["active_skills"], row["memory"], row["metadata"]
         )
 
+    def save_subagent(
+        self,
+        *,
+        session_id: str,
+        name: str,
+        model: str,
+        messages: list[dict[str, Any]],
+        metadata: dict[str, Any],
+    ) -> None:
+        """Write one recorder-owned child row locally, never through the parent rail.
+
+        Ordinary live-session loading and listing refuse these rows until S3/S4
+        expose read-only inspection. The execution's single writer supplies the
+        full message sequence, so an atomic upsert is sufficient without
+        manufacturing a writable ``CompanionSession`` or invoking mirror hooks.
+        """
+        required = ("parent_session_id", "parent_agent_id", "agent_id")
+        if metadata.get("session_kind") != "subagent" or not all(metadata.get(k) for k in required):
+            raise ValueError("subagent rows require session_kind and complete parent lineage")
+        with self._save_lock, self._conn() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            previous = conn.execute(
+                "SELECT updated_at FROM sessions WHERE id = ?", (session_id,)
+            ).fetchone()
+            updated_at = _now_marker(str(previous[0] or "")) if previous else _now_marker()
+            conn.execute(
+                """INSERT INTO sessions (
+                    id, name, created_at, updated_at, messages, active_skills,
+                    memory, metadata, model, revision)
+                VALUES (?, ?, ?, ?, ?, '[]', '{}', ?, ?, 1)
+                ON CONFLICT(id) DO UPDATE SET
+                    name = excluded.name, updated_at = excluded.updated_at,
+                    messages = excluded.messages, metadata = excluded.metadata,
+                    model = excluded.model, revision = sessions.revision + 1""",
+                (
+                    session_id,
+                    name,
+                    updated_at,
+                    updated_at,
+                    json.dumps(messages),
+                    json.dumps(metadata),
+                    model or "",
+                ),
+            )
+
     def _row_for_save(self, session: CompanionSession) -> dict[str, Any]:
         """The row one save writes (named parameters of the CAS statements)."""
         session.updated_at = _offset_marker(session.updated_at)
@@ -1224,6 +1269,8 @@ class CompanionSessionStore:
             for column, raw in zip(("messages", "active_skills", "memory", "metadata"), row[4:8])
         }
         saved_model, revision = row[8], row[9]
+        if decoded["metadata"].get("session_kind") == "subagent":
+            return None  # child inspection is read-only (S3); never construct a writer
         try:
             session = self._session_from_row(client, sid, name, saved_model, decoded)
         except (TypeError, ValueError, KeyError, AttributeError) as exc:
@@ -1264,6 +1311,9 @@ class CompanionSessionStore:
         _sync_untrusted_mark(session)
         session._load_usage_state_from_metadata()
         session.reload_permission_rules()  # the restored project's rule file
+        from .subagent_sessions import bind_subagent_recorder
+
+        bind_subagent_recorder(session, self)
         return session
 
     def _restore_messages(self, session: CompanionSession, messages: list[Any]) -> None:
@@ -1338,6 +1388,8 @@ class CompanionSessionStore:
         project: str | None,
     ) -> bool:
         """One-line predicate drawing the C2+ filter contract out of the loop."""
+        if summary["session_kind"] == "subagent":
+            return False  # child rows are never ordinary writable sessions
         if not include_archived and summary["archived_at"]:
             return False
         if endpoint and not cls._matches_endpoint(summary["endpoints"], endpoint):
@@ -1784,6 +1836,7 @@ class CompanionSessionStore:
             "venue": str(metadata.get("venue") or DEFAULT_VENUE),
             "state": str(metadata.get("state") or ""),
             "turn_count": cls._turn_count_of(metadata),
+            "session_kind": str(metadata.get("session_kind") or "conversation"),
         }
 
     @staticmethod
@@ -1844,6 +1897,9 @@ class CompanionSessionStore:
             session_id=session_id, name=session_name, client=client, model=model
         )
         session.metadata.setdefault("venue", venue)
+        from .subagent_sessions import bind_subagent_recorder
+
+        bind_subagent_recorder(session, self)
         self.save(session)
         return session
 

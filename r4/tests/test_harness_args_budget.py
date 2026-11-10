@@ -38,9 +38,17 @@ def _raw(text: str) -> str:
         (_PLAN * 300, 100_000, False),  # under a quarter of the budget
         (_PLAN * 450, 0, False),  # off
     ],
+    ids=("comment-heavy", "code-under-cap", "code-over-cap", "comments-under-cap", "disabled"),
 )
 def test_planning_in_args(text: str, budget: int, expected: bool) -> None:
     assert planning_in_args(_raw(text), budget) is expected
+
+
+def test_planning_args_parameter_ids_stay_log_safe() -> None:
+    mark = next(mark for mark in test_planning_in_args.pytestmark if mark.name == "parametrize")
+    case_ids = mark.kwargs.get("ids", ())
+    assert len(case_ids) == len(mark.args[1])
+    assert all("\n" not in case_id and len(case_id) <= 64 for case_id in case_ids)
 
 
 def _call_chunk(arguments: str, *, index: int = 0, first: bool = False) -> dict:

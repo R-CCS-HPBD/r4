@@ -27,7 +27,10 @@ RUN_BODY = {
 RESULT_KEYS = frozenset(
     {"execution_id", "workflow_name", "status", "artifacts", "outputs", "error"}
 )
-COMPANION_EXTRA_KEYS = frozenset({"site", "handle"})
+# 2026-11-09: ADR-113 D-4 (#810): a run pins the version and digest it ran,
+# so the companion's run payload carries them too. #810 did not update this
+# pin and main's MCP job went red.
+COMPANION_EXTRA_KEYS = frozenset({"site", "handle", "workflow_version", "source_sha256"})
 
 
 def _companion_run_payload(client) -> dict:

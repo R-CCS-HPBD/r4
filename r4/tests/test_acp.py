@@ -848,6 +848,15 @@ def test_ask_user_routes_to_editor_and_returns_answer() -> None:
     assert tools._handle_ask_user({"question": "q", "options": []}).output == "use /mnt/fixture"
 
 
+def test_ask_user_autopilot_does_not_call_the_editor() -> None:
+    from r4.companion.agent_settings import ASK_USER_AUTO_ANSWER
+
+    runtime, session, calls = _ask_user_runtime("unused")
+    session.interaction_mode = "autopilot"
+    assert runtime._on_ask_user("Which folder?", ["a", "b"]) == ASK_USER_AUTO_ANSWER
+    assert calls == []
+
+
 def test_ask_user_without_active_chat_returns_unavailable() -> None:
     runtime, _session, _calls = _ask_user_runtime("ignored")
     runtime._ask_user_threads.clear()

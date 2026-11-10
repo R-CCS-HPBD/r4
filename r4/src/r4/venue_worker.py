@@ -476,6 +476,7 @@ class VenueWorker:
     def _ask_user(self, question: str, options: list[str]) -> str:
         """Ask the owner through a durable question (ADR-099 D-8); auto-answer
         only when the user's own ``ask_user_mode`` is ``auto``."""
+        from .companion.agent_mode import session_mode
         from .companion.agent_settings import (
             applied_agent_settings,
             ask_user_auto_answer,
@@ -483,7 +484,8 @@ class VenueWorker:
         )
 
         mode = applied_agent_settings(self.session).get("ask_user_mode")
-        if normalize_ask_user_mode(mode) == "auto":
+        automatic = session_mode(self.session) == "autopilot"
+        if automatic or normalize_ask_user_mode(mode) == "auto":
             return ask_user_auto_answer()
         turn_id = str(getattr(self.session, "_current_turn_id", "") or "")
         try:

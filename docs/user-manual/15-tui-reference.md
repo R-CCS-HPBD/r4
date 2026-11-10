@@ -23,7 +23,7 @@ The companion supports three interaction modes, switchable at any time:
 |------|-------------|----------|
 | `chat` | Conversational Q&A | Standard chat with current tool-approval policy |
 | `plan` | Planning and reasoning | No tools first; picker to auto-approve, manual-approve, or keep planning |
-| `autopilot` | Auto-execute tool calls | Every tool runs; it asks only before credential access or a force-push, for a knowledge decision, at your own ask rules, and for a delete it could not back up first (deleted files are copied to `~/.local/share/r4/trash`) |
+| `autopilot` | Auto-execute tool calls | Every local non-deletion permission prompt is auto-answered with an audit note, including `ask_user`; recognised user-file deletion, patch rename/delete sources, worktree removal and deleting merge-backs ask. Explicit denies and backend/sandbox restrictions still apply (2026-11-09, ADR-104 amendment 3) |
 
 ```bash
 # Launch in a specific mode
@@ -51,7 +51,7 @@ r4 --mode autopilot
 | `/rag query` | | Query indexed documents |
 | `/rag upload` | | Upload a document for RAG |
 | `/job list` | | List durable jobs |
-| `/workflow list` | | List registered workflows |
+| `/workflow list` | | List registered workflows with their default version and count (`v1.2.0 (+2)`); `/workflow show NAME@VERSION` describes one version ([ch. 9](09-workflows-jobs.md#workflow-versions-2026-11-08-adr-113)) |
 | `/mode <mode>` | | Set the mode: `chat` (read-only tools run, others ask), `plan`, `autopilot` (Shift+Tab cycles) |
 | `/trust` | `/yolo` | Same as `/mode autopilot` (2026-10-31, ADR-104: `/approve` and `/allow-all` are retired) |
 | `/models` | `/model` | Show/switch provisioned model (picker on bare `/models`) |

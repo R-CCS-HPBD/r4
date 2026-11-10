@@ -123,6 +123,19 @@ class TestAskUser:
         assert worker._ask_user("?", ["x"]) == ASK_USER_AUTO_ANSWER
         assert rail.questions == {}
 
+    def test_autopilot_auto_answers_without_a_durable_question(self):
+        rail = QuestionRail()
+        rail.settings = {
+            "rev": 1,
+            "settings": {"interaction_mode": "autopilot", "ask_user_mode": "ask"},
+        }
+        session = RealPermsSession()
+        worker, _, _ = _worker(rail, session)
+        worker.bootstrap()
+        assert session.permissions.mode is PermissionMode.TRUST
+        assert worker._ask_user("?", ["x"]) == ASK_USER_AUTO_ANSWER
+        assert rail.questions == {}
+
     def test_rail_refusal_is_named_never_assumed(self):
         rail = QuestionRail()
         rail.ask_refusal = VenueRailError(404, "not found")

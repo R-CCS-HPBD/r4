@@ -139,7 +139,6 @@ def _finish_login(args: Namespace) -> None:
     _sync_umrs_client_profile(args)
     _ensure_umrs_user_config(args)
     _try_zmq_session_bootstrap_with_profile(args.profile)
-    _maybe_enroll_hpc_after_login(args.profile)
     _sync_projects_from_server(args.profile)
     if getattr(args, "full", False):
         _run_full_setup(args.profile)
@@ -571,19 +570,6 @@ def _note_kept_home(profile: str, home: str) -> None:
         f"r4 auth login{flag} --gateway-url {target} --api-key-stdin",
         file=sys.stderr,
     )
-
-
-def _maybe_enroll_hpc_after_login(profile: str) -> None:
-    """After a successful login, offer HPC SSH delegation enrollment if the site supports it."""
-    try:
-        from ..client import Client
-        from ..config import Config
-        from .onboard import _maybe_enroll_hpc
-
-        client = Client(config=Config.from_env(profile))
-        _maybe_enroll_hpc(client)
-    except Exception:
-        pass  # Enrollment is optional; never fail login because of it
 
 
 def _sync_projects_from_server(profile: str) -> None:
@@ -1607,7 +1593,6 @@ def cmd_login(args):
     _sync_umrs_client_profile(args)
     _ensure_umrs_user_config(args)
     _try_zmq_session_bootstrap_with_profile(args.profile)
-    _maybe_enroll_hpc_after_login(args.profile)
     _sync_projects_from_server(args.profile)
     if getattr(args, "full", False):
         _run_full_setup(args.profile)

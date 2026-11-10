@@ -17,6 +17,7 @@ import {
   type UmrsWorkflowExecution,
 } from "../stores/umrs-workflow";
 import { inWorkScope } from "./work-scope";
+import { runDefinitionKey } from "./workflow-versions";
 
 /**
  * Show the overlay for `id` and fetch its topology. `fresh` is a record the
@@ -26,11 +27,12 @@ import { inWorkScope } from "./work-scope";
  */
 export function openExecutionGraph(id: string, fresh?: UmrsWorkflowExecution): void {
   actions.setExecDetailId(id);
-  umrsWorkflowActions.ensureDefinition(umrsWorkflowStore.activeExecutions[id]?.workflow_name);
+  const known = umrsWorkflowStore.activeExecutions[id];
+  umrsWorkflowActions.ensureDefinition(known ? runDefinitionKey(known) : undefined);
   if (fresh) return;
   void umrsWorkflowActions
     .refreshStatus(id)
-    .then((exec) => umrsWorkflowActions.ensureDefinition(exec.workflow_name))
+    .then((exec) => umrsWorkflowActions.ensureDefinition(runDefinitionKey(exec)))
     .catch(() => undefined);
 }
 

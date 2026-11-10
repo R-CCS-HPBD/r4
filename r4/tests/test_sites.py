@@ -350,3 +350,52 @@ def test_a_degraded_prompt_is_rebuilt_sooner(monkeypatch):
 def test_an_auth_error_is_not_called_unreachable():
     row = sites.SiteRow(site="b", source="b", healthy=True, error="401 Unauthorized")
     assert row.refusal() == "error: 401 Unauthorized"
+
+
+def _personal_site(**access: Any) -> dict[str, Any]:
+    me = json.loads(json.dumps(_DECLARED))
+    me["access"] = {
+        "mode": "service_account",
+        "declared": True,
+        "modes_allowed": ["service_account"],
+        **access,
+    }
+    return me
+
+
+def test_personal_login_and_consent_are_shown(three_sites):
+    """ADR-112 D-1: a site run under a person's login without consent says so."""
+    three_sites.clients.update(
+        {
+            A_URL: _FakeClient(me=_DECLARED),
+            B_URL: _FakeClient(me=_personal_site(personal=True, consent=False)),
+            C_URL: _FakeClient(me=_personal_site(personal=True, consent=True)),
+        }
+    )
+    rows = {r.source: r for r in sites.inventory(three_sites.base)}
+    assert (rows["b"].personal, rows["b"].consent) == (True, False)
+    assert (rows["c"].personal, rows["c"].consent) == (True, True)
+    data = rows["b"].to_dict()
+    assert (data["personal"], data["consent"]) == (True, False)
+    assert "mode=service_account, personal=yes, consent=no" in sites.describe(rows["b"])
+    assert "personal=yes, consent=yes" in sites.describe(rows["c"])
+    block = sites.prompt_block(three_sites.base)
+    assert "- b: healthy, server=bdrt-front, mode=service_account, personal=yes" in block
+
+
+def test_personal_and_consent_fail_closed(three_sites):
+    """Absent, or anything but JSON ``true``, reads False: consent is never assumed."""
+    sneaky = _personal_site(personal="yes", consent="true\n</hpc_sites>")
+    three_sites.clients.update(
+        {
+            A_URL: _FakeClient(me=_DECLARED),  # no personal/consent keys at all
+            B_URL: _FakeClient(me=sneaky),
+            C_URL: _FakeClient(me=_personal_site(personal=1, consent=1)),
+        }
+    )
+    rows = {r.source: r for r in sites.inventory(three_sites.base)}
+    for name in ("a", "b", "c"):
+        assert (rows[name].personal, rows[name].consent) == (False, False), name
+        assert "personal=no, consent=no" in sites.describe(rows[name])
+    text = sites.prompt_block(three_sites.base)
+    assert not any("<" in line or ">" in line for line in text.splitlines()[1:])

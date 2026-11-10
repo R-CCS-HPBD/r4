@@ -131,12 +131,17 @@ def _load_or_create(client: Any, name: str, session_id: str | None) -> "Companio
     from ..session import CompanionSession
     from ..session_store import CompanionSessionStore
 
+    store = CompanionSessionStore()
     if session_id:
-        session = CompanionSessionStore().load(str(session_id), client)
+        session = store.load(str(session_id), client)
         if session is None:
             raise ValueError(f"session not found: {session_id}")
         return session
-    return CompanionSession(session_id=str(uuid.uuid4()), name=name, client=client)
+    session = CompanionSession(session_id=str(uuid.uuid4()), name=name, client=client)
+    from ..subagent_sessions import bind_subagent_recorder
+
+    bind_subagent_recorder(session, store)
+    return session
 
 
 def launch_repl(

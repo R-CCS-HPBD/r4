@@ -117,9 +117,12 @@ def export_workflow(workflows: Any, params: dict[str, Any]) -> dict[str, Any]:
     workflow_name = str(params.get("workflow_name") or "").strip()
     if not workflow_name:
         raise ValueError("workflow.export params.workflow_name is required")
+    # ADR-113 D-3: an optional version (or NAME@VERSION in workflow_name).
+    version = str(params.get("version") or "").strip() or None
+    stem = f"{workflow_name}@{version}" if version else workflow_name
     directory = export_dest_dir(str(params.get("dest_dir") or "").strip())
-    with _reserved_export_path(directory, workflow_name) as target:
-        written = Path(workflows.export(workflow_name, target, overwrite=False))
+    with _reserved_export_path(directory, stem) as target:
+        written = Path(workflows.export(workflow_name, target, overwrite=False, version=version))
     files, excluded = manifest_counts(written)
     return {
         "ok": True,

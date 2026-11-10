@@ -585,6 +585,33 @@ FILES_ERRORS = {
     "files.bucket_registry_unavailable": 503,
 }
 
+HPCACCESS_ERRORS = {
+    # ADR-112 (2026-11-08): declared HPC access modes and gated delegation.
+    # Wave A raises the first three; waves B-D raise the rest. Append-only.
+    "hpcaccess.mode_undeclared": 403,
+    "hpcaccess.project_not_allowed": 403,
+    "hpcaccess.not_enrolled": 403,
+    "hpcaccess.allocation_not_linked": 403,
+    "hpcaccess.allocation_not_at_site": 403,
+    "hpcaccess.gate_refused": 403,
+    "hpcaccess.gate_version": 409,
+    "hpcaccess.signature_required": 428,
+    # Wave B1 review (2026-11-08): an agent-marked request to change the
+    # account (D-8: the person's own act).
+    "hpcaccess.person_required": 403,
+    # Wave B2 (2026-11-08, plan §5 B2.0 §10.2): signed intents and the lanes
+    # that have no gated path yet.
+    "hpcaccess.intent_invalid": 422,
+    "hpcaccess.intent_used": 409,
+    "hpcaccess.lane_not_gated": 403,
+    # Waves C and D (2026-11-09, plan §6 "C/D.0" C4): standing grants, the
+    # project GPU budget and the usage ledger.
+    "hpcaccess.grant_invalid": 422,
+    "hpcaccess.grant_not_found": 404,
+    "hpcaccess.budget_exceeded": 403,
+    "hpcaccess.ledger_unavailable": 503,
+}
+
 
 @dataclass(frozen=True)
 class PlatformError:
@@ -960,6 +987,15 @@ class PlatformError:
         )
 
     @classmethod
+    def hpcaccess(cls, name: str, message: str, **detail: Any) -> PlatformError:
+        return cls(
+            code=f"hpcaccess.{name}",
+            message=message,
+            http_status=HPCACCESS_ERRORS[f"hpcaccess.{name}"],
+            detail=detail,
+        )
+
+    @classmethod
     def adaptive(cls, name: str, message: str, **detail: Any) -> PlatformError:
         return cls(
             code=f"adaptive.{name}",
@@ -1329,6 +1365,7 @@ def known_error_codes() -> dict[str, int]:
         VISION_ERRORS,
         WORKFLOWAUTH_ERRORS,
         WORKFLOWS2_ERRORS,
+        HPCACCESS_ERRORS,
     ):
         out.update(fam)
     return out

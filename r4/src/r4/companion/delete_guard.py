@@ -1,9 +1,10 @@
-"""A delete nobody approved must be recoverable (ADR-104 amendment 2).
+"""Recognise file deletion and back it up for automatic non-autopilot calls.
 
-Autopilot runs tool calls without asking. The one exception the maintainer
-kept (2026-11-05: "true autopilot mode (except file delete if no full backup
-exists)") is a delete R4 cannot undo. Before a call that no person approved
-deletes files, :func:`protect` makes sure each target has a full backup:
+ADR-104 amendment 3 (maintainer, 2026-11-09): autopilot asks before every
+recognised user-file deletion or worktree removal, even when a backup would
+be possible. Amendment 2's backup-and-run remains for other automatic paths.
+Before one of those calls deletes files, :func:`protect` makes sure each
+target has a full backup:
 
 - the file is tracked by git and committed unchanged (git can restore it), or
 - R4 copies it (file or directory tree) into a per-call folder under
@@ -35,6 +36,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
+from r4_contracts.team_engine.plan import GATE_TOOL
+
 from . import agent_workspace
 
 logger = logging.getLogger(__name__)
@@ -45,7 +48,7 @@ MAX_BACKUP_BYTES = 512 * 1024 * 1024
 _SHELL_DELETERS = frozenset({"rm", "rmdir", "unlink", "shred"})
 _SHELL_PREFIXES = frozenset({"sudo", "command", "nohup", "time", "env", "exec"})
 _SHELL_WRAPPERS = frozenset({"bash", "sh", "zsh", "dash", "ksh"})
-_SEGMENT_SPLIT = re.compile(r"&&|\|\||[;|\n]")
+_SHELL_OPERATORS = (";;&", "&&", "||", "|&", ";;", ";&", ";", "|", "&", "\n")
 _UNRESOLVED_CHARS = re.compile(r"[*?\[\]$`{}]")
 
 _PY_LITERAL_DELETE = re.compile(
@@ -86,13 +89,8 @@ class Protection:
 def scan(tool_name: str, arguments: dict[str, Any]) -> DeleteScan:
     """The files this call would delete (best effort, from its text)."""
     cwd = str(arguments.get("cwd") or arguments.get("workdir") or "")
-    if tool_name == "apply_patch":
-        return _scan_patch(arguments, cwd)
-    if tool_name == "shell_exec":
-        return _with_cwd(_scan_shell(str(arguments.get("command") or "")), cwd)
-    if tool_name == "python_exec":
-        return _with_cwd(_scan_python(str(arguments.get("code") or "")), cwd)
-    return DeleteScan()
+    scanner = _SCANNERS.get(tool_name)
+    return scanner(arguments, cwd) if scanner is not None else DeleteScan()
 
 
 def _with_cwd(found: DeleteScan, cwd: str) -> DeleteScan:
@@ -109,29 +107,107 @@ def _scan_patch(arguments: dict[str, Any], cwd: str) -> DeleteScan:
         patches = parse_patch(text)
     except Exception:  # noqa: BLE001 - a malformed patch fails in the tool
         return DeleteScan()
-    deleted = tuple(fp.old_path for fp in patches if fp.action == "delete" and fp.old_path)
+    deleted = tuple(
+        fp.old_path for fp in patches if fp.action in {"delete", "rename"} and fp.old_path
+    )
     return DeleteScan(deleted, "", cwd)
 
 
 def _scan_shell(command: str) -> DeleteScan:
     paths: list[str] = []
-    for segment in _SEGMENT_SPLIT.split(command):
-        found = _scan_segment(segment)
+    for segment in _shell_segments(command):
+        try:
+            tokens = shlex.split(segment)
+        except ValueError:
+            return DeleteScan((), "the command cannot be parsed")
+        stripped = _strip_prefixes(tokens)
+        if not stripped:
+            continue
+        found = _scan_tokens(stripped)
         if found.unresolved:
             return found
         paths.extend(found.paths)
     return DeleteScan(tuple(paths))
 
 
-def _scan_segment(segment: str) -> DeleteScan:
-    try:
-        tokens = shlex.split(segment)
-    except ValueError:
-        return DeleteScan((), "the command cannot be parsed")
-    tokens = _strip_prefixes(tokens)
-    if not tokens:
-        return DeleteScan()
-    return _scan_tokens(tokens)
+def _shell_segments(command: str) -> list[str]:
+    """Raw command pieces on unquoted, unescaped shell control operators.
+
+    Quote state is evaluated before ``shlex.split`` removes quote information.
+    That keeps a remote script or a literal ``';'`` harmless while a real
+    newline, ``|&``, ``&&``, ``||`` or ``;`` separates the next command.
+    """
+    command = _without_shell_comments(command)
+    segments: list[str] = []
+    start = index = 0
+    quote = ""
+    escaped = False
+    while index < len(command):
+        width = _separator_at(command, index, quote, escaped)
+        if width:
+            segments.append(command[start:index])
+            index += width
+            start = index
+            continue
+        quote, escaped = _shell_state(command[index], quote, escaped)
+        index += 1
+    segments.append(command[start:])
+    return segments
+
+
+def _without_shell_comments(command: str) -> str:
+    """Drop comments outside quotes while keeping their command newlines.
+
+    Apostrophes in comments are prose, not quote delimiters. Removing them
+    before segmentation prevents a comment such as ``# user's`` from hiding a
+    deletion on the following line or quoting a real operator on its own line.
+    """
+    out: list[str] = []
+    quote = ""
+    escaped = False
+    commented = False
+    for index, char in enumerate(command):
+        if commented:
+            if char != "\n":
+                continue
+            commented = False
+        elif _comment_at(command, index, quote, escaped):
+            commented = True
+            out.append(" ")
+            continue
+        out.append(char)
+        quote, escaped = _shell_state(char, quote, escaped)
+    return "".join(out)
+
+
+def _comment_at(command: str, index: int, quote: str, escaped: bool) -> bool:
+    """Whether ``#`` starts a shell comment (at a word boundary) here."""
+    if quote or escaped or command[index] != "#":
+        return False
+    return index == 0 or command[index - 1].isspace() or command[index - 1] in ";|&"
+
+
+def _separator_at(command: str, index: int, quote: str, escaped: bool) -> int:
+    """Length of a control operator at this raw position, or zero."""
+    if quote or escaped:
+        return 0
+    if command[index] == "&" and command[index + 1 : index + 2] == ">":
+        return 0  # ``&>`` / ``&>>`` are redirections, not a background marker
+    tail = command[index:]
+    return next((len(op) for op in _SHELL_OPERATORS if tail.startswith(op)), 0)
+
+
+def _shell_state(char: str, quote: str, escaped: bool) -> tuple[str, bool]:
+    """POSIX single/double-quote and backslash state for one character."""
+    if escaped:
+        return quote, False
+    if char == "\\" and quote != "'":
+        return quote, True
+    if quote:
+        return ("" if char == quote else quote), False
+    if char in {'"', "'"}:
+        return char, False
+    return "", False
 
 
 def _strip_prefixes(tokens: list[str]) -> list[str]:
@@ -205,6 +281,27 @@ def _scan_python(code: str) -> DeleteScan:
     if len(literal) < calls:
         return DeleteScan((), "the code deletes a path computed at run time")
     return DeleteScan(tuple(literal))
+
+
+def _scan_worktree(arguments: dict[str, Any], cwd: str) -> DeleteScan:
+    if arguments.get("action") != "remove":
+        return DeleteScan()
+    return DeleteScan((), "removing the session worktree may discard its files", cwd)
+
+
+def _scan_gate(arguments: dict[str, Any], cwd: str) -> DeleteScan:
+    deleted = arguments.get("deletions")
+    paths = tuple(str(path) for path in deleted or () if str(path))
+    return DeleteScan(paths, "", cwd)
+
+
+_SCANNERS: dict[str, Callable[[dict[str, Any], str], DeleteScan]] = {
+    "apply_patch": _scan_patch,
+    "shell_exec": lambda args, cwd: _with_cwd(_scan_shell(str(args.get("command") or "")), cwd),
+    "python_exec": lambda args, cwd: _with_cwd(_scan_python(str(args.get("code") or "")), cwd),
+    "worktree_exit": _scan_worktree,
+    GATE_TOOL: _scan_gate,
+}
 
 
 # ── Backup ──────────────────────────────────────────────────────────────────

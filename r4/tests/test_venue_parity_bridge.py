@@ -196,6 +196,16 @@ class TestAskUserLocal:
         monkeypatch.setenv("R4_ASK_USER_MODE", "auto")
         assert server._on_ask_user("which?", []) == ASK_USER_AUTO_ANSWER
 
+    def test_autopilot_auto_answers_even_when_the_setting_is_ask(self, tmp_path, monkeypatch):
+        server, _, session = _server(tmp_path, monkeypatch, venue="local")
+        server.set_interaction_mode({"mode": "autopilot"})
+        emitted: list[dict] = []
+        server._emit_line = emitted.append
+        server._read_ask_user = lambda _rid: pytest.fail("autopilot asked the user")
+        assert session.permissions.mode is PermissionMode.TRUST
+        assert server._on_ask_user("which?", ["A", "B"]) == ASK_USER_AUTO_ANSWER
+        assert emitted == []
+
     def test_ask_mode_asks(self, tmp_path, monkeypatch):
         server, _, _ = _server(tmp_path, monkeypatch, venue="local")
         emitted: list[dict] = []

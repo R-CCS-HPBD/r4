@@ -1,6 +1,10 @@
 /**
  * Workflow tree view — sidebar panel for browsing and triggering
  * workflows via Gateway /gw/workflows/*.
+ *
+ * ADR-113 WV4 (2026-11-09): a workflow row reads `name` with
+ * `v<default> (+N)`; one with several versions expands to a child per
+ * version, and triggering a child runs exactly that version.
  */
 
 import * as vscode from "vscode";
@@ -8,6 +12,7 @@ import {
   GatewayClient,
   type Workflow,
 } from "../gateway-client";
+import { versionRowSpecs, workflowRowSpec } from "../workflow-versions";
 
 export class WorkflowTreeProvider
   implements vscode.TreeDataProvider<WorkflowItem>, vscode.Disposable
@@ -21,7 +26,8 @@ export class WorkflowTreeProvider
     return element;
   }
 
-  async getChildren(): Promise<WorkflowItem[]> {
+  async getChildren(element?: WorkflowItem): Promise<WorkflowItem[]> {
+    if (element) return element.workflow ? versionItems(element.workflow) : [];
     const client = this.getClient();
     if (!client) {
       return [
@@ -57,20 +63,7 @@ export class WorkflowTreeProvider
       ];
     }
 
-    return workflows.map((w) => {
-      const item = new WorkflowItem(
-        w.name ?? "",
-        w.description ?? "",
-        "workflow",
-      );
-      item.workflowId = w.workflow_id;
-      item.workflowName = w.name;
-      item.iconPath = new vscode.ThemeIcon("symbol-event");
-      if (w.tags && w.tags.length > 0) {
-        item.tooltip = `Tags: ${w.tags.join(", ")}`;
-      }
-      return item;
-    });
+    return workflows.map(workflowItem);
   }
 
   refresh(): void {
@@ -82,9 +75,40 @@ export class WorkflowTreeProvider
   }
 }
 
+/** One workflow row: `name` + `v<default> (+N) · description`. */
+function workflowItem(w: Workflow): WorkflowItem {
+  const spec = workflowRowSpec(w);
+  const item = new WorkflowItem(spec.label, spec.description, "workflow");
+  item.workflowId = w.workflow_id;
+  item.workflowName = w.name;
+  item.workflow = w;
+  item.iconPath = new vscode.ThemeIcon("symbol-event");
+  if (spec.expandable) item.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
+  if (w.tags && w.tags.length > 0) {
+    item.tooltip = `Tags: ${w.tags.join(", ")}`;
+  }
+  return item;
+}
+
+/** A child per registered version; its trigger runs that version. */
+function versionItems(w: Workflow): WorkflowItem[] {
+  return versionRowSpecs(w).map((spec) => {
+    const item = new WorkflowItem(spec.label, spec.description, "workflow-version");
+    item.workflowId = w.workflow_id;
+    item.workflowName = w.name;
+    item.workflowVersion = spec.version;
+    item.iconPath = new vscode.ThemeIcon("tag");
+    return item;
+  });
+}
+
 export class WorkflowItem extends vscode.TreeItem {
   workflowId?: string;
   workflowName?: string;
+  /** The catalog row (top-level rows only): its versions feed the picker. */
+  workflow?: Workflow;
+  /** Set on a version child: the exact version to run. */
+  workflowVersion?: string;
 
   constructor(
     label: string,

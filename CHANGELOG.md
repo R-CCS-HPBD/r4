@@ -7,6 +7,28 @@ the TUI binaries. Gap rows `D-nn` refer to
 [docs/R4-UMRS-GAP-ANALYSIS-2026-09-22.md](docs/R4-UMRS-GAP-ANALYSIS-2026-09-22.md);
 the per-wave detail is kept in the maintainers' development records.
 
+## [Unreleased]
+
+- **Literal local autopilot; deletion asks** (ADR-104 amendment 3;
+  2026-11-09). Autopilot auto-answers every local non-deletion permission
+  prompt, including trust-policy misses, credential/force-push fences, user
+  `ask` rules, tainted memory/messages, team-plan gates and `ask_user`, with an
+  audit note and no fabricated human approval. Recognised user-file deletion,
+  patch rename/delete sources, worktree removal and deleting merge-backs always
+  ask. Subagents now inherit an isolated view of the parent's permission
+  policy. Explicit denies and backend/sandbox authorization are unchanged.
+- **Durable subagent child recording** (S1/S2, D-70; 2026-11-10): sync and
+  async children now get stable backend and child-session identities before
+  work starts. The existing session store and event log retain parent lineage,
+  task/prompt/model/tool declarations, full replies/follow-ups, redacted and
+  capped tool history, and completed/failed/cancelled state. Nested children
+  use the immediate parent and the same custom database; child writes never
+  invoke the parent's snapshot rail. Ordinary Work rows now correlate by the
+  backend `agent_id` and finish from `agent_result`, including defensive
+  result-before-spawn handling and distinct execution turns for follow-ups.
+  Read-only inspector RPC, open-session UI and
+  remote venue parity remain later S3–S5 waves (plan).
+
 ## [v0.2.0-rc4] — 2026-11-07
 
 - Rebuild of v0.2.0-rc3, whose export was refused by the secret-scanning gate: a test fixture shaped like a Stripe key is now built at runtime.

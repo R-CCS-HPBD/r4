@@ -126,7 +126,7 @@ export function MgmtCardView({ card }: { card: MgmtCard }) {
           {(row) => (
             <box height={1}>
               <text
-                children={t`${fg(palette.fg)(`${truncate(row[0], 30)} `)}${fg(palette.fgDim)(row[1] ? `[${row[1]}] ` : "")}${truncate(row[2], chatContentWidth(44))}`}
+                children={t`${fg(palette.fg)(`${truncate(row[0], 30)} `)}${fg(palette.accent2)(row[3] ? `${row[3]} ` : "")}${fg(palette.fgDim)(row[1] ? `[${row[1]}] ` : "")}${truncate(row[2], chatContentWidth(56))}`}
               />
             </box>
           )}

@@ -29,6 +29,7 @@ import { handleSettingsRules, settingsMatrixNotice } from "../lib/settings-rules
 import { umrsWorkflowActions, type UmrsWorkflowCatalogItem } from "../stores/umrs-workflow";
 import { workflowGraphCommand } from "./workflow-graph";
 import { workflowExportCommand } from "./workflow-export";
+import { parseWorkflowRef } from "../lib/workflow-versions";
 import { trackActiveProjectJob, wireProjectJobEventsOnce } from "./project-job-events";
 import { trackSlashInFlight } from "../lib/slash-in-flight";
 import { rpc } from "../bridge/rpc";
@@ -1674,10 +1675,13 @@ async function wfListCard(bridge: ProjectBridge): Promise<SlashDispatchResult> {
 async function wfShowCard(bridge: ProjectBridge, tokens: string[]): Promise<SlashDispatchResult> {
   const name = tokens[1];
   if (!name) return { kind: "insert", text: "/workflow show " };
-  const payload = await bridge.request("workflow_describe", { workflow_name: name }, 30_000);
+  // ADR-113 D-3: `name@X` shows version X; a bare name the default.
+  const ref = parseWorkflowRef(name);
+  const params = ref.version ? { workflow_name: ref.name, version: ref.version } : { workflow_name: ref.name };
+  const payload = await bridge.request("workflow_describe", params, 30_000);
   // The describe payload is flat (version, steps, …); nesting it under
   // `describe` hid every row but the name (TUI audit 2026-10-17).
-  actions.sendMgmtCard("wf-show", { workflow_name: name, ...(payload as Record<string, unknown>) });
+  actions.sendMgmtCard("wf-show", { workflow_name: ref.name, ...(payload as Record<string, unknown>) });
   return { kind: "handled" };
 }
 

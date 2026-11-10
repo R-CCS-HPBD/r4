@@ -20,6 +20,8 @@ applyTo: '**'
 - Require human-in-the-loop approval for high-impact tools (send email, deploy, delete records)
 - Enforce rate limits on tool calls per request to prevent infinite loops and resource exhaustion
 
+*R4 product-specific clarification (2026-11-09, ADR-104 amendment 3, accepted by the maintainer): the user-facing local autopilot ladder auto-answers every local non-deletion permission prompt with an audit note, including the generic high-impact examples above. Recognised user-file deletion/worktree removal still asks; explicit deny rules, backend-owned approvals/authorization and sandbox constraints are not bypassed. Deployment and coding-agent contributor approvals remain governed by their own rules.*
+
 ## Content Safety
 
 - Scan all user inputs for threat signals before passing to the agent (data exfiltration, prompt injection, privilege escalation)

@@ -13,6 +13,13 @@
 import type { WorkflowDefinitionDetail, WorkflowDefStep } from "./workflow-def-types";
 import { effectiveSteps, renderDag } from "./dag-layout";
 import { describeParam, needsJson, triggerCommand, workflowRunSpec, type WorkflowParam } from "./workflow-params";
+import {
+  codeUnavailable,
+  defaultVersionOf,
+  serverListsVersions,
+  shortDigest,
+  versionListLabel,
+} from "./workflow-versions";
 
 export type CardTone = "fg" | "dim" | "accent" | "bright";
 
@@ -81,7 +88,29 @@ function metaRows(d: WorkflowDefinitionDetail): CardRow[] {
   if (d.requirements?.length) rows.push(`requires  · ${d.requirements.join(" · ")}`);
   if (d.triggers?.length) rows.push(`triggers  · ${d.triggers.length} subscription(s)`);
   if (d.source_path) rows.push(`source    · ${d.source_path}`);
-  return rows.map((text) => ({ text, tone: "fg" as const }));
+  return [...rows.map((text) => ({ text, tone: "fg" as const })), ...versionRows(d)];
+}
+
+/** ADR-113: every registered version (v in the card picks one), the code
+ * digest, and a version whose files are gone marked before anything else. */
+function versionRows(d: WorkflowDefinitionDetail): CardRow[] {
+  const rows: CardRow[] = [];
+  const versions = d.versions ?? [];
+  if (versions.length) {
+    const pick = versions.length > 1 ? "  — v / V picks another" : "";
+    rows.push({ text: `versions  · ${versionListLabel(versions, defaultVersionOf(versions), d.version)}${pick}`, tone: "fg" });
+  }
+  if (d.source_sha256) rows.push({ text: `digest    · ${shortDigest(d.source_sha256)}`, tone: "dim" });
+  if (codeUnavailable(d)) {
+    rows.push({ text: "code      · unavailable — this version's files are gone; running it fails", tone: "bright" });
+  }
+  return rows;
+}
+
+/** The version a trigger line pins: the one the card shows, when the server
+ * lists versions (an older server takes the bare name, as before). */
+export function cardVersion(d: WorkflowDefinitionDetail): string | undefined {
+  return serverListsVersions(d) && d.version ? d.version : undefined;
 }
 
 const TYPED = new Set(["integer", "number", "boolean"]);
@@ -89,7 +118,7 @@ const TYPED = new Set(["integer", "number", "boolean"]);
 function howToRunRows(d: WorkflowDefinitionDetail, params: WorkflowParam[], spec: ReturnType<typeof workflowRunSpec>): CardRow[] {
   const rows: CardRow[] = [
     { text: "how to run", tone: "accent" },
-    { text: INDENT + triggerCommand(d.workflow_name, params), tone: "bright" },
+    { text: INDENT + triggerCommand(d.workflow_name, params, cardVersion(d)), tone: "bright" },
   ];
   const required = params.filter((p) => p.required);
   if (required.length) {
@@ -222,5 +251,8 @@ export function workflowCardRows(d: WorkflowDefinitionDetail, opts: CardOptions)
 /** The trigger line `r` (and the work pane's `t`) put in the composer. */
 export function cardTriggerCommand(d: WorkflowDefinitionDetail): { command: string; required: number } {
   const { params } = workflowRunSpec(d);
-  return { command: triggerCommand(d.workflow_name, params), required: params.filter((p) => p.required).length };
+  return {
+    command: triggerCommand(d.workflow_name, params, cardVersion(d)),
+    required: params.filter((p) => p.required).length,
+  };
 }

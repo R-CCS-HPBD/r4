@@ -180,7 +180,7 @@ def test_fork_shares_trust_checker_gate_and_recorder() -> None:
     host.set_escalation_check(lambda tool, _args: "ask" if tool == "file_write" else None)
 
     assert fork.check("shell_exec", {"command": "make"}) is True
-    assert fork.check("file_edit", {"path": "a"}) is False  # not on the allowlist
+    assert fork.check("file_edit", {"path": "a"}) is True  # amendment 3 auto-answers the miss
     assert "shell_exec" in host._trust_check_cache  # one cache, shared
     assert fork.check("file_read", {"path": "a"}) is True  # read-only: no consult
     fork.approve_for_session("file_edit")

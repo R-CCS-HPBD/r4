@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from . import session_bus_cli
 from .base import CommandHandler
 from .registry import command
 
@@ -44,6 +45,8 @@ class SessionsCommand(CommandHandler):
                 "stop",
                 "questions",
                 "answer",
+                "live",
+                "send",
             ],
             metavar="subcommand",
             help="Subcommand (default: list)",
@@ -54,7 +57,7 @@ class SessionsCommand(CommandHandler):
             "answer_args",
             nargs="*",
             metavar="question_id text",
-            help="answer: the question id, then the answer text",
+            help="answer: the question id, then the answer text; send: the message text",
         )
         parser.add_argument(
             "--kind",
@@ -163,6 +166,9 @@ def _session_handlers() -> dict[str, Any]:
         "stop": _handle_venue_stop,
         "questions": _handle_venue_questions,
         "answer": _handle_venue_answer,
+        # ADR-114 D-7: the local session bus.
+        "live": session_bus_cli.handle_live,
+        "send": session_bus_cli.handle_send,
     }
 
 

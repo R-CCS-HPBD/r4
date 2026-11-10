@@ -28,6 +28,7 @@ import { handleApprovalRequest } from "../bridge/approval-bridge";
 import { handleAskUserRequest } from "../bridge/ask-user-bridge";
 import { bindProjectJobEvents } from "../commands/project-job-events";
 import { handleSearchServerEvent } from "../commands/search-server-command";
+import { handleSessionInbox } from "../commands/session-inbox";
 import { handleWorktreeEvent } from "../commands/worktree-command";
 import { actions, workspace } from "../stores";
 import {
@@ -50,6 +51,8 @@ export const TAB_WATCHED_CHANNELS = [
   // ADR-108 W1c: the tab's worktree changed (the user, the agent, or auto mode).
   "worktree_event",
   "session_title",
+  // ADR-114 D-6: the tab's session received messages from another session.
+  "session_inbox",
   "source_stale",
   "protocol_error",
   "unmatched",
@@ -79,6 +82,9 @@ function dispatchChatEvent(channel: string, payload: unknown, tabId: string): vo
       return;
     case "worktree_event":
       handleWorktreeEvent(payload);
+      return;
+    case "session_inbox":
+      handleSessionInbox(payload, tabId);
       return;
     case "init_state":
       handleInitState(payload);

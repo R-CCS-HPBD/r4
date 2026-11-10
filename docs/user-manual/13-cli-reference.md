@@ -1,6 +1,6 @@
 # 13. CLI Reference
 
-Complete command tree for the `r4` CLI. For exact flags on any command, use `r4 <command> --help`. (Project-loop, knowledge-transport and skill-review entries refreshed 2026-09-24; `r4 project storage` added 2026-10-01; `r4 bucket`, `r4 files list/--bucket/--recursive`, `r4 workflow results` added 2026-10-02; access verbs — `endpoint/graph/catalog/workflow/bucket access`, `rag corpus-access` — and the `r4 circle` / `r4 grant` sections added 2026-10-03; groups renamed to project-scoped circles 2026-10-05; `r4 model scale` added 2026-10-10; `r4 project data-class` added 2026-10-16; `r4 rag ingest` retired 2026-10-18; `r4 --sandbox` and `r4 config sandbox` added 2026-10-30; `r4 workflow export` added 2026-11-07.)
+Complete command tree for the `r4` CLI. For exact flags on any command, use `r4 <command> --help`. (Project-loop, knowledge-transport and skill-review entries refreshed 2026-09-24; `r4 project storage` added 2026-10-01; `r4 bucket`, `r4 files list/--bucket/--recursive`, `r4 workflow results` added 2026-10-02; access verbs — `endpoint/graph/catalog/workflow/bucket access`, `rag corpus-access` — and the `r4 circle` / `r4 grant` sections added 2026-10-03; groups renamed to project-scoped circles 2026-10-05; `r4 model scale` added 2026-10-10; `r4 project data-class` added 2026-10-16; `r4 rag ingest` retired 2026-10-18; `r4 --sandbox` and `r4 config sandbox` added 2026-10-30; `r4 workflow export` added 2026-11-07; workflow versions — `NAME@VERSION` / `--version`, `r4 workflow versions`, `adopt`, `list --all-versions`, `triggers --pin/--unpin` — added 2026-11-08.)
 
 ## Command Ownership
 
@@ -355,21 +355,29 @@ r4 job retry ID
 ### Workflows (`r4 workflow`)
 
 ```
-r4 workflow list [--scope SCOPE] [--name NAME] [--all]   # --all: full catalog, admin only
-r4 workflow access NAME [--set SCOPE ...] [--private]   # who may run it
-r4 workflow export NAME [-o PATH] [--force] [--extract DIR] [--json]   # download a workflow you can see as a verified zip
+r4 workflow list [--scope SCOPE] [--name NAME] [--all] [--all-versions]   # --all: full catalog, admin only
+r4 workflow versions NAME [--json]     # every registered version; * = the default
+r4 workflow access NAME [--set SCOPE ...] [--private]   # who may run it (every version)
+r4 workflow export NAME[@VERSION] [--version V] [-o PATH] [--force] [--extract DIR] [--json]   # download a workflow you can see as a verified zip
 r4 workflow upload WORKFLOW_DIR|.zip [--name NAME]
 r4 workflow run WORKFLOW_DIR|.zip [--param KEY=VALUE ...] [--wait]   # upload + trigger
 r4 workflow lint PATH                  # Check a bundle against the upload contract (description, depends_on), offline
-r4 workflow trigger NAME [--param KEY=VALUE] [--params-file FILE]
+r4 workflow adopt OLD_NAME --as NAME --version V   # re-register a name-versioned workflow as NAME@V
+r4 workflow delete NAME[@VERSION] [--version V] [--yes]   # one version, or every version
+r4 workflow trigger NAME[@VERSION] [--version V] [--param KEY=VALUE] [--params-file FILE]
                          [--params-json JSON] [--input-file FILE_ID_OR_S3]
                          [--project ID] [--wait]
+r4 workflow trigger NAME[@VERSION] --site SITE [--project ID] [--param KEY=VALUE]
+                         [--params-file FILE] [--params-json JSON]
+                         [--input-file FILE_ID_OR_S3] [--listed-input STEP S3_URI FILE]
+                         [--show-inputs] [--yes]
+                                       # sign one run under my own account at SITE (chapter 31)
 r4 workflow status EXEC_ID
 r4 workflow results EXEC_ID [--json]   # Per-step output keys + extras, and the
                                        # `r4 files download … --recursive` line
 r4 workflow watch EXEC_ID [--interval SEC]
-r4 workflow show NAME [--graph [--mermaid]]
-r4 workflow triggers NAME [--json]
+r4 workflow show NAME[@VERSION] [--version V] [--graph [--mermaid]]
+r4 workflow triggers NAME[@VERSION] [--pin VERSION | --unpin] [--owner USER] [--json]
 r4 workflow approve EXEC_ID STEP [--approver NAME] [--comment TEXT]
 r4 workflow reject EXEC_ID STEP [--comment TEXT]
 r4 workflow cancel EXEC_ID
@@ -387,6 +395,48 @@ r4 workflow cancel EXEC_ID
   escape `DIR` (§9, Exporting a workflow).
 - `--input-file` is a repeatable **input file ID or S3 key**; pass run
   parameters with `--param`, `--params-file`, or `--params-json`.
+- Versions: without `@VERSION` / `--version` a command takes the
+  highest registered version; `run` triggers the version it just uploaded;
+  `status`, `results` and `watch` print `NAME@VERSION` and the code digest
+  (§9, Workflow versions).
+- **`trigger --site SITE`: a signed run under my own account**
+  (2026-11-09; not yet deployed). For a site that offers
+  `user_account`, where I have an active account and a link for the
+  project (`r4 hpc add`, `r4 hpc link`). See
+  [Chapter 31 §31.7](31-own-hpc-accounts.md#317-run-work).
+  - `SITE` is named as for `r4 hpc status`. Without `--site`, a plain
+    trigger that UMRS answers with `hpcaccess.signature_required` starts
+    the same flow; there `--yes` does not apply and r4 always asks
+    (2026-11-08 review).
+  - `@VERSION` / `--version` pick a registered version, as for a
+    plain trigger; the summary shows `workflow@version`.
+  - r4 asks the site for a proposed intent
+    (`POST /umrs/workflows/{name}/intent-proposal`), downloads the export
+    of that exact version, hashes every file itself, and recomputes the
+    steps, their order and dependencies, chained inputs and each step's
+    configuration. On any difference, or a login, allocation, parameter,
+    site-profile or time-window mismatch, it refuses with a diff and signs
+    nothing.
+  - It then shows the summary: site, login, allocation, project,
+    `workflow@version`, run id, expiry, and the run's time limit; the
+    trusted platform image; and per step the entrypoint, image (reference
+    and id), partition, CPUs, memory, GPUs, time, model endpoint or
+    "no network", changed configuration keys, and inputs labelled
+    *chosen by you*, *data chosen by UMRS* or *outputs of step `<p>`*.
+    Above 20 inputs it shows counts per label; `--show-inputs` lists all.
+  - `--listed-input STEP s3://BUCKET/KEY FILE` (repeatable) names an input
+    of `STEP` that I choose: r4 hashes my local copy `FILE` itself, the site
+    checks the object against that digest, and the summary labels it
+    *chosen by you*.
+  - It asks `y/N`. `--yes` skips only that question; the signing key still
+    needs a touch, a PIN or a passphrase. It signs the intent
+    (namespace `umrs-intent-v1@<signing domain>`) and triggers with
+    `intent` and `signature`. The answer adds `intent_id`.
+  - It refuses in the assistant's shell (`R4_COMPANION_SESSION`) and
+    without a terminal. Through the shell, `r4 workflow trigger|run …
+    --site` asks in chat/plan; autopilot only auto-answers that local prompt
+    and still cannot sign or bypass the assistant-shell refusal (2026-11-09,
+    the autopilot policy update).
 
 - `r4 workflow show --graph` — layered ASCII DAG of the step dependencies
   (with step-type icon and status glyph).
@@ -1028,6 +1078,170 @@ r4 hpc retry <id>[@<site>]
 A site is a registered platform source or the profile's own gateway. Site
 details come from `GET /gw/sites/me` (verified identity; a gateway without
 the route shows `unknown`).
+
+**My own account at a site** (2026-11-08; [Chapter 31](31-own-hpc-accounts.md)). These need a
+site that offers `user_account` in `hpc_access.modes_allowed`; elsewhere
+the site refuses with `hpcaccess.mode_undeclared`. See
+[Chapter 31](31-own-hpc-accounts.md).
+
+```
+r4 hpc add <site> [--ssh HOST] [--key-type sk|ed25519]   # signing key, transport key, gate install over my own ssh, then verify
+r4 hpc add <site> --manual --home <dir>   # print the three gate files and the authorized_keys line instead
+r4 hpc verify <site> --login <login>      # the site reaches my gate (probe, then hello) and stores my allocations
+r4 hpc status [site] [--json]             # my account and links; warns when the site's gate sha differs from this r4's
+r4 hpc link --project <id> --account <allocation> [--site <site>]
+r4 hpc unlink --project <id> [--site <site>]
+r4 hpc revoke <site> [--remove-line --ssh HOST]   # the site destroys my transport key; optionally remove the line
+r4 hpc rotate <site> [--ssh HOST] [--manual --home <dir>]   # new transport key; the line is replaced, then verify
+r4 hpc profile <site>                     # (wave B2) show, diff and reinstall the site profile only, then verify
+r4 hpc status <site> --witness            # (wave B2) check the gate's log chain over my own ssh; flag intents r4 did not sign
+r4 hpc status <site> --witness --ack ID   # (wave B2) clear an unsigned intent I checked; it is flagged on every witness until then
+r4 hpc status <site> --live               # (wave B2) ask the site for a live hello of my gate: version, site profile, log head
+```
+
+*(2026-11-09: B2 is merged through #815; deployment and each site's first receipt are separate acceptance steps.)* `add` re-run upgrades
+the gate to version 2: it replaces the gate and `gate.json`, writes the
+site profile `~/.umrs/gate/site.json` (0600, shown with a diff first, its
+hash recorded in `~/.config/r4/hpc/sites/<site>.json`), and keeps
+`allowed_signers`, `state/` and `log/`. Signed runs:
+`r4 workflow trigger NAME --site SITE` (Workflows, above).
+
+- **Signing key.** `add` creates a dedicated key under
+  `~/.config/r4/hpc/signing/` (directory 0700): `ed25519-sk` with
+  `verify-required` (a FIDO2 key with a PIN; OpenSSH 8.2 or newer), or with
+  `--key-type ed25519` a passphrase-protected key (OpenSSH 8.1 or newer). A
+  key left without a passphrase is refused. Signing runs
+  `ssh-keygen -Y sign -f <key>` on the key file, never through an agent.
+- **The person's act.** Every account command except `status` refuses in
+  the assistant's shell (`R4_COMPANION_SESSION`), and so do the r4 client
+  calls behind them (`python -c` gets the same refusal); UMRS refuses a
+  request marked as an agent's. `add`, `revoke` and `rotate` also need a
+  terminal and ask before they change anything. Through the shell,
+  `r4 hpc add|rotate|revoke|sign|grant|grant-cancel|profile` (quoted or expanded verbs too) and
+  any command that touches `R4_COMPANION_SESSION` asks in chat/plan;
+  autopilot auto-answers only that local prompt (2026-11-09, amendment 3),
+  and no assistant tool wraps or signs these commands. These
+  guards catch mistakes and ordinary misuse; they are not a sandbox, which
+  is why the gate trusts only your signature. *(2026-11-08 review: this
+  item said agent tools cannot run them at all.)*
+- **Which signing key.** `add` records the key kind it installed for the
+  site (`~/.config/r4/hpc/sites/<site>.json`); `verify` and `rotate` use
+  it. With both an `sk` and an `ed25519` key and no record, they ask for
+  `--key-type`.
+- **Rotate asks first.** `rotate` asks before UMRS makes the new key. If
+  the line cannot be replaced over SSH afterwards, it prints the exact
+  swap to make by hand.
+- **What r4 checks.** The server's transport key must be exactly
+  `ssh-ed25519 <key> umrs-transport-<site>-<key_id>` (one line, no options,
+  a 32-byte key). The `authorized_keys` and `allowed_signers` lines are
+  built locally from checked parts. The gate's sha256 must equal the gate
+  this r4 ships, else `add` stops with a version-skew message.
+- **Install.** `add` runs fixed scripts over `ssh <HOST>` (default: the
+  site name). Everything variable travels on stdin, never on the command
+  line. It writes `~/.umrs/gate/` (0700) with `umrs_gate.py`, `gate.json`
+  and `allowed_signers` (0600), and appends the line to
+  `~/.ssh/authorized_keys` (0600) only if it is absent.
+- **Revoke in B1.** The site has no route yet that forwards a signed
+  control to the gate. `revoke` therefore asks the site to destroy its key,
+  then prints the comment of the line to delete. With `--remove-line` it
+  removes that line over your own ssh session instead.
+
+**Standing permissions (grants) and usage** (2026-11-09, waves C and D;
+on `wave/gated-cd-grants-ledger` (UMRS `22dffbd1`), pending review, unmerged and undeployed;
+[Chapter 31](31-own-hpc-accounts.md)). A grant
+lets UMRS start runs of the workflow versions you list, at one site, under
+your own login, within limits you set, until it expires or you cancel it.
+Your gate checks every run against it.
+
+```
+r4 hpc grant --site S --project P --workflow NAME[@VERSION] [--workflow ...]
+             --max-jobs N --max-gpu-hours H --days D
+             [--max-core-hours C] [--max-concurrent K]
+             [--inputs listed|chained|any] [--listed-input FILE ...] [--yes]
+r4 hpc grants [--site S] [--json]          # my grants: status, limits against live usage, warnings
+r4 hpc grant-cancel ID [--site S] [--direct] [--ssh HOST]   # sign, verify, optionally deliver directly over my own ssh
+r4 hpc usage [--site S] [--since DATE] [--json] [--witness] [--ssh HOST]   # my usage, totals, optional gate-log evidence
+r4 hpc usage --project P [--site S] [--since DATE] [--json] [--witness] [--ssh HOST]   # project usage/budget; witness needs S
+r4 hpc status S --witness --clear-fork     # after investigating a fork, accept the log as the new baseline
+```
+
+- **Defaults.** `--max-core-hours 0` means no core-hour limit (the summary
+  says so); `--max-concurrent` defaults to 4, and never more than
+  `--max-jobs`; `--inputs chained`; `--days` is 1 to 30.
+- **Site versus SSH destination.** `--site S` selects the site's gateway and
+  its recorded signer. `r4 hpc add S --ssh HOST` records the physical gate's
+  destination and venue. A later `add` cannot redirect that signer to another
+  physical gate, and another site record cannot claim the same venue: use a
+  genuinely separate site/venue or keep the existing record for cancel/revoke.
+  These are refusals, never a new signing route. For cancellation or evidence,
+  `--ssh HOST` defaults to the site name and is only the destination for my own
+  gate verification or direct delivery.
+- **What r4 checks before you sign.** For each workflow, r4 reads the export
+  of the exact version and recomputes the code manifest, the step graph and
+  configs, and the parameter schema itself, and refuses with a diff when
+  the site's proposal differs. Every image must be one a step declares, or
+  the platform image. r4 refuses, naming the parameter, a parameter that
+  could carry code: a type other than `string`, `integer`, `number` or
+  `boolean`; a keyword such as `format`, `pattern`, `items` or `$ref`; or a
+  name such as `script`, `cmd`, `path`, `url`, `prompt` or `api_base`. A
+  text parameter without a declared length gets 1024 characters; a decimal
+  bound is narrowed to a whole number; both are shown.
+- **Separate image roles.** Step images are in `images`; the helper/posture
+  images are separately pinned in `trusted_images`, and each helper must also
+  be in `images`. The gate never substitutes a step image for that helper.
+  A legacy one-image grant remains readable/cancellable; an older multi-image
+  grant without `trusted_images` must be revoked and reissued.
+- **The data rule.** `listed`: only the files you hashed with
+  `--listed-input`. `chained` (the default): those files, if any, and
+  outputs of runs under this permission, which UMRS picks. `any`: the
+  summary says "Under a standing permission you give, UMRS chooses the data
+  your approved workflows run on."
+- **What UMRS still decides.** The summary lists it: whether and when to
+  start runs (up to your limits), the parameter values within the bounds
+  shown, the data per the rule above, each step's partition, CPUs, memory,
+  GPUs and walltime within the installed site profile, and which listed
+  account and project a run uses. UMRS also sees every output. It cannot run
+  other code or images, change the pinned steps, call a model endpoint,
+  exceed your limits, or run anything after expiry, a cancel or a
+  re-enrolment. A run still going at expiry stops there.
+- **The person's act.** `grant` and `grant-cancel` refuse in the assistant's
+  shell and without a terminal, and are always asked in the permission
+  ladder. The times are set after you confirm, just before signing. r4 keeps
+  a record of each grant it signed in `~/.config/r4/hpc/grants/<id>.json`.
+  `grants` and `usage` are read only and run anywhere.
+- **Cancelling with evidence.** `grant-cancel` signs a five-minute cancel
+  and first tries the site's relay. That relay counts only when the cancel it
+  claims is found at the same head of the gate log read over your own SSH.
+  Otherwise `--direct` sends a fresh signed control straight to your gate
+  (with `--ssh HOST` when its destination differs) and checks its receipt.
+  Without either proof, the command exits 1 and names the pending/unconfirmed
+  UMRS mirror; retry, or use `--direct`. Running jobs are not stopped:
+  cancel them with `r4 hpc cancel`.
+- **Re-enrolment.** `add` for an account the site reports as absent or
+  revoked also writes `~/.umrs/gate/state/grants/epoch` over your own ssh;
+  your gate then refuses every grant signed before it. An upgrade of an
+  active account writes none.
+- **The witness.** `status S --witness` also lists grant submits and
+  cancels since the last check, flags a grant this r4 did not sign (until
+  `--ack ID`), counts each grant's submits over the whole log and flags
+  `OVER CAP` above the jobs you signed, and checks that the site's view of
+  the log head lies on the log r4 read. A rewritten log or a split view is
+  a fork: it prints `✗ FORK` lines, exits 1, and r4 then signs no run, grant
+  or `rotate` for that site until you investigate and run
+  `--clear-fork`. `grant-cancel` and `revoke` still work. `status S --live`
+  reports a fork when the live head is behind the one r4 witnessed.
+  Independently, `usage --witness [--ssh HOST]` verifies that the returned
+  usage rows join to logged submits and that recorded GPU/core charges are not
+  below the gate's evidence. Missing rows, a broken chain or under-reporting
+  is an error. With `--project`, it requires an explicit `--site`.
+- **Usage.** Rows come from the site's usage ledger; a row marked
+  `(estimate)` is not settled yet. A project budget is in GPU-hours over the
+  project's lifetime, summed over every site. On a personal usage endpoint,
+  `limit` caps only returned rows, not totals: totals still cover every
+  matching current row. If required pricing is absent or malformed, submit
+  stops with `hpcaccess.ledger_unavailable` rather than using a cheaper
+  estimate. An `hpc_script` estimate is parsed from its `sbatch_args`; r4 and
+  UMRS do not read the script's body to derive resource requests.
 
 ### Sources (`r4 source`)
 

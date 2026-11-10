@@ -11,6 +11,7 @@ import { rpc, type RpcMethod, type RpcResult } from "../bridge/rpc";
 import { isOfflineBackend } from "../lib/console-mode";
 import { formatWorkflowProgress } from "../lib/workflow-activity";
 import { projectWorkflowExecutionOntoGraph } from "../lib/workflow-graph-projection";
+import { parseWorkflowRef, runDefinitionKey } from "../lib/workflow-versions";
 
 export interface UmrsWorkflowCatalogItem {
   workflow_name: string;
@@ -22,11 +23,19 @@ export interface UmrsWorkflowCatalogItem {
   owner?: string;
   shared?: boolean;
   access?: string[];
+  /** ADR-113 D-3: the default version, every registered one (SemVer-desc)
+   * and the default's code digest. Absent from older servers. */
+  version?: string;
+  versions?: string[];
+  source_sha256?: string;
 }
 
 export interface UmrsWorkflowExecution {
   execution_id: string;
   workflow_name?: string | null;
+  /** ADR-113 D-4: the version and code digest the run pinned. */
+  workflow_version?: string;
+  source_sha256?: string;
   status: string;
   /** 0..1 fraction on the wire (r4_contracts `WorkflowStatus.progress`);
    * show it through `executionRowDetail` / `formatWorkflowProgress`. */
@@ -62,7 +71,9 @@ export interface UmrsWorkflowStoreState {
   catalog: UmrsWorkflowCatalogItem[];
   activeExecutions: Record<string, UmrsWorkflowExecution>;
   /** 2026-10-01: definition packages per workflow name; errors per name so
-   * a backend without the route degrades to an honest card, not a crash. */
+   * a backend without the route degrades to an honest card, not a crash.
+   * ADR-113: keyed by the ref asked for, `name` (the default version) or
+   * `name@version`. */
   definitions: Record<string, WorkflowDefinitionDetail>;
   definitionErrors: Record<string, string>;
   lastError: string | null;
@@ -236,7 +247,7 @@ function trackExecution(execution: UmrsWorkflowExecution): void {
   _ensureExecutionPoll(execution);
   // The badge's step total (2026-10-24 review): a live run's definition is
   // read once when the run is first tracked, not only when its overlay opens.
-  if (_executionIsLive(execution.status)) _ensureDefinition(execution.workflow_name);
+  if (_executionIsLive(execution.status)) _ensureDefinition(runDefinitionKey(execution));
   // T5 topic-13: live workflow-graph projection — this execution's own step
   // rows replace the graph so the pane follows the in-flight run visually.
   // Capability-detected: no rows land for workflows without step topology.
@@ -296,6 +307,8 @@ export const umrsWorkflowActions = {
       inputFiles?: string[];
       projectId?: string;
       wait?: boolean;
+      /** ADR-113 D-3: the version to run; absent = the server's default. */
+      version?: string;
     } = {},
   ): Promise<UmrsWorkflowExecution> {
     setUmrsWorkflowStore("lastError", null);
@@ -311,6 +324,7 @@ export const umrsWorkflowActions = {
       input_files: options.inputFiles,
       project_id: projectId,
       wait: Boolean(options.wait),
+      ...(options.version ? { version: options.version } : {}),
     });
     trackExecution({ ...result, _scopeProjectId: projectId });
     return result;
@@ -393,12 +407,16 @@ export const umrsWorkflowActions = {
   /**
    * Fetch the workflow definition package (2026-10-01): step graph rows,
    * resources, and the registered code files. A backend without the route
-   * stores an honest per-name error the card renders verbatim.
+   * stores an honest per-name error the card renders verbatim. The argument
+   * is a name (the default version) or `name@version` (ADR-113) and the
+   * cache key; the stored package's `workflow_name` is the bare name.
    */
   async fetchDefinition(workflowName: string): Promise<WorkflowDefinitionDetail | null> {
+    const { name, version } = parseWorkflowRef(workflowName);
     try {
-      const wire = await bridgeRequest("workflow.package", { workflow_name: workflowName }, 30_000);
-      const detail: WorkflowDefinitionDetail = { ...wire, workflow_name: wire.workflow_name ?? workflowName };
+      const params = version ? { workflow_name: name, version } : { workflow_name: name };
+      const wire = await bridgeRequest("workflow.package", params, 30_000);
+      const detail: WorkflowDefinitionDetail = { ...wire, workflow_name: wire.workflow_name ?? name };
       setUmrsWorkflowStore("definitions", workflowName, detail);
       setUmrsWorkflowStore("definitionErrors", workflowName, "");
       return detail;

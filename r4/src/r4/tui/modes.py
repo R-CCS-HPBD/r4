@@ -4,9 +4,9 @@ Three modes, cycled with Shift+Tab — the session's one mode (ADR-104 D-1;
 ``r4.companion.agent_mode`` derives the permission mode from it):
 - Chat: read-only tools run, every other tool asks (default)
 - Plan: read-only tools only; a plan first, which you accept into chat or autopilot
-- Autopilot: tools run without asking (ADR-104 amendment 2); only credential
-  access, knowledge decisions, your ask rules and deletes R4 could not back
-  up first still ask
+- Autopilot: every local non-deletion prompt is auto-answered with an audit
+  note (ADR-104 amendment 3); recognised user-file deletion and worktree
+  removal still ask
 """
 
 from __future__ import annotations
@@ -36,10 +36,7 @@ class Mode(Enum):
         descriptions = {
             Mode.CHAT: "read-only tools run; others ask",
             Mode.PLAN: "plan first — read-only tools only until you accept the plan",
-            Mode.AUTOPILOT: (
-                "tools run without asking; only credentials, knowledge decisions"
-                " and deletes without a backup ask"
-            ),
+            Mode.AUTOPILOT: "non-delete prompts auto-answer; file/worktree deletion asks",
         }
         return descriptions[self]
 

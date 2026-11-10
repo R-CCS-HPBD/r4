@@ -116,3 +116,39 @@ def test_wired_beside_any_tool_set() -> None:
     assert agent._with_async_agent_tools(wired) == wired  # idempotent
     spawn_tool = next(tool for tool in wired if tool["name"] == "async_agent_spawn")
     assert spawn_tool["concurrency_safe"] is True
+
+
+def test_acceptance_hook_precedes_work_and_never_runs_over_cap() -> None:
+    import threading
+
+    pool = AsyncAgentPool(max_running=1)
+    release = threading.Event()
+    order: list[str] = []
+
+    def runner(_record) -> str:
+        order.append("work")
+        release.wait(2)
+        return "done"
+
+    pool.spawn("first", runner, before_start=lambda _record: order.append("accepted"))
+    pool.spawn(
+        "rejected",
+        runner,
+        before_start=lambda _record: order.append("must-not-register"),
+    )
+    assert order == ["accepted", "work"]
+    release.set()
+    assert pool.wait_idle()
+
+
+def test_acceptance_failure_does_not_start_or_register() -> None:
+    pool = AsyncAgentPool(max_running=1)
+    ran: list[str] = []
+
+    def refuse(_record) -> None:
+        raise RuntimeError("database unavailable")
+
+    with pytest.raises(RuntimeError, match="database unavailable"):
+        pool.spawn("task", lambda _record: ran.append("work") or "done", before_start=refuse)
+    assert ran == []
+    assert pool.status() == []

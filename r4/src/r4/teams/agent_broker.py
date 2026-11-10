@@ -42,9 +42,9 @@ What the broker adds around that turn, and why:
   numbered passages through the one pack renderer; each read is recorded
   with the result (``retrieval``, journalled by the engine); and the tool
   keeps its name, so its result registers ``rag_chunk`` taint (ADR-039).
-- **Gates** (slice 2). ``ask_gate`` asks the lead's human through the
-  never-auto approval path (``team_plan_gate``), labelled with the gate; with
-  no approval lane (the CLI) it refuses by name. Nothing auto-approves it.
+- **Gates** (slice 2). ``ask_gate`` resolves through ``team_plan_gate``:
+  local autopilot decides non-deletions with automatic notes, otherwise the
+  lead's approval path asks. With no eligible lane it refuses by name.
 """
 
 from __future__ import annotations
@@ -82,7 +82,12 @@ from r4_teamengine_spi.errors import BudgetExhausted
 from ..companion import tools as companion_tools
 from ..companion.agent_workspace import AgentWorkspace, agent_workspace
 from ..companion.cancellation import TurnCancellation, TurnCancelledError
-from ..companion.permissions import TEAM_AGENT_DENY, PermissionManager, PermissionMode
+from ..companion.permissions import (
+    TEAM_AGENT_DENY,
+    PermissionManager,
+    PermissionMode,
+    take_permission_notes,
+)
 from ..companion.session_models import BudgetLimitExceededError
 from ..errors import ModelRouteRefusedError, R4Error
 from ..teamup import role_agent
@@ -435,20 +440,43 @@ class RoleTurnAgentBroker(AgentBroker):
             token.request()
 
     async def ask_gate(self, request: GateRequest) -> GateDecision:
-        """Ask the human through the never-auto approval path (slice 2).
+        """Resolve a gate locally, or ask through its approval path.
 
-        On a worker thread: the approval callback blocks until the human
-        answers. The wall clock of the run's per-round guard does not run
-        meanwhile (a human reads at human speed, D-7).
+        Non-deletion local autopilot decisions return automatic provenance and
+        notes; chat/plan and deleting merge-backs wait for a human. The wall
+        clock pauses during that human read (D-7). Work happens on a thread.
         """
         return await asyncio.to_thread(self._ask_gate_sync, request)
+
+    def gate_is_automatic(self, request: GateRequest) -> bool:
+        """Whether this local gate needs no human-input event or callback.
+
+        This is the engine's side-effect-free preview. Server/inbox gate lanes
+        do not implement the method and keep their normal human-request event.
+        """
+        lane = self._gate_lane
+        if getattr(lane, "mode", None) != PermissionMode.TRUST or not callable(
+            getattr(lane, "fork_for_agent", None)
+        ):
+            return False
+        arguments = {
+            "gate": request.gate,
+            "class": request.trigger_class,
+            "deletions": list(request.metadata.get("deletions") or ()),
+        }
+        rules = getattr(lane, "ruleset", None)
+        if rules is not None and rules.first("deny", GATE_TOOL, arguments) is not None:
+            return False
+        from ..companion.delete_guard import scan
+
+        return not scan(GATE_TOOL, arguments).deletes
 
     def _ask_gate_sync(self, request: GateRequest) -> GateDecision:
         lane = self._gate_lane
         fork = getattr(lane, "fork_for_agent", None)
         if self._cancel.is_set():
             return GateDecision(approved=False, answered=False, reason="cancelled")
-        if not callable(fork) or getattr(lane, "_approval_callback", None) is None:
+        if not callable(fork):
             return GateDecision(approved=False, answered=False, reason="no_human")
         if getattr(getattr(lane, "mode", None), "value", "") == PermissionMode.DENY.value:
             return GateDecision(approved=False, answered=False, reason="permission_mode_deny")
@@ -458,10 +486,19 @@ class RoleTurnAgentBroker(AgentBroker):
             "class": request.trigger_class,
             "prompt": request.prompt,
             "run_id": self._run_id,
+            "deletions": list(request.metadata.get("deletions") or ()),
         }
+        decision = asker.decide(GATE_TOOL, arguments)
+        if decision.behavior == "deny":
+            return GateDecision(approved=False, answered=False, reason=decision.source)
+        automatic = self.gate_is_automatic(request)
+        if not automatic and getattr(lane, "_approval_callback", None) is None:
+            return GateDecision(approved=False, answered=False, reason="no_human")
         with self._limits.paused():
-            approved = bool(asker.check(GATE_TOOL, arguments))
-        return GateDecision(approved=approved, answered=True, decided_by="human")
+            approved = bool(asker.resolve(decision, GATE_TOOL, arguments))
+        notes = take_permission_notes()
+        decided_by = "autopilot" if automatic else "human"
+        return GateDecision(approved=approved, answered=True, decided_by=decided_by, notes=notes)
 
     def preflight_models(self, models: Iterable[str | None]) -> None:
         """Resolve every distinct model through the ADR-062 gate before any spend.

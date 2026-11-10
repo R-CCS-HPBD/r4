@@ -66,6 +66,10 @@ class MergeBatch:
     def files(self) -> list[str]:
         return sorted({c.rel for e in self.entries for c in e.changes})
 
+    def deletions(self) -> list[str]:
+        """Exactly the project-root files this batch would unlink."""
+        return sorted({c.rel for e in self.entries for c in e.changes if c.kind == "delete"})
+
 
 class RunWorkspaces:
     """The workspaces of one plan run directory."""

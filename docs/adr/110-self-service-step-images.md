@@ -202,6 +202,18 @@ Nothing landed yet. The slices, each its own wave:
   - So the platform-image seccomp writer, `--entrypoint`, `--unsetenv-all` with the fixed env, `--image-volume=ignore` and `--workdir=/tmp` all work for a non-platform image on the nodes.
 - **I0** (maintainer: a dedicated step account) is still open; it gates I2–I5.
 
+## Rollout-status (2026-11-08): D-8's per-user identity is ADR-112 `user_account`
+
+- **D-8, second bullet.** "Per-user cluster identity on the step lane" now means [ADR-112](112-user-hpc-accounts-gated-delegation.md) `user_account`: the step runs in the user's own HPC account, through the gate, on intents the user signed. It no longer means [ADR-069](069-identity-mapping-per-target.md) `per_user_ssh`, which ADR-112 retires. The first bullet (a dedicated step account) is unchanged.
+- **Wave A does not meet D-8.** Wave A of the gated-delegation plan declares each site's access mode and limits user work on a site whose platform login belongs to a person to admins and listed projects. Steps still run as `<operator-account>`, so `user:` images stay refused.
+- **I0 stays open** until a gated lane receipt (ADR-112 wave B2) or a dedicated step account. It still gates I2–I5.
+
+## Rollout-status (2026-11-08, later): the gated lane (ADR-112 wave B2) in progress
+
+- **What B2 builds.** On a site that offers ADR-112 `user_account`, a staged step of a person with an active account and an active project link runs under that person's own HPC login and allocation, through the gate in their HPC home, on an intent they signed. The gated lane has no payload pickle: the gate writes the step input as JSON from signed fields (ADR-112 D-6, [ADR-074](074-uploaded-step-code-runs-sandboxed.md) rollout-status of the same date). The gate composes the batch script itself, pins each image by id, and checks the archive's digest and labels; D-6 of this ADR (trusted seccomp, a fixed entrypoint, image env ignored) is kept in the gate's template.
+- **D-8, second bullet: met per site, after a lane receipt.** A site meets it for the users whose steps run on the gated lane once a gated lane receipt has passed there (one step run end to end under a user's own login through the gate). Until that receipt, nothing changes on that site. Steps of users without an account and link at that site keep running under the site's platform login, so `user:` images stay refused for them.
+- **I0 stays open** until the first gated lane receipt, or a dedicated step account. It still gates I2–I5. B2 is in progress on `wave/gated-b2-intents`, not merged and not deployed; it needs a step-image rebuild and a staged converge before the receipt (maintainer legs).
+
 ## Related
 
 - [ADR-069](069-identity-mapping-per-target.md), [ADR-074](074-uploaded-step-code-runs-sandboxed.md), [ADR-079](079-researcher-self-service-data-path.md), [ADR-080](080-one-access-guard-shareable-resources.md), [ADR-109](109-vision-service-and-routed-endpoints-for-steps.md)
