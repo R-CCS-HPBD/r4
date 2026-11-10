@@ -159,8 +159,7 @@ bridges poll their own bound queue from the existing bus watcher and merge
 local and remote unread rows by send time. Queue outages are reported and never
 fall back to a different recipient/store. Local-only bus behavior, direct-call
 refusal, relay permission rungs, stable-prefix mode and both bus/snapshot
-opt-outs are unchanged. S2.2 is specified by D-13 below; S2.3
-headless/REPL presence remains undecided and unimplemented.
+opt-outs are unchanged. S2.2 is specified by D-13 below and S2.3 by D-14.
 
 ### Slice 2.2 amendment (2026-11-10): explicit tab-targeted notices
 
@@ -182,6 +181,32 @@ text still enters only through the `session_message`-tainted `session_inbox` too
 D-1…D-12, one-user identity, local/remote queues, taint and relay permissions are
 unchanged. S2.3 headless/REPL presence is not part of this amendment.
 
+### Slice 2.3 amendment (2026-11-10): interactive REPL presence, intentional one-shot refusal
+
+**D-14. Interactive REPL leads advertise; one-shot `r4 -p` runs never do.** The
+maintainer explicitly chose this split. After terminal setup, `launch_repl` attaches
+its one lead `CompanionSession` to the existing `BusAttachment` lifecycle: the same
+process/host presence entry, exact session id, durable owner binding, heartbeat, and
+local/remote withdrawal. There is no REPL-specific store, alias, queue or daemon.
+Normal return, EOF and an escaping REPL error detach in `finally`; the existing exit
+hook and stale-pid/heartbeat rules cover process termination. `R4_SESSION_BUS=0`
+skips local registration, remote binding and polling, and the availability gate
+keeps all three lead-only tools off. Team roles, plan agents, recipes and sub-agents
+remain excluded exactly as in D-3.
+
+The REPL never starts a hidden or sender-triggered turn. Its next **explicit user**
+turn carries the existing count-and-sanitized-names reminder; sender text still
+enters only through `session_message`-tainted `session_inbox` output. This preserves
+both prompt layouts, including `R4_COMPANION_STABLE_PREFIX=0`, and adds no plaintext
+notice-body path.
+
+`_launch_headless` remains outside this lifecycle: it creates no local presence,
+remote binding, watcher or ghost inbox. Its messaging tools remain unavailable and
+a direct call intentionally refuses, naming the one-shot headless policy. This is a
+feature boundary, not a claim that one-shot runs support the bus. D-1…D-13, remote
+venue behavior, direct rejection of every off-bus tool, and both wake/snapshot
+opt-outs are unchanged.
+
 ### Why
 
 - Files under the user's own config home need no daemon, no port and no
@@ -202,12 +227,13 @@ unchanged. S2.3 headless/REPL presence is not part of this amendment.
   (`r4 session send`).
 - Cost: one daemon thread per bridge (2 s poll); a session in autopilot that
   has read the web asks before messaging another session first.
-- NOT in scope after the 2026-11-10 S2.1/S2.2 amendments: automatic work in a
-  busy or background tab (D-13 delivers only its notice); headless and REPL
-  sessions on the bus; a console list/compose view; messages between different
-  users (never through this bus: it is private per user by construction). Remote
-  venue/other-machine identity and queue behavior remain D-9…D-12; S2.3 remains
-  a separate decision.
+- NOT in scope after the 2026-11-10 S2.1…S2.3 amendments: automatic work in a
+  busy or background tab (D-13 delivers only its notice); one-shot `r4 -p`
+  presence or messaging; automatic REPL turns; a console list/compose view;
+  messages between different users (never through this bus: it is private per
+  user by construction). Remote venue/other-machine identity and queue behavior
+  remain D-9…D-12; interactive REPL presence and its intentional headless refusal
+  are D-14.
 
 ## Alternatives Considered
 
@@ -330,6 +356,32 @@ PASSED (0 warnings)**; the pre-commit gate is recorded in wave ledger (266).
 D-69 stays **Partial**: S2.1's separately authorized live venue
 receipt and S2.3 remain open, and this wave ran no interactive/live acceptance,
 merge, deployment, host action or public export.
+
+## Rollout-status (2026-11-10): S2.3 repo-side interactive REPL / headless split
+
+S2.3 implements D-14 on `wave/session-messaging-s2-3`, stacked on PR #841 head
+`9f5efa29a9b4ccc4b5a08b3586023f7a99220119` (which contains main `34be4f31` through
+PR #840). UMRS remains `0eb22a2938e218d423af2b2e6866f9e187fe1cea`; no submodule,
+remote-map, queue, console-notice, credential or scheduler file changed.
+
+The interactive REPL is attached only in `launch_repl`, after session/web/sandbox
+setup, and uses `BusAttachment` unchanged. Its `finally` plus the existing exit hook
+withdraw both local and durable presence. The one-shot `_launch_headless` path has
+no attachment or watcher. Its named direct refusal now says explicitly that
+one-shot `r4 -p` stays off; its tool offer and legacy prefix layout remain unchanged.
+REPL notice delivery is deliberately a no-op for wake purposes: only the user's next
+turn gets the count/name reminder, and message bodies stay behind the tainted inbox.
+
+Fail-before evidence: `/tmp/opencode/s23-r4-fail-before.log` (**5 failed / 3 passed**)
+on the old code: no REPL local presence, no exact durable bind, no normal/error
+withdrawal, an absent no-hidden-wake lifecycle, and no explicit one-shot refusal.
+The passing pins already covered opt-out, lead-only attachment and stable-prefix=0.
+Final focused evidence: **53 tests** across the new terminal lifecycle suite, local
+and remote bus suites, existing REPL/headless wiring and stable-prefix compatibility.
+The changed-files and pre-commit gate evidence is recorded in wave ledger (267).
+D-69 stays **Partial** pending S2.1's separately authorized remote live acceptance;
+this wave ran no interactive/live acceptance, merge, deployment, host action or
+public export.
 
 ## Related
 

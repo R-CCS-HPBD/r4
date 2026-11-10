@@ -3,7 +3,7 @@
 One directory per user, private (0700), under the r4 config home:
 
 - ``sessions/<session_id>.json`` — one presence entry per live session
-  (written by the console bridge, refreshed by its heartbeat);
+  (written by an interactive console/REPL lifecycle, refreshed by its heartbeat);
 - ``inbox/<session_id>/<message>.json`` — one file per unread message,
   written to a temporary name and renamed, so a reader never sees half a
   message and two writers never share a file.

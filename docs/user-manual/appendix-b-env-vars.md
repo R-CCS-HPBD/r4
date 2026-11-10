@@ -98,6 +98,18 @@ tool descriptions are the ones R4 sent before these fixes.
 | `R4_COMPANION_TOP_P` | (unset: not sent) | `top_p` sent with agent rounds (H14), 0–1; an invalid value is ignored |
 | `R4_ASK_USER_MODE` | `ask` | `auto`: `ask_user` returns an "auto-answered" note instead of waiting (the model picks the most reasonable option and says so). In the TUI bridge and remote sessions the r4 config's `ask_user_mode` wins over this variable; with no UI attached to answer (a headless run, the benchmark driver) only this variable counts (H12) |
 
+### Session messaging
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `R4_SESSION_BUS` | on | Interactive console tabs and Rich REPL sessions register presence and can use the three lead-session messaging tools. `0` / `off` / `false` / `no` skips local registration, durable binding and polling. One-shot `r4 -p` runs are always off: they do not advertise and direct messaging calls refuse by name |
+| `R4_SESSION_BUS_DIR` | `~/.config/r4/session-bus` | Private per-user presence/inbox directory (0700; files 0600). No daemon or second job store |
+| `R4_SESSION_BUS_WAKE` | on | Console only: an idle active tab may start a turn containing R4's fixed read-your-inbox instruction; `0` leaves unread notices but disables that turn. Busy/background tabs never auto-start. Rich REPL and one-shot headless runs never auto-start a message turn |
+
+Message bodies never appear in unread notices or the wake instruction. In the
+REPL, only the next explicit user turn carries the count/name reminder; text is
+read through `session_inbox` and treated as untrusted tool output.
+
 ### R4 retrieval
 
 *Added 2026-10-10.* These variables control how R4 asks UMRS for passages and

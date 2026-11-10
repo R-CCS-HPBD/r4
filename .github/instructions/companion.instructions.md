@@ -53,7 +53,7 @@ companion/
   memory_store.py          — saved memory, one private file per fact, user + project scopes (2026-11-07, ADR-111)
   memory_tools.py          — memory_read / memory_write / memory_forget, attached by the lead session only (ADR-111 D-4)
   memory_commands.py       — /memory and `r4 memory` verbs: list, add, forget, lessons, promote, off/on
-  session_bus.py           — local session bus: live-session presence + one-file-per-message inboxes, private per user (2026-11-08, ADR-114)
+  session_bus.py           — local session bus: interactive console/REPL presence + one-file-per-message inboxes, private per user (2026-11-08, ADR-114)
   session_bus_remote.py    — S2.1 thin owner/lease adapter to the proven durable binding + ADR-046 turn queue; no R4 durable state (2026-11-10)
   session_bus_tools.py     — session_list / session_send / session_inbox + local/remote unread merging and the reminder, attached by the lead session only (ADR-114 D-3)
   context_budget.py        — budget resolved from the active model
@@ -107,9 +107,9 @@ companion/
     command_bridge.py      — slash commands bridged into the companion UIs
     project_bridge.py      — typed project_* RPCs for the console
     sandbox_bridge.py      — session.sandbox_get / session.sandbox_set, snapshot key session.sandbox (2026-10-30, ADR-101)
-    session_bus_bridge.py  — the bridge's active session on the session bus: register/withdraw, heartbeat, `session_inbox` notices (ADR-114)
+    session_bus_bridge.py  — shared interactive-session lifecycle: register/withdraw, heartbeat, durable bind, `session_inbox` notices (ADR-114)
     subagent_bridge.py     — D-70 S3 read-only inspect_subagent + opt-in local child inventory; raw store/event-log reads, bounded/redacted event pages, no live child constructor or writer
-    repl.py                — Rich REPL fallback (always available)
+    repl.py                — Rich REPL fallback (always available); its lead uses that lifecycle, while one-shot `r4 -p` stays off (S2.3)
 ```
 
 There is no Python TUI in this package: the Ink/JS TUI was deleted
@@ -195,8 +195,9 @@ Prevent mistakes (guides) rather than catch them after (sensors), but use both.
   the tainted `session_inbox` tool. S2.2 (ADR-114 D-13) requires an exact
   named-tab/bound-session match for console notices and scopes delivery through
   `applyOnTab`; busy/background tabs never auto-start work, and the fixed
-  idle-active wake remains the default. S2.3 headless/REPL presence remains
-  unimplemented.
+  idle-active wake remains the default. S2.3 (ADR-114 D-14) puts an interactive
+  REPL lead through this same verified local/durable lifecycle with no hidden
+  wake; one-shot `r4 -p` deliberately stays off and refuses direct bus calls.
 - Venues today: `frontend` and `cluster:<name>`; CPU-only and trusted-host
   venues are design targets (D-09, D-48).
 

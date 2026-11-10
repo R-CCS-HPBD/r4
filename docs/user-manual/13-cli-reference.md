@@ -823,7 +823,7 @@ r4 run ledger JOB_ID [--json]
 ### Sessions (`r4 session`)
 
 ```
-r4 session [list|show|archive|remove|delete|conclude|pull|reconcile] [SESSION_ID]
+r4 session [list|show|archive|remove|delete|conclude|pull|reconcile|live|send] [SESSION_ID]
            [--kind {all|agent|companion|teamup}] [--endpoint ID]
            [--project ID] [--venue CSV] [--state CSV] [--no-remote]
            [--include-archived] [--limit N]
@@ -842,6 +842,21 @@ r4 session [list|show|archive|remove|delete|conclude|pull|reconcile] [SESSION_ID
 > (`--clear-default-venue` to remove). `r4 session pull <id>` fetches a
 > `remote-only` row from the server journal into the local store — local
 > rows always win, it never overwrites an existing id.
+
+For messaging between your own running sessions:
+
+```
+r4 session live [--json]
+r4 session send <session-id|unique-prefix|name> <message…> [--json]
+```
+
+Interactive console tabs and Rich REPL sessions advertise their presence while
+running. A one-shot `r4 -p "…"` run deliberately does not appear in `session live`
+and cannot use the session-messaging tools; direct calls are refused rather than
+creating a temporary presence entry. A REPL does not start work when a message
+arrives: its next explicit user turn carries an unread count and sender names, and
+the agent reads message text with `session_inbox`. Set `R4_SESSION_BUS=0` to keep an
+interactive session off the bus as well.
 
 ### Memory (`r4 memory`)
 

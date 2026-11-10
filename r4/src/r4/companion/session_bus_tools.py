@@ -4,9 +4,9 @@ Attached by the lead :class:`CompanionSession` only, never through
 ``get_builtin_tools``: team roles, plan agents, recipes and sub-agents do
 not message other sessions.
 
-The tools work while the session has local console presence or an explicitly
-bound S2.1 remote-venue presence (:class:`BusPresence`); elsewhere (headless
-``r4 -p`` and the REPL) they refuse by name.
+The tools work while the session has local console/interactive-REPL presence
+or an explicitly bound S2.1 remote-venue presence (:class:`BusPresence`). A
+one-shot headless ``r4 -p`` run never joins the bus; a direct call refuses by name.
 
 ``session_list`` and ``session_inbox`` are read-only (``SAFE_TOOLS``).
 ``session_send`` asks in chat and plan modes, and in every mode once the
@@ -45,8 +45,8 @@ INBOX_DESCRIPTION = (
 )
 
 NOT_ON_BUS = (
-    "this session is not on the local session bus (only sessions run in the R4 console "
-    "are); session messaging is unavailable here"
+    "this session is not on the local session bus (only interactive R4 console and REPL "
+    "sessions are; headless one-shot r4 -p runs stay off); session messaging is unavailable here"
 )
 
 

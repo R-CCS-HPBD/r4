@@ -301,13 +301,12 @@ SESSION_BUS_KEY = "session_bus_presence"
 
 
 def _off_session_bus(tool: dict[str, Any], client: "Client | None") -> str | None:
-    """ADR-114 D-2: the messaging tools are offered only while the session is
-    on the local session bus (console sessions); headless runs, the REPL and
-    venue workers never see tools that could only refuse."""
+    """ADR-114: offer messaging only with interactive console/REPL presence;
+    headless one-shot runs and unbound workers never see refusing tools."""
     getter = tool.get(SESSION_BUS_KEY)
     if not callable(getter) or getter() is not None:
         return None
-    return "not on the local session bus (console sessions only)"
+    return "not on the local session bus (interactive console/REPL only; one-shot r4 -p is off)"
 
 
 _CHECKS = (

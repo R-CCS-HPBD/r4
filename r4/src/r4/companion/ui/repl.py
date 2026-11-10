@@ -18,6 +18,7 @@ from r4.ui_theme import make_console, rotating_status
 if TYPE_CHECKING:
     from ..agent import CompanionEvent
     from ..session import CompanionSession
+    from .session_bus_bridge import BusAttachment
 
 logger = logging.getLogger(__name__)
 
@@ -144,6 +145,21 @@ def _load_or_create(client: Any, name: str, session_id: str | None) -> "Companio
     return session
 
 
+def _start_repl_bus(session: "CompanionSession") -> "BusAttachment | None":
+    """Run the existing interactive-session bus lifecycle, never a wake loop."""
+    from .session_bus_bridge import BusAttachment, bus_enabled
+
+    if not bus_enabled():
+        return None
+    import atexit
+
+    attachment = BusAttachment(lambda _notice: None)
+    attachment.attach(session)
+    attachment.start()
+    atexit.register(attachment.detach)
+    return attachment
+
+
 def launch_repl(
     client,
     *,
@@ -170,5 +186,9 @@ def launch_repl(
     # ADR-101: settled before the web question, whose local note depends on it.
     apply_local_sandbox(session)
     apply_repl_web_access(session, getattr(client, "config", None), flag=web_flag)
-    repl = RichREPL(session)
-    repl.run()
+    bus = _start_repl_bus(session)
+    try:
+        RichREPL(session).run()
+    finally:
+        if bus is not None:
+            bus.detach()
