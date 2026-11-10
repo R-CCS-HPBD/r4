@@ -494,6 +494,9 @@ export type InspectSubagentResult = {
   read_only: boolean;
   event_payload_cap: number;
   event_payloads_may_be_abridged: boolean;
+  source: "local" | "remote";
+  remote_available: boolean;
+  remote_reason: string;
 };
 
 /** One durable attempt (``_attempt_row``). */

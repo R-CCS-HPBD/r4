@@ -88,6 +88,7 @@ companion/
   session_state.py         — session metadata serialization
   session_store.py         — SQLite persistence + compatibility; default listing/loading excludes children, explicit read-only child filters retain lineage (D-70 S3)
   subagent_sessions.py     — existing-store/event-log child recording, stable lineage and terminal lifecycle (2026-11-10, D-70 S1/S2); local-only child writes never use the parent snapshot rail
+  subagent_remote.py       — explicit owner-only remote inspection + lease-only child persistence adapter; remote reads never fall back to local/parent rows (D-70 S5)
   session_ops.py           — on-demand session operations shared by the bridge and ACP rails
   persistence.py           — persistence protocol
   event_log.py · replay.py · checkpoint.py — SQLite event log (`event_log` table), replay, checkpoints (`checkpoints` table)
@@ -198,6 +199,15 @@ Prevent mistakes (guides) rather than catch them after (sensors), but use both.
   idle-active wake remains the default. S2.3 (ADR-114 D-14) puts an interactive
   REPL lead through this same verified local/durable lifecycle with no hidden
   wake; one-shot `r4 -p` deliberately stays off and refuses direct bus calls.
+- *2026-11-10 (ADR-046 P11, D-70 S5):* remote subagent persistence uses only
+  the explicitly child-aware lease rail. UMRS proves root lease/running venue
+  and immediate-parent/backend bindings; child history stays in its own existing
+  snapshot row, never the parent. Generic snapshot, session-bus and venue-start
+  writes refuse bound children before mutation. Post-admission remote failures
+  replay events in order or leave durable `remote_degraded` evidence without
+  changing execution truth. Local children keep the non-mirror default, owner
+  inspection is read-only, and remote outage never falls back to a local or
+  parent row. Repo-side only; live acceptance remains owed.
 - Venues today: `frontend` and `cluster:<name>`; CPU-only and trusted-host
   venues are design targets (D-09, D-48).
 

@@ -1996,7 +1996,7 @@ class CompanionBridgeServer(
         include_archived = bool(params.get("include_archived") or False)
         from .subagent_bridge import child_list_filters
 
-        child_only, child_filters = child_list_filters(params)
+        _, child_filters = child_list_filters(params)
         if venue:
             from ..session_store import validate_venue
 
@@ -2011,12 +2011,11 @@ class CompanionBridgeServer(
             "remote_reason": "",
             "sync_mode": sync_mode,
         }
-        if child_only:
-            response["remote_reason"] = "remote subagent inventory is not implemented"
-            return response
         if params.get("no_remote"):
             return response
-        return self._merge_remote_sessions(response, venue, state, include_archived)
+        return self._merge_remote_sessions(
+            response, venue, state, include_archived, child_filters=child_filters
+        )
 
     def _local_session_rows(
         self,
@@ -2044,13 +2043,17 @@ class CompanionBridgeServer(
         venue: str,
         state: str,
         include_archived: bool,
+        *,
+        child_filters: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Fold the server journal into the listing response (honest failure).
 
         Journal unreachable → remote_available=false + reason; local rows
         keep their 'local-only' badge — never emulated remote rows.
         """
-        snapshots, error = self._fetch_session_journal(venue, state, include_archived)
+        snapshots, error = self._fetch_session_journal(
+            venue, state, include_archived, child_filters=child_filters
+        )
         if error is not None:
             response["remote_reason"] = error
             return response
@@ -2072,7 +2075,12 @@ class CompanionBridgeServer(
         return response
 
     def _fetch_session_journal(
-        self, venue: str, state: str, include_archived: bool
+        self,
+        venue: str,
+        state: str,
+        include_archived: bool,
+        *,
+        child_filters: dict[str, Any] | None = None,
     ) -> tuple[list[dict[str, Any]], str | None]:
         """GET the snapshot journal with filter params on the wire.
 
@@ -2081,7 +2089,7 @@ class CompanionBridgeServer(
         """
         from ..session_store import journal_prefix
 
-        prefix = journal_prefix(self._client)
+        prefix = journal_prefix(getattr(self, "_client", None))
         query = ["limit=200"]
         if venue:
             query.append(f"venue={venue}")
@@ -2089,6 +2097,8 @@ class CompanionBridgeServer(
             query.append(f"state={state}")
         if include_archived:
             query.append("include_archived=true")
+        for key, value in (child_filters or {}).items():
+            query.append(f"{key}={value}")
         try:
             listing = self._client.get(f"{prefix}/companion/sessions?{'&'.join(query)}") or {}
         except Exception as exc:  # noqa: BLE001 — journal optional
@@ -3258,7 +3268,9 @@ class CompanionBridgeServer(
         """Read a durable child without loading or switching the active session."""
         from .subagent_bridge import inspect_subagent_record
 
-        return inspect_subagent_record(self._store, self._event_log, params)
+        return inspect_subagent_record(
+            self._store, self._event_log, params, remote_client=getattr(self, "_client", None)
+        )
 
     # -- background job management -----------------------------------------
 
@@ -5861,19 +5873,20 @@ def _remote_only_row(snap: dict[str, Any], local_ids: set[str]) -> dict[str, Any
     return {
         "id": sid,
         "name": str(snap.get("name") or ""),
-        "created_at": "",
-        "updated_at": str(snap.get("updated_at") or ""),
-        "model": "",
-        "venue": str(snap.get("venue") or ""),
-        "state": str(snap.get("state") or ""),
-        "archived_at": str(snap.get("archived_at") or ""),
+        "created_at": _str_field(snap, "created_at"),
+        "updated_at": _str_field(snap, "updated_at"),
+        "model": _str_field(snap, "model"),
+        "message_count": int(snap.get("message_count", 0)),
+        "venue": _str_field(snap, "venue"),
+        "state": _str_field(snap, "state"),
+        "archived_at": _str_field(snap, "archived_at"),
         "pinned": False,
         "sync": "remote-only",
-        "session_kind": "conversation",
-        "parent_session_id": "",
-        "parent_agent_id": "",
-        "agent_id": "",
-        "subagent_status": "",
+        "session_kind": str(snap.get("session_kind", "conversation")),
+        "parent_session_id": _str_field(snap, "parent_session_id"),
+        "parent_agent_id": _str_field(snap, "parent_agent_id"),
+        "agent_id": _str_field(snap, "agent_id"),
+        "subagent_status": _str_field(snap, "subagent_status"),
     }
 
 

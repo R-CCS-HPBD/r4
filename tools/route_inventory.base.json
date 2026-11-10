@@ -473,6 +473,14 @@
       "auth": "verified"
     },
     {
+      "path": "/umrs/companion/sessions/session-bus/presence",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
       "path": "/umrs/companion/sessions/{session_id}",
       "methods": [
         "DELETE"
@@ -627,6 +635,46 @@
       "auth": "lease-token"
     },
     {
+      "path": "/umrs/companion/sessions/{session_id}/rail/session-bus",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "lease-token"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/rail/session-bus",
+      "methods": [
+        "PUT"
+      ],
+      "router": "fastapi.routing",
+      "auth": "lease-token"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/rail/session-bus/inbox",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "lease-token"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/rail/session-bus/presence",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "lease-token"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/rail/session-bus/send",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "lease-token"
+    },
+    {
       "path": "/umrs/companion/sessions/{session_id}/rail/settings",
       "methods": [
         "GET"
@@ -651,9 +699,65 @@
       "auth": "lease-token"
     },
     {
+      "path": "/umrs/companion/sessions/{session_id}/rail/subagents/{child_session_id}/events",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "lease-token"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/rail/subagents/{child_session_id}/snapshot",
+      "methods": [
+        "PUT"
+      ],
+      "router": "fastapi.routing",
+      "auth": "lease-token"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/session-bus",
+      "methods": [
+        "DELETE"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/session-bus",
+      "methods": [
+        "PUT"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/session-bus/inbox",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/session-bus/send",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
       "path": "/umrs/companion/sessions/{session_id}/snapshot",
       "methods": [
         "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/companion/sessions/{session_id}/subagent",
+      "methods": [
+        "GET"
       ],
       "router": "fastapi.routing",
       "auth": "verified"
@@ -3549,11 +3653,11 @@
   ],
   "summary": {
     "open(white)": 6,
-    "verified": 263,
+    "verified": 269,
     "edge-auth(nginx)": 140,
     "open(probe)": 1,
     "admin(jwt|verified-admin)": 8,
-    "lease-token": 13,
+    "lease-token": 20,
     "suspect-param": 1,
     "admin-token(x-admin-token)": 6,
     "open(discovery)|verified(s3cfg)": 1,

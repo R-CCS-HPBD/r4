@@ -181,6 +181,12 @@ class TestGenerateMerge:
         assert written["summary"]["edge-auth(nginx)"] == 1
         assert written["summary"]["unknown"] == 1
 
+    def test_concrete_inference_supersedes_unknown_prior(self):
+        rows = [{"path": "/umrs/jobs", "methods": ["GET"], "auth": "verified"}]
+        prior = {"routes": [{"path": "/umrs/jobs", "methods": ["GET"], "auth": "unknown"}]}
+
+        assert route_inventory._merged_rows(rows, prior)[0]["auth"] == "verified"
+
     def test_generate_fresh_ignores_existing_notes(self, tmp_path, synth_inventory):
         out = tmp_path / "base.json"
         self._seed(out)

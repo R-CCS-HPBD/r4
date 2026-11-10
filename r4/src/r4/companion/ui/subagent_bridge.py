@@ -40,17 +40,23 @@ def child_list_filters(params: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
     return kind == "subagent", filters
 
 
-def _child_record(store: Any, session_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
+def _validated_child_record(record: Any, session_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
     if not session_id:
         raise ValueError("subagent session_id is required")
-    record = store.get_session_record(session_id)
     metadata = record.get("metadata") if isinstance(record, dict) else None
     if not isinstance(metadata, dict) or metadata.get("session_kind") != "subagent":
         raise ValueError(f"subagent session not found: {session_id}")
+    if str(record.get("id") or "") != session_id:
+        raise ValueError(f"subagent session identity mismatch: {session_id}")
     required = ("parent_session_id", "parent_agent_id", "agent_id")
     if not all(metadata.get(key) for key in required):
         raise ValueError(f"subagent session has incomplete lineage: {session_id}")
     return record, metadata
+
+
+def _child_record(store: Any, session_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    record = store.get_session_record(session_id) if session_id else None
+    return _validated_child_record(record, session_id)
 
 
 def _declared_tools(metadata: dict[str, Any]) -> list[str] | None:
@@ -87,20 +93,44 @@ def _session_projection(record: dict[str, Any], metadata: dict[str, Any]) -> dic
     }
 
 
-def inspect_subagent_record(store: Any, event_log: Any, params: dict[str, Any]) -> dict[str, Any]:
-    """Read one child snapshot and replay window, with no live-session fallback."""
-    session_id = str(params.get("session_id") or "")
-    record, metadata = _child_record(store, session_id)
-    limit = params.get("limit", 100)
-    after_id = params.get("after_id")
-    window = event_log.page(session_id, after_id=after_id, limit=limit)
+def _inspection_result(
+    record: dict[str, Any],
+    metadata: dict[str, Any],
+    window: dict[str, Any],
+    *,
+    source: str,
+) -> dict[str, Any]:
+    """Project either transport through the same bounded S3 response contract."""
     events = [_clip(row) for row in window.pop("events")]
     return {
         "session": _session_projection(record, metadata),
-        "session_id": session_id,
+        "session_id": str(record["id"]),
         "events": events,
         **window,
         "read_only": True,
         "event_payload_cap": _TEXT_CAP,
         "event_payloads_may_be_abridged": True,
+        "source": source,
+        "remote_available": source == "remote",
+        "remote_reason": "",
     }
+
+
+def inspect_subagent_record(
+    store: Any,
+    event_log: Any,
+    params: dict[str, Any],
+    *,
+    remote_client: Any = None,
+) -> dict[str, Any]:
+    """Read one child locally, or explicitly from UMRS without local fallback."""
+    if params.get("remote"):
+        from ..subagent_remote import inspect_remote_subagent
+
+        return inspect_remote_subagent(remote_client, params)
+    session_id = str(params.get("session_id") or "")
+    record, metadata = _child_record(store, session_id)
+    window = event_log.page(
+        session_id, after_id=params.get("after_id"), limit=params.get("limit", 100)
+    )
+    return _inspection_result(record, metadata, window, source="local")

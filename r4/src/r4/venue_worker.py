@@ -262,10 +262,19 @@ class VenueWorker:
             agent.on_event(self._on_event)
         if self.store is not None and hasattr(self.store, "set_mirror_poster"):
             self.store.set_mirror_poster(self._rail_poster, getattr(session, "client", None))
+        self._attach_subagent_remote(agent)
         # Mirror the user row as soon as a turn starts so the TUI adopts it
         # (F7 hook — same durability window the local bridge covers).
         session._on_turn_started_hook = self._on_turn_started
         self._sync_settings()
+
+    def _attach_subagent_remote(self, agent: Any) -> None:
+        recorder = getattr(agent, "_subagent_sessions", None)
+        if recorder is None or not callable(getattr(self.rail, "put_subagent_snapshot", None)):
+            return
+        from .companion.subagent_remote import VenueSubagentRemote
+
+        recorder.remote = VenueSubagentRemote(self.rail)
 
     def _attach_session_bus(self) -> None:
         """ADR-114 S2.1: explicitly bind this venue's exact durable identity."""

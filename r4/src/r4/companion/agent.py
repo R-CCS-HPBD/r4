@@ -5754,7 +5754,11 @@ class ResearchCompanion:
     def _subagent_event_data(execution: Any, **fields: Any) -> dict[str, Any]:
         if execution is None:
             return fields
-        return cast("dict[str, Any]", execution.event_data(**fields))
+        data = cast("dict[str, Any]", execution.event_data(**fields))
+        if getattr(execution, "remote_degraded", False):
+            data["remote_degraded"] = True
+            data["remote_sync_error"] = execution.remote_sync_error
+        return data
 
     @staticmethod
     def _subagent_status_for_error(error: BaseException) -> str:

@@ -50,6 +50,19 @@ the per-wave detail is kept in the maintainers' development records.
   history. It polls only open non-terminal local children, paginates by durable
   event id, and never calls `load_session` or creates a second writer. Remote
   children report local-only unavailability until S5 rather than fabricated data.
+- **Server-bound remote subagent inspection** (S5, D-70; 2026-11-10,
+  repo-side): venue workers mirror actual child snapshots/events through an
+  explicitly child-aware lease rail, never the parent's generic mirror. UMRS
+  validates root lease/running venue, immediate-parent and nested bindings,
+  revision/source-id replay and payload caps while storing history in the
+  existing snapshot journal. Failed event appends replay in order before clean
+  completion; persistent transport outages retain truthful local execution with
+  visible degraded-sync evidence. Generic snapshots, session-bus writes and new
+  venue workers cannot mutate or adopt a bound child. Authenticated owner
+  inventory and inspection use the S3 lineage/message/replay/redaction contract
+  without local or parent fallback. Local non-mirror behavior remains unchanged.
+  Maintainer live remote acceptance is still open; no deployment or
+  `remote verified` claim is made.
 
 ## [v0.2.0-rc4] — 2026-11-07
 

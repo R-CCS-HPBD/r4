@@ -167,6 +167,9 @@ class InspectSubagentResult:
     read_only: bool = True
     event_payload_cap: int = 8000
     event_payloads_may_be_abridged: bool = True
+    source: Literal["local", "remote"] = "local"
+    remote_available: bool = False
+    remote_reason: str = ""
 
 
 # ── session setters ──────────────────────────────────────────────────────────

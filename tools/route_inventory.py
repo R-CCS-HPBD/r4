@@ -180,6 +180,8 @@ def _merged_rows(rows: list[dict[str, Any]], prior: dict | None) -> list[dict[st
     A bare ``generate`` must not wipe hand-set auth notes (this already
     happened once — the 2026-08 annotation pass was lost on regen). Notes
     follow the (path, methods) key; brand-new routes keep the inferred note.
+    An ``unknown`` placeholder is not a hand-set note: once the handler has a
+    concrete auth dependency/docstring, normal regeneration must accept it.
     """
     if not prior:
         return rows
@@ -190,7 +192,7 @@ def _merged_rows(rows: list[dict[str, Any]], prior: dict | None) -> list[dict[st
     }
     for row in rows:
         key = (row["path"], tuple(row["methods"]))
-        if key in notes:
+        if key in notes and notes[key] != "unknown":
             row["auth"] = notes[key]
     return rows
 

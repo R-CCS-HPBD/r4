@@ -514,10 +514,11 @@ class CompanionSessionStore:
     ) -> None:
         """Write one recorder-owned child row locally, never through the parent rail.
 
-        Ordinary live-session loading and listing refuse these rows until S3/S4
-        expose read-only inspection. The execution's single writer supplies the
-        full message sequence, so an atomic upsert is sufficient without
-        manufacturing a writable ``CompanionSession`` or invoking mirror hooks.
+        Ordinary live-session loading and default listing exclude these rows;
+        S3/S5 use dedicated read-only inspection. The execution's single writer
+        supplies the full message sequence, so an atomic upsert is sufficient
+        without manufacturing a writable ``CompanionSession`` or invoking the
+        generic mirror hooks (S5 attaches its explicit adapter in the recorder).
         """
         required = ("parent_session_id", "parent_agent_id", "agent_id")
         if metadata.get("session_kind") != "subagent" or not all(metadata.get(k) for k in required):

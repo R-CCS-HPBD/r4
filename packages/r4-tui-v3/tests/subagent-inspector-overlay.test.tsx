@@ -64,6 +64,9 @@ function inspection(): InspectSubagentResult {
     read_only: true,
     event_payload_cap: 8000,
     event_payloads_may_be_abridged: true,
+    source: "local",
+    remote_available: false,
+    remote_reason: "",
   };
 }
 

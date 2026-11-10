@@ -105,6 +105,22 @@ class VenueRailClient:
             json={"name": name, "updated_at": updated_at, "payload": payload, "state": state},
         )
 
+    def put_subagent_snapshot(self, child_session_id: str, *, payload: str) -> dict[str, Any]:
+        """Create/advance a server-bound child through this parent's lease rail."""
+        return self._call(
+            "PUT", f"subagents/{child_session_id}/snapshot", json={"payload": payload}
+        )
+
+    def append_subagent_event(
+        self, child_session_id: str, *, source_event_id: int, event: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Append one actual event to the same bound child, never to its parent."""
+        return self._call(
+            "POST",
+            f"subagents/{child_session_id}/events",
+            json={"source_event_id": source_event_id, "event": event},
+        )
+
     def pop_queue(self) -> dict[str, Any] | None:
         """Next queued turn or unnotified ADR-114 session message, else None."""
         result = self._call("POST", "queue/pop", json={})

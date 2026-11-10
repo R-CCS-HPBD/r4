@@ -127,6 +127,28 @@ the ADR-051 spawn budget (`AGENT_JOB_KINDS`). The private sweeper
 (`venue_sweeper`, `session_venue_runtime`, `UMRS_VENUE_SWEEP_*`) is
 retired.
 
+P11. **Subagent history is server-bound inside the existing snapshot journal**
+(S5, 2026-11-10). A venue child is a row in the existing
+`companion_session_snapshots` table, never a child value written onto the parent
+row. The child payload's server-owned `subagent_binding` records root session,
+immediate parent session/backend agent, child backend agent, venue and lease;
+its `subagent_event_log` carries actual redacted event pages. There is no new
+table, session store, scheduler, queue or durable job family. The worker uses
+only P7's lease rail (`PUT …/{root}/rail/subagents/{child}/snapshot`, `POST
+…/events`), never a user JWT or provider key. Every write revalidates the live
+root lease and venue and exact immediate parent; nested parents must already be
+bound to that same root lease. Generic snapshot/queue writes cannot create or
+mutate children. Revision/source-event-id replay, stale-order rules and an
+owner+child row lock protect concurrent snapshot/event transitions. Request
+caps are 4 MiB per snapshot and 64 KiB per event. The authenticated owner reads
+`GET /umrs/companion/sessions/{child}/subagent` with the S3 `after_id`/1–200
+replay contract and sees no lease id. Offline history remains readable;
+offline, unknown, malformed-lineage, cross-user and wrong-lease writes fail by
+name, with no parent or local-record fallback. Local child rows retain their
+ordinary non-mirror default and inspector reads never construct a second live
+writer. The S5 implementation is repo-side only and has no deployment or
+live-venue acceptance claim.
+
 ## Consequences
 
 - **Push cost:** every public source the user wants remotely must be
