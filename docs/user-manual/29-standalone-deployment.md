@@ -12,6 +12,9 @@
 > `r4 endpoint list`, and `umrs info` in `direct` mode. The step in which
 > `register` creates the stack's project was added later on 2026-10-16 and
 > has not yet been run live.
+> **2026-11-13:** new section "Document models (Docling and GLiNER)": both
+> are in the image and on by default; `STANDALONE_DOCMODELS=0` leaves their
+> container out.
 > **Status:** a development and evaluation deployment. Do not put sensitive
 > research data in it yet. Operator reference:
 > [deploy/standalone/README.md](../../deploy/standalone/README.md).
@@ -313,6 +316,60 @@ Widening back to `non_sensitive` needs the typed confirmation
 (`--confirm 'default non_sensitive'`). Only the project's owner (the user
 it was first registered for) or an administrator can change its class.
 `register` names the owner when it is another user.
+
+### Document models (Docling and GLiNER)
+
+*Added 2026-11-13.*
+
+The server image carries the two models the knowledge extraction uses
+([Chapter 27](27-knowledge-management.md#how-documents-are-read-docling-and-gliner)):
+Docling, which reads a PDF's layout and tables, and GLiNER, which marks
+likely entity names as hints. Both are on by default. Building the image
+downloads them once (about 1.4 GB more disk), so the stack needs no
+`docling pull` or `gliner pull` any more; those commands remain for a model
+directory of your own. At run time nothing is downloaded.
+
+The stack runs them in a `umrs-docmodels` container (`./r4-local status`
+lists it), which keeps both models loaded; the `umrs` container hands
+parsing and tagging to it over a network only the two share. While that
+container is starting or down, `umrs` does not load the models itself (they
+would not fit next to the e5 embedder in its 6 GB): the document is read
+with pypdf and without hints. They run on the CPU: expect roughly 20–40 s
+more for a 20-page PDF on a laptop, and a PDF over 80 pages (or a document
+over 64 MiB) is read with pypdf. If a model cannot run, the document is
+still read, without it, and the job notes say why. `umrs-docmodels` runs as
+an unprivileged user, and its healthcheck only asks whether it serves, so
+`up` never waits for or fails on the models loading. An older published
+image has no such service: `up` then starts the stack without it and says
+so (use a newer `UMRS_IMAGE`, or `STANDALONE_BUILD=1`).
+
+Memory: the container holds about 3.4 GB once both models are loaded (more
+while it parses a large PDF). On a podman machine of 8 GB with the chat
+model on your own ollama, that is tight next to the rest of the stack; this
+figure has not been measured on such a machine yet. On a small machine,
+leave the service out with `STANDALONE_DOCMODELS=0` in `env/local.env`
+(`umrs` then runs the models itself, inside its own 6 GB), or switch the
+stages off as below.
+
+Check it:
+
+```bash
+R4_SOURCE=standalone r4 doctor                  # line: knowledge_models (Docling … on, GLiNER on, …)
+R4_SOURCE=standalone r4 doctor --json           # the same, as the "knowledge_models" block
+./standalone.sh exec umrs python -m umrs.knowledge.ingest_models show   # what the server is set to
+```
+
+Turn either off in `env/local.env`, then run `./r4-local up` so both
+containers start again with the new setting (a stage switched off is not
+loaded in `umrs-docmodels` either):
+
+```bash
+UMRS_KNOWLEDGE_DOC_PARSER=pypdf        # PDFs read with pypdf
+UMRS_KNOWLEDGE_GLINER_MODEL=off        # no GLiNER hints
+STANDALONE_DOCMODELS=0                 # no umrs-docmodels container; umrs runs the models
+```
+
+Remove the line to turn the model back on.
 
 ## Limits (2026-10-15)
 

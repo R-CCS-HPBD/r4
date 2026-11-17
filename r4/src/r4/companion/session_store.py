@@ -65,6 +65,23 @@ def computed_state(summary: dict[str, Any]) -> str:
     return str(summary.get("state") or "")
 
 
+def _payload_is_subagent(payload: Any) -> bool:
+    """True for a journal payload whose metadata (object or JSON text) marks a child."""
+    metadata = payload.get("metadata") if isinstance(payload, dict) else None
+    if isinstance(metadata, str):
+        try:
+            metadata = json.loads(metadata)
+        except json.JSONDecodeError:
+            return False
+    return isinstance(metadata, dict) and metadata.get("session_kind") == "subagent"
+
+
+def _refuse_subagent_write(metadata: dict[str, Any], session_id: str) -> None:
+    """Recorder-owned child history is never mutable through ordinary session verbs."""
+    if metadata.get("session_kind") == "subagent":
+        raise ValueError(f"subagent session {session_id} is read-only; use inspect_subagent")
+
+
 # create_session() names every session "Session YYYY-MM-DD HH:MM" — a
 # timestamp placeholder, useless for picking a session out of a list. While
 # the name still matches this pattern it is considered auto-generated and
@@ -370,11 +387,16 @@ def _summary_kind_accepted(is_child: bool, requested: str | None) -> bool:
 
 
 def _summary_lineage_accepted(
-    summary: dict[str, Any], parent_session_id: str | None, agent_id: str | None
+    summary: dict[str, Any],
+    parent_session_id: str | None,
+    agent_id: str | None,
+    subagent_status: str | None = None,
 ) -> bool:
     if parent_session_id and summary["parent_session_id"] != parent_session_id:
         return False
     if agent_id and summary["agent_id"] != agent_id:
+        return False
+    if subagent_status and summary["subagent_status"] != subagent_status:
         return False
     return True
 
@@ -1116,33 +1138,52 @@ class CompanionSessionStore:
     def pull_session(self, client: "Client", session_id: str) -> str:
         """Pull one remote-only session into the local store (plan 2026-09-09 P5).
 
-        Returns: 'pulled' | 'already-local' | 'not-found' | 'unavailable'.
-        Local rows always win: an existing id is never overwritten.
+        Returns: 'pulled' | 'already-local' | 'not-found' | 'subagent' |
+        'unavailable'. Local rows always win: an existing id is never
+        overwritten. A server-bound S5 child is never materialized as an
+        ordinary local row ('subagent'): it is read through inspect_subagent.
         """
         with self._conn() as conn:
             if conn.execute("SELECT 1 FROM sessions WHERE id = ?", (session_id,)).fetchone():
                 return "already-local"
             try:
-                restored = self._restore_snapshot_row(conn, client, session_id)
+                snapshot = self._journal_snapshot(client, session_id)
+                if snapshot is None:
+                    return "not-found"
+                if _payload_is_subagent(snapshot[0]):
+                    return "subagent"
+                self._insert_journal_snapshot(conn, session_id, *snapshot)
             except Exception:  # noqa: BLE001 — journal optional
                 return "unavailable"
-        return "pulled" if restored else "not-found"
+        return "pulled"
 
     def _restore_snapshot_row(self, conn, client: "Client", sid: str) -> int:
         """Insert one absent local row from its snapshot; 0 if present/skipped."""
         if conn.execute("SELECT 1 FROM sessions WHERE id = ?", (sid,)).fetchone():
             return 0
+        snapshot = self._journal_snapshot(client, sid)
+        if snapshot is None or _payload_is_subagent(snapshot[0]):
+            return 0
+        self._insert_journal_snapshot(conn, sid, *snapshot)
+        return 1
+
+    @staticmethod
+    def _journal_snapshot(client: "Client", sid: str) -> tuple[Any, dict[str, Any]] | None:
+        """GET one journal row as (payload, detail); None when absent or unreadable."""
         detail = client.get(f"{journal_prefix(client)}/companion/sessions/{sid}") or {}
         # Absent rows (404-shaped empty dict) never insert an empty shell.
         if str(detail.get("session_id") or "") != sid:
-            return 0
+            return None
         try:
-            payload = json.loads(detail.get("payload") or "{}")
+            return json.loads(detail.get("payload") or "{}"), detail
         except json.JSONDecodeError:
-            return 0
+            return None
+
+    def _insert_journal_snapshot(
+        self, conn: sqlite3.Connection, sid: str, payload: Any, detail: dict[str, Any]
+    ) -> None:
         self._adopt_journal_fields(payload, detail)
         self._insert_snapshot_row(conn, sid, payload, fallback_name=str(detail.get("name") or ""))
-        return 1
 
     @staticmethod
     def _insert_snapshot_row(
@@ -1380,6 +1421,7 @@ class CompanionSessionStore:
         session_kind: str | None = None,
         parent_session_id: str | None = None,
         agent_id: str | None = None,
+        subagent_status: str | None = None,
     ) -> list[dict[str, Any]]:
         """List sessions: pinned first (newest pin first), then most recently updated.
 
@@ -1406,6 +1448,7 @@ class CompanionSessionStore:
                 session_kind=session_kind,
                 parent_session_id=parent_session_id,
                 agent_id=agent_id,
+                subagent_status=subagent_status,
             ):
                 continue
             if venue is not None and summary["venue"] != venue:
@@ -1428,6 +1471,7 @@ class CompanionSessionStore:
         session_kind: str | None = None,
         parent_session_id: str | None = None,
         agent_id: str | None = None,
+        subagent_status: str | None = None,
     ) -> bool:
         """Compose ordinary and opt-in child predicates without constructing a session."""
         return all(
@@ -1436,7 +1480,7 @@ class CompanionSessionStore:
                 include_archived or not summary["archived_at"],
                 not endpoint or cls._matches_endpoint(summary["endpoints"], endpoint),
                 not project or summary["project_id"] == project,
-                _summary_lineage_accepted(summary, parent_session_id, agent_id),
+                _summary_lineage_accepted(summary, parent_session_id, agent_id, subagent_status),
             )
         )
 
@@ -1462,11 +1506,23 @@ class CompanionSessionStore:
             "metadata": metadata,
         }
 
+    def refuse_subagent_session(self, session_id: str) -> None:
+        """Refuse legacy raw-ID rails for a local child; absent remote rows pass through."""
+        record = self.get_session_record(session_id)
+        if record is not None:
+            _refuse_subagent_write(record["metadata"], session_id)
+
     def set_pinned(self, session_id: str, pinned: bool) -> bool:
         """Pin/unpin a session (C2). Store-level op: safe for sessions not
         currently loaded anywhere. Returns True when a row was updated."""
         ts = datetime.now(timezone.utc).isoformat() if pinned else None
         with self._conn() as conn:
+            row = conn.execute(
+                "SELECT metadata FROM sessions WHERE id = ?", (session_id,)
+            ).fetchone()
+            if row is None:
+                return False
+            _refuse_subagent_write(self._decode_json_object(row[0]), session_id)
             cursor = conn.execute(
                 "UPDATE sessions SET pinned_at = ? WHERE id = ?", (ts, session_id)
             )
@@ -1481,10 +1537,11 @@ class CompanionSessionStore:
             raise ValueError("session name cannot be empty")
         with self._conn() as conn:
             row = conn.execute(
-                "SELECT updated_at FROM sessions WHERE id = ?", (session_id,)
+                "SELECT updated_at, metadata FROM sessions WHERE id = ?", (session_id,)
             ).fetchone()
             if row is None:
                 return False
+            _refuse_subagent_write(self._decode_json_object(row[1]), session_id)
             cursor = conn.execute(
                 "UPDATE sessions SET name = ?, updated_at = ? WHERE id = ?",
                 (cleaned[:120], _now_marker(str(row[0] or "")), session_id),
@@ -1493,6 +1550,10 @@ class CompanionSessionStore:
 
     def archive(self, session_id: str) -> bool:
         """Mark a session as archived."""
+        record = self.get_session_record(session_id)
+        if record is None:
+            return False
+        _refuse_subagent_write(record["metadata"], session_id)
         self._catch_up_with_journal(session_id)
         record = self.get_session_record(session_id)
         if record is None:
@@ -1626,7 +1687,9 @@ class CompanionSessionStore:
                 metadata_json,
                 model,
             ) = row
-            metadata = _local_fork_metadata(json.loads(metadata_json))
+            metadata = json.loads(metadata_json)
+            _refuse_subagent_write(metadata, session_id)
+            metadata = _local_fork_metadata(metadata)
             metadata["forked_from"] = session_id
             if from_turn:
                 sliced = _slice_messages_to_turn(json.loads(messages), from_turn)
@@ -1687,37 +1750,46 @@ class CompanionSessionStore:
             if row is None:
                 return None
             metadata = self._decode_json_object(row[0])
-            mirrored = (
-                bool(metadata.get("_mirror_marker"))
-                or str(metadata.get("venue") or "") in {"frontend"}
-                or str(metadata.get("venue") or "").startswith("cluster:")
-            )
-            outcome = "deleted"
-            if mirrored:
-                deleter = getattr(client, "delete", None) if client is not None else None
-                ok = False
-                if deleter is not None:
-                    try:
-                        self._delete_journal_row(client, session_id)
-                        ok = True
-                    except Exception:  # noqa: BLE001 — journal optional
-                        ok = False
-                if not ok:
-                    outcome = "mirror-pending"
-                    self._sync_errors += 1
-                    self._last_sync = {
-                        "mode": "degraded",
-                        "error": f"mirror delete pending for {session_id}",
-                    }
-                    conn.execute(
-                        (
-                            "INSERT OR REPLACE INTO session_delete_tombstones"
-                            " (session_id, deleted_at, retries) VALUES (?, ?, 0)"
-                        ),
-                        (session_id, datetime.now(timezone.utc).isoformat()),
-                    )
+            _refuse_subagent_write(metadata, session_id)
+            outcome = self._delete_session_journal_row(conn, session_id, client, metadata)
             cursor = conn.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
             return outcome if cursor.rowcount > 0 else None
+
+    def _delete_session_journal_row(
+        self,
+        conn: sqlite3.Connection,
+        session_id: str,
+        client: "Client | None",
+        metadata: dict[str, Any],
+    ) -> str:
+        """Delete a mirrored row or leave its retry tombstone in this transaction."""
+        mirrored = (
+            bool(metadata.get("_mirror_marker"))
+            or str(metadata.get("venue") or "") in {"frontend"}
+            or str(metadata.get("venue") or "").startswith("cluster:")
+        )
+        if not mirrored:
+            return "deleted"
+        deleter = getattr(client, "delete", None) if client is not None else None
+        if deleter is not None:
+            try:
+                self._delete_journal_row(client, session_id)
+                return "deleted"
+            except Exception:  # noqa: BLE001 — journal optional
+                pass
+        self._sync_errors += 1
+        self._last_sync = {
+            "mode": "degraded",
+            "error": f"mirror delete pending for {session_id}",
+        }
+        conn.execute(
+            (
+                "INSERT OR REPLACE INTO session_delete_tombstones"
+                " (session_id, deleted_at, retries) VALUES (?, ?, 0)"
+            ),
+            (session_id, datetime.now(timezone.utc).isoformat()),
+        )
+        return "mirror-pending"
 
     # -- delete tombstones (mirror-pending retention) ------------------------
 
@@ -1883,6 +1955,9 @@ class CompanionSessionStore:
             "parent_agent_id": _metadata_text(metadata, "parent_agent_id"),
             "agent_id": _metadata_text(metadata, "agent_id"),
             "subagent_status": _metadata_text(metadata, "subagent_status"),
+            "execution_kind": _metadata_text(metadata, "execution_kind"),
+            "started_at": _metadata_text(metadata, "started_at"),
+            "ended_at": _metadata_text(metadata, "ended_at"),
         }
 
     @staticmethod
@@ -1956,6 +2031,10 @@ class CompanionSessionStore:
         False when no row exists.
         """
         validate_storable_state(state)
+        record = self.get_session_record(session_id)
+        if record is None:
+            return False
+        _refuse_subagent_write(record["metadata"], session_id)
         self._catch_up_with_journal(session_id)
         with self._conn() as conn:
             row = conn.execute(

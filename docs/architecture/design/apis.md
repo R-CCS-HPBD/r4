@@ -65,8 +65,8 @@ which always adds `X-Forwarded-For`) and "direct" (the converge's probe on
 | `/gw/ops/ping`, `/gw/ops/connect-info`, `/gw/ops/` | client discovery (connect-info also carries the `s3cfg`, D-16) |
 | `/gw/zmq/`, `/umrs/zmq/` (raw passthrough) | session-CURVE bootstrap; marked `X-API-Lane: internal`, `Deprecation: true` |
 | `/gw/files/upload` | `/umrs/files/upload`, `client_max_body_size 0` |
-| `/gw/files/download/` | `/umrs/files/download/`, served through `/internal/files/` or `/internal/s3/` (X-Accel, presigned URL never exposed) |
-| `/gw/stream/`, `/gw/web/dashboard/`, `/gw/egress/` | streaming, web dashboard, egress-audit sink |
+| `/gw/files/download/` | `/umrs/files/download/`, streamed by UMRS; `GET`/`HEAD`, one `Range` → 206, unsatisfiable → 416, `If-Range`, `?disposition=inline` for the media allowlist (ADR-115 D-1); presigned URL never exposed. 2026-11-13: this row said `/internal/s3/` X-Accel, gone since 2026-08-26; `/gw/stream/` and `/internal/s3/` are removed |
+| `/gw/web/dashboard/`, `/gw/egress/` | web dashboard, egress-audit sink |
 | `/gw/v1/(endpoints|models|llm)`, `/gw/v1beta/(knowledge|k2|loops|research)` | lane-prefixed aliases; bare `/gw/v1/`, `/gw/v1beta/` return 404 |
 
 The public README does not link its shields to `/status/models.json` (ADR-106

@@ -169,6 +169,9 @@
         "read_only": {
           "type": "boolean"
         },
+        "resumable": {
+          "type": "boolean"
+        },
         "event_payload_cap": {
           "type": "integer"
         },
@@ -198,6 +201,7 @@
         "total_events",
         "limit",
         "read_only",
+        "resumable",
         "event_payload_cap",
         "event_payloads_may_be_abridged",
         "source",

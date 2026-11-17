@@ -26,17 +26,18 @@ def child_list_filters(params: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
     kind = _param_text(params, "session_kind")
     parent_id = _param_text(params, "parent_session_id")
     agent_id = _param_text(params, "agent_id")
+    status = _param_text(params, "subagent_status")
     if kind not in ("", "subagent"):
         raise ValueError("session_kind must be 'subagent' when supplied")
-    if kind != "subagent" and (parent_id or agent_id):
+    if kind != "subagent" and any((parent_id, agent_id, status)):
         raise ValueError("child lineage filters require session_kind='subagent'")
-    filters: dict[str, Any] = {}
-    if kind:
-        filters["session_kind"] = kind
-    if parent_id:
-        filters["parent_session_id"] = parent_id
-    if agent_id:
-        filters["agent_id"] = agent_id
+    requested = {
+        "session_kind": kind,
+        "parent_session_id": parent_id,
+        "agent_id": agent_id,
+        "subagent_status": status,
+    }
+    filters = {key: value for key, value in requested.items() if value}
     return kind == "subagent", filters
 
 
@@ -108,6 +109,7 @@ def _inspection_result(
         "events": events,
         **window,
         "read_only": True,
+        "resumable": False,
         "event_payload_cap": _TEXT_CAP,
         "event_payloads_may_be_abridged": True,
         "source": source,

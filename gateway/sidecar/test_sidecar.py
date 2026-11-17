@@ -23,7 +23,6 @@ from main import (  # noqa: E402
     DEFAULT_DEV_JWT_SECRET,
     app,
     validate_auth_config,
-    validate_download_key,
 )
 from main import (  # noqa: E402
     JWT_SECRET as SIDE_JWT_SECRET,
@@ -317,127 +316,18 @@ def test_sidecar_allows_explicit_local_dev_secret_on_loopback():
     )
 
 
-def test_validate_download_key_allows_project_scoped_key():
-    assert validate_download_key("proj-1/reports/a.pdf", "proj-1") == "proj-1/reports/a.pdf"
-
-
-def test_validate_download_key_rejects_cross_project_key():
-    with pytest.raises(Exception) as exc_info:
-        validate_download_key("proj-2/reports/a.pdf", "proj-1")
-
-    assert exc_info.value.status_code == 403
-
-
-def test_validate_download_key_rejects_traversal():
-    with pytest.raises(Exception) as exc_info:
-        validate_download_key("proj-1/../secret.txt", "proj-1")
-
-    assert exc_info.value.status_code == 400
-
-
-def test_validate_download_success(monkeypatch):
-    calls = []
-
-    async def fake_authorize_download_with_umrs(key: str, claims: dict) -> str:
-        calls.append({"key": key, "claims": dict(claims)})
-        return "http://minio/r4-data/proj-1/reports/a.pdf?signature=ok"
-
-    monkeypatch.setattr(
-        sidecar_main,
-        "authorize_download_with_umrs",
-        fake_authorize_download_with_umrs,
-    )
+def test_validate_download_presign_route_is_gone():
+    """ADR-115 D-1 (2026-11-13): the unreferenced /validate-download route
+    (UMRS presign, then X-Accel-Redirect to /internal/s3/) is removed;
+    downloads stream through UMRS on /gw/files/download/ with Range."""
     token = _make_token({"sub": "user-1", "project_id": "proj-1"})
     resp = client.get(
         "/validate-download/proj-1/reports/a.pdf",
         headers={"Authorization": f"Bearer {token}"},
     )
-
-    assert resp.status_code == 200
-    assert resp.headers["x-accel-redirect"].startswith("/internal/s3/?url=")
-    assert resp.headers["content-disposition"] == 'attachment; filename="a.pdf"'
-    assert len(calls) == 1
-    captured = calls[0]
-    assert captured["key"] == "proj-1/reports/a.pdf"
-    exp = captured["claims"].pop("exp")
-    assert isinstance(exp, int) and exp > time.time()
-    assert captured["claims"] == {
-        "user_id": "user-1",
-        "project_id": "proj-1",
-        "email": "",
-        "roles": [],
-        "project_memberships": [],
-    }
-
-
-def test_validate_download_denies_umrs_acl_failure(monkeypatch):
-    async def fake_authorize_download_with_umrs(key: str, claims: dict) -> str:
-        raise sidecar_main.HTTPException(status_code=403, detail="denied by UMRS")
-
-    monkeypatch.setattr(
-        sidecar_main,
-        "authorize_download_with_umrs",
-        fake_authorize_download_with_umrs,
-    )
-    token = _make_token({"sub": "user-1", "project_id": "proj-1"})
-    resp = client.get(
-        "/validate-download/proj-1/reports/a.pdf",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-
-    assert resp.status_code == 403
-    assert resp.json()["detail"] == "denied by UMRS"
-
-
-def test_authorize_download_with_umrs_forwards_verified_context(monkeypatch):
-    calls = []
-
-    class FakeAsyncClient:
-        def __init__(self, timeout: float):
-            self.timeout = timeout
-
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, exc_type, exc, traceback):
-            return None
-
-        async def post(self, url: str, json: dict, headers: dict):
-            calls.append({"url": url, "json": dict(json), "headers": dict(headers)})
-            return httpx.Response(
-                200,
-                json={
-                    "key": "proj-1/reports/a.pdf",
-                    "url": "http://minio/r4-data/proj-1/reports/a.pdf?signature=ok",
-                },
-            )
-
-    monkeypatch.setattr(sidecar_main.httpx, "AsyncClient", FakeAsyncClient)
-
-    import asyncio
-
-    presigned_url = asyncio.run(
-        sidecar_main.authorize_download_with_umrs(
-            "proj-1/reports/a.pdf",
-            {"project_id": "proj-1"},
-        )
-    )
-
-    assert presigned_url == "http://minio/r4-data/proj-1/reports/a.pdf?signature=ok"
-    assert calls[0]["url"].endswith("/umrs/files/presign")
-    assert calls[0]["json"]["operation"] == "download"
-    assert calls[0]["json"]["key"] == "proj-1/reports/a.pdf"
-    assert calls[0]["headers"]["X-Verified-Project-ID"] == "proj-1"
-
-
-def test_validate_download_rejects_cross_project_path():
-    token = _make_token({"sub": "user-1", "project_id": "proj-1"})
-    resp = client.get(
-        "/validate-download/proj-2/reports/a.pdf",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-
-    assert resp.status_code == 403
+    assert resp.status_code == 404
+    assert "x-accel-redirect" not in resp.headers
+    assert not hasattr(sidecar_main, "authorize_download_with_umrs")
 
 
 # ── H-1 memberships lane (2026-10-18): the memberships list is signed ───────
@@ -906,7 +796,9 @@ def test_validate_optional_and_download_refuse_a_disabled_account(
     optional = _ask(path="/validate-optional")
     assert optional.status_code == 200
     assert "x-user-id" not in optional.headers  # anonymous upstream
-    download = _ask(path="/validate-download/default/out.txt")
+    # 2026-11-13: /validate-download was removed (ADR-115 D-1); downloads go
+    # through /validate like every other /gw route.
+    download = _ask(path="/validate")
     assert download.status_code == 403
     assert download.headers["x-auth-error"] == "account_disabled"
 

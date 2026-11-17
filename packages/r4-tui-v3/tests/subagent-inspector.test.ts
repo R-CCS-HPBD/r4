@@ -93,6 +93,7 @@ function inspection(sessionId: string, agentId: string, status = "completed"): I
     total_events: 2,
     limit: 100,
     read_only: true,
+    resumable: false,
     event_payload_cap: 8000,
     event_payloads_may_be_abridged: true,
     source: "local",

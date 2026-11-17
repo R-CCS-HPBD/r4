@@ -27,7 +27,11 @@ COPY r4/docker/requirements.lock.txt /build/requirements.lock.txt
 RUN pip install --no-cache-dir --no-deps -r /build/requirements.lock.txt
 
 # -- The unpublished siblings r4 depends on (registry-free), no deps --
-#    r4-contracts (stdlib-only) → r4-teamengine-spi (ADR-020 SPI) → science.
+#    umrs-protocol (stdlib-only, from the umrs submodule; U2.0, ADR-117 D-2)
+#    → r4-contracts (stdlib-only) → r4-teamengine-spi (ADR-020 SPI) → science.
+COPY umrs/protocol/pyproject.toml umrs/protocol/README.md umrs/protocol/LICENSE /build/umrs-protocol/
+COPY umrs/protocol/src/ /build/umrs-protocol/src/
+RUN pip install --no-cache-dir --no-deps /build/umrs-protocol
 COPY r4-contracts/pyproject.toml r4-contracts/README.md /build/r4-contracts/
 COPY r4-contracts/src/ /build/r4-contracts/src/
 RUN pip install --no-cache-dir --no-deps /build/r4-contracts
@@ -48,6 +52,11 @@ COPY umrs/src/umrs/ /build/umrs/umrs/
 COPY umrs/src/client_umrs.py /build/umrs/
 RUN pip install --no-cache-dir --no-deps /build/umrs \
     && pip check
+
+# -- One gate (U2.0b, ADR-117 D-2): pip check above proves the r4-contracts,
+#    r4 and umrs -> umrs-protocol edges; this proves r4_contracts.hpc_gate IS
+#    the umrs_protocol module (the alias shim), so the image ships one gate. --
+RUN python -c "import r4_contracts.hpc_gate as g, umrs_protocol.hpc_gate as p; assert g is p"
 
 # ============================================================
 # Stage 2 — runtime

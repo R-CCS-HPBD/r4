@@ -59,7 +59,6 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://r4:r4-dev@postgres:5
 
 # UMRS authorization
 UMRS_BASE_URL = os.environ.get("UMRS_BASE_URL", "http://umrs:8000").rstrip("/")
-UMRS_DOWNLOAD_ACL_TIMEOUT_SEC = float(os.environ.get("UMRS_DOWNLOAD_ACL_TIMEOUT_SEC", "5"))
 # ADR-097: which project a request acts in is decided here, per request,
 # against the user's live memberships (UMRS GET /umrs/projects). token =
 # the token's project only (pre-ADR-097); live = the client may select any
@@ -605,24 +604,14 @@ def generate_presigned_url(
     return f"{S3_ENDPOINT}/{bucket}/{quote(key)}?{params}"
 
 
-def validate_download_key(path: str, project_id: str) -> str:
-    """Return a safe project-scoped S3 key for a download request."""
-    key = path.strip("/")
-    if not key:
-        raise HTTPException(status_code=400, detail="Missing file key")
-    if ".." in key.split("/"):
-        raise HTTPException(status_code=400, detail="Invalid file key")
-    if not key.startswith(f"{project_id}/"):
-        raise HTTPException(status_code=403, detail="File is outside caller project")
-    return key
-
-
 def _sign_identity_hmac(secret: str, user_id: str, project_id: str, is_admin: bool) -> str:
     """Sign the identity tuple. KEEP IN SYNC with
-    r4_contracts.handshake_hmac.sign_claims — the canonical tuple format is
-    contract-defined; the sidecar image does not package r4-contracts (narrow
-    ansible build context), so it carries this stdlib-only twin. Guarded by
-    umrs/tests/test_sidecar_sign_parity.
+    umrs_protocol.handshake_hmac.sign_claims (r4_contracts.handshake_hmac is
+    its alias since U2.0b) — the canonical tuple format is contract-defined;
+    the sidecar image does not package r4-contracts (narrow ansible build
+    context), so it carries this stdlib-only twin. Guarded by
+    umrs/tests/test_sidecar_sign_parity and the golden vectors in
+    tests/test_umrs_protocol_golden.py.
     """
     import hashlib
     import hmac
@@ -633,8 +622,8 @@ def _sign_identity_hmac(secret: str, user_id: str, project_id: str, is_admin: bo
 
 def _sign_workflow_author_hmac(secret: str, user_id: str, project_id: str, author: bool) -> str:
     """ADR-027 wf-claim signature on its OWN basis — KEEP IN SYNC with
-    r4_contracts.handshake_hmac.sign_workflow_author_claim (same twin
-    arrangement as the identity signer; same parity test)."""
+    umrs_protocol.handshake_hmac.sign_workflow_author_claim (same twin
+    arrangement as the identity signer; same parity tests)."""
     import hashlib
     import hmac
 
@@ -646,8 +635,9 @@ def _sign_memberships_hmac(
     secret: str, user_id: str, project_id: str, is_admin: bool, memberships: list[str]
 ) -> str:
     """H-1 (2026-10-18) memberships signature on its OWN basis — KEEP IN SYNC
-    with r4_contracts.handshake_hmac.sign_memberships (same twin arrangement;
-    parity: umrs/tests/test_h1r_memberships_sign_parity.py). The canonical
+    with umrs_protocol.handshake_hmac.sign_memberships (same twin arrangement;
+    parity: umrs/tests/test_h1r_memberships_sign_parity.py and
+    tests/test_umrs_protocol_golden.py). The canonical
     list is comma-split, trimmed, deduplicated and sorted."""
     import hashlib
     import hmac
@@ -701,70 +691,6 @@ def _verified_project_headers(claims: dict) -> dict[str, str]:
     if secret:
         headers.update(_signed_headers(secret, user_id, project_id, is_admin, claims))
     return headers
-
-
-def _raise_for_umrs_presign_status(response: httpx.Response) -> None:
-    if response.status_code in {401, 403, 404}:
-        raise HTTPException(status_code=response.status_code, detail=_umrs_error_detail(response))
-    if response.status_code >= 400:
-        raise HTTPException(status_code=502, detail=_umrs_error_detail(response))
-
-
-def _presigned_url_from_umrs_response(response: httpx.Response, key: str) -> str:
-    _raise_for_umrs_presign_status(response)
-    try:
-        data = response.json()
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=502, detail="UMRS download ACL returned invalid JSON"
-        ) from exc
-
-    authorized_key = data.get("key")
-    if authorized_key != key:
-        raise HTTPException(status_code=502, detail="UMRS download ACL returned mismatched key")
-
-    presigned_url = data.get("url")
-    if not isinstance(presigned_url, str) or not presigned_url:
-        raise HTTPException(status_code=502, detail="UMRS download ACL returned no presigned URL")
-    return presigned_url
-
-
-async def authorize_download_with_umrs(key: str, claims: dict) -> str:
-    """Ask UMRS to authorize and presign a project-scoped download key."""
-    payload = {
-        "operation": "download",
-        "key": key,
-        "bucket": S3_BUCKET,
-        "ttl_sec": PRESIGNED_TTL_SECONDS,
-    }
-    url = f"{UMRS_BASE_URL}/umrs/files/presign"
-    try:
-        async with httpx.AsyncClient(timeout=UMRS_DOWNLOAD_ACL_TIMEOUT_SEC) as client:
-            response = await client.post(
-                url,
-                json=payload,
-                headers=_verified_project_headers(claims),
-            )
-    except httpx.TimeoutException as exc:
-        logger.warning("UMRS download ACL timed out for key %s", key)
-        raise HTTPException(status_code=503, detail="UMRS download ACL timed out") from exc
-    except httpx.RequestError as exc:
-        logger.warning("UMRS download ACL unavailable for key %s: %s", key, exc)
-        raise HTTPException(status_code=503, detail="UMRS download ACL unavailable") from exc
-
-    return _presigned_url_from_umrs_response(response, key)
-
-
-def _umrs_error_detail(response: httpx.Response) -> str:
-    try:
-        data = response.json()
-    except ValueError:
-        return response.text or "UMRS download ACL denied request"
-    if isinstance(data, dict):
-        detail = data.get("detail")
-        if isinstance(detail, str):
-            return detail
-    return "UMRS download ACL denied request"
 
 
 # =============================================================================
@@ -1097,46 +1023,10 @@ async def validate_optional(
     return response
 
 
-@app.get("/validate-download/{path:path}")
-async def validate_download(
-    path: str,
-    request: Request,
-    x_original_uri: str | None = Header(None),
-    authorization: str | None = Header(None),
-    x_requested_project_id: str | None = Header(None),
-):
-    """
-    Validate download request and return X-Accel-Redirect.
-
-    Returns headers for NGINX to serve the file.
-    """
-    token = extract_token(authorization)
-
-    if not token:
-        raise HTTPException(status_code=401, detail="Missing authorization")
-
-    claims = await resolve_request_project(validate_jwt(token), x_requested_project_id)
-    key = validate_download_key(path, claims["project_id"])
-
-    presigned_url = await authorize_download_with_umrs(key, claims)
-
-    # Log download
-    await log_audit(
-        AuditEntry(
-            client_ip=request.client.host if request.client else "unknown",
-            method="GET",
-            path=f"/gw/files/download/{key}",
-            user_id=claims["user_id"],
-            action="file_download",
-            resource_id=key,
-        )
-    )
-
-    # Return X-Accel-Redirect for NGINX
-    response = Response(status_code=200)
-    response.headers["X-Accel-Redirect"] = f"/internal/s3/?url={quote(presigned_url)}"
-    response.headers["Content-Disposition"] = f'attachment; filename="{os.path.basename(path)}"'
-    return response
+# 2026-11-13 (ADR-115 D-1): GET /validate-download/{path} (presign through
+# UMRS, then X-Accel-Redirect to nginx /internal/s3/) is removed. No nginx
+# location called it since c0ddc7cb (2026-08-26); downloads stream through
+# /gw/files/download/ -> UMRS with Range support, never a presigned URL.
 
 
 @app.get("/audit")

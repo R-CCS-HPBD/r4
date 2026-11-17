@@ -114,3 +114,7 @@ gate switches on green. Permanent exemptions are forbidden by CONSTITUTION §8.
 
 - [ADR-053](053-umrs-import-discipline.md)
 - structure-hardening-plan-2026-09-14.md
+
+## Rollout-status (2026-11-13, ADR-117)
+
+Amended by [ADR-117](117-umrs-one-branch-protocol-extension-own-cicd.md) D-7. The umrs changed-files gate (lint and complexity ratchets with `tools/*_umrs.json`) moves into UMRS-org/umrs CI (wave U4). Until then `scripts/ci-lint-local.sh --umrs-changed` stays the gate.

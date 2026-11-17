@@ -90,6 +90,19 @@ reaches the client (constitution §2).
   consulted by run resolution; each colleague uploads their own copy);
   personal buckets on ADR-077 bound stores; deleting buckets; a CLI flag for
   `scope=system`.
+- *Amended 2026-11-13 by [ADR-115](115-project-media-browser.md) D-3
+  (O-3 accepted: follow the runner).* Personal buckets on bound stores are
+  now in scope. One resolver, `resolve_bucket_store`
+  (`umrs/src/umrs/shared/storage/project_storage.py`), picks the store for
+  a bucket from the caller's project: a project with an ADR-077 binding
+  uses its bound store, any other project the server's own. The workflow
+  runner, the owned-bucket download, list and upload routes and
+  `POST /umrs/buckets` all call it, so in a bound project the pair is
+  created where the runner reads and writes it. An unreadable binding
+  answers 503 and never falls back to the default store. Consequence: a
+  bucket is resolved per request project, so a personal bucket made on the
+  default store is not visible from a bound project (it never was to that
+  project's runs either).
 
 ## Alternatives Considered
 

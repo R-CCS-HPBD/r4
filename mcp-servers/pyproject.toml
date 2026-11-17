@@ -51,7 +51,9 @@ sse = [
 ]
 # `all` is what the container image installs. It must stay buildable from the
 # repository checkout alone: only published packages plus the unpublished
-# `r4-contracts` sibling (installed first by mcp-servers/Dockerfile). The
+# `r4-contracts` sibling and the `umrs-protocol` it depends on (U2.0b,
+# ADR-117 D-2; umrs/protocol, PyPI holds only a 0.0.0 name reservation), both
+# installed first, in one resolve, by mcp-servers/Dockerfile. The
 # former `project-research` extra pulled the `r4` SDK for tools WP-07 retired;
 # PyPI's `r4` 0.0.x is an unrelated package, so that extra broke every image
 # build (ADR-045 D3, 2026-09-07).

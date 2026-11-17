@@ -105,19 +105,18 @@ V1BETA_LANE_REGEX = "~ ^/gw/v1beta/(knowledge|k2|loops|research)(/.*)?$"
 LANE_GUARDS: set[str] = {"/gw/v1/", "/gw/v1beta/"}
 
 # Dynamic proxy_pass is a containment risk; it is pinned to exactly these
-# blocks (dynamic S3 presigned fetch stays internal; stream URLs are
-# sidecar-issued per request).
-DYNAMIC_PROXY_PASS: dict[str, str] = {
-    "/internal/s3/": "$arg_url",
-    "/gw/stream/": "$upstream_url",
-}
+# blocks. 2026-11-13 (ADR-115 D-1): none are left. /internal/s3/ ($arg_url,
+# the X-Accel target of the removed sidecar /validate-download presign chain)
+# and /gw/stream/ ($upstream_url, set by nothing) were removed; media streams
+# through UMRS on /gw/files/download/ with Range.
+DYNAMIC_PROXY_PASS: dict[str, str] = {}
 
 # SSE lanes (long-lived streams; buffering + cache must stay off).
 SSE_LANES: set[str] = {"/gw/llm/", "/gw/chat/", "/gw/companion/"}
 
 # Internal locations must never answer external requests or run the auth
 # sidecar (they exist only as X-Accel/presigned targets).
-INTERNAL_LOCATIONS: set[str] = {"/internal/files/", "/internal/s3/"}
+INTERNAL_LOCATIONS: set[str] = {"/internal/files/"}  # /internal/s3/ gone 2026-11-13
 
 
 def _location_blocks() -> dict[str, str]:

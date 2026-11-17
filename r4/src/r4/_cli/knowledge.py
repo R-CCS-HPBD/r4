@@ -14,6 +14,8 @@ Subtree::
     ├── validate <bundle>  Validate bundle integrity
     ├── delete <artifact>  Delete an artifact and everything derived (MD-16)
     ├── review [action]    Review proposed knowledge (K1.5; see knowledge_review)
+    ├── ontology [action]  Register/list/show/retire ontologies (ADR-116; knowledge_ontology)
+    ├── graph-bind         Bind a graph to an ontology (ADR-116; knowledge_ontology)
     └── allowlist          Web sites URL/repo ingest may fetch (knowledge_allowlist)
 """
 
@@ -38,6 +40,14 @@ from ._helpers import _current_project_id
 from .base import CommandHandler
 from .knowledge_allowlist import handle_allowlist, register_allowlist
 from .knowledge_ls import handle_ls, register_ls
+from .knowledge_ontology import (
+    handle_graph_bind,
+    handle_ontology,
+    parse_coordinate,
+    register_graph_bind,
+    register_ontology,
+    run_guarded,
+)
 from .knowledge_review import handle_review, register_review
 from .registry import command
 
@@ -414,7 +424,9 @@ class KnowledgeCommand(CommandHandler):
                 "  r4 knowledge bundles\n"
                 "  r4 knowledge info my-project.kb\n"
                 "  r4 knowledge validate my-project.kb\n"
-                "  r4 knowledge delete art-0123abcd -p my-project"
+                "  r4 knowledge delete art-0123abcd -p my-project\n"
+                "  r4 knowledge ontology register lab.yaml\n"
+                "  r4 knowledge graph-bind lab-graph lab-ontology@1"
             ),
             formatter_class=argparse.RawDescriptionHelpFormatter,
         )
@@ -642,6 +654,12 @@ class KnowledgeCommand(CommandHandler):
             help="Optionally associate with a project",
         )
         p_gcreate.add_argument("--kind", "-k", default="research")
+        p_gcreate.add_argument(
+            "--ontology",
+            metavar="ID[@VERSION]",
+            default=None,
+            help="Bind the new graph to a registered ontology (default version: newest live)",
+        )
         p_gcreate.add_argument("--json", "-j", action="store_true", dest="as_json")
 
         p_garchive = sub.add_parser(
@@ -824,6 +842,9 @@ class KnowledgeCommand(CommandHandler):
         register_review(sub)
         # ---- allowlist: web sites URL/repo ingest may fetch (2026-10-25) ----
         register_allowlist(sub)
+        # ---- ontologies (ADR-116 D-5) -----------------------------------------
+        register_ontology(sub)
+        register_graph_bind(sub)
 
         return parser
 
@@ -831,6 +852,8 @@ class KnowledgeCommand(CommandHandler):
         handlers = {
             "review": handle_review,
             "allowlist": handle_allowlist,
+            "ontology": handle_ontology,
+            "graph-bind": handle_graph_bind,
             "ls": handle_ls,
             "export": self._handle_export,
             "import": self._handle_import,
@@ -1099,27 +1122,40 @@ class KnowledgeCommand(CommandHandler):
         return 0
 
     def _handle_graph_create(self, args: argparse.Namespace) -> int:
-        """Create a named knowledge graph."""
-        from ..client import Client
-
+        """Create a named knowledge graph, optionally bound to an ontology."""
+        if getattr(args, "ontology", None):
+            return run_guarded(args, self._create_graph, ontology_route=False)
         try:
-            graph = Client().knowledge.graph_create(
-                args.name,
-                description=args.description,
-                project_id=args.project_id,
-                kind=args.kind,
-            )
+            return self._create_graph(args)
         except Exception as exc:
             print(f"✗ Graph creation failed: {exc}", file=sys.stderr)
             logger.debug("knowledge graph-create failed", exc_info=True)
             return 1
+
+    def _create_graph(self, args: argparse.Namespace) -> int:
+        """``graph-create`` body; ``--ontology ID[@VERSION]`` sends both fields."""
+        from ..client import Client
+
+        ontology_id, version = None, None
+        if getattr(args, "ontology", None):
+            ontology_id, version = parse_coordinate(args.ontology)
+        graph = Client().knowledge.graph_create(
+            args.name,
+            description=args.description,
+            project_id=args.project_id,
+            kind=args.kind,
+            ontology_id=ontology_id,
+            ontology_version=version,
+        )
         if args.as_json:
             _print_json(graph)
-        else:
-            print(
-                f"✓ Graph created: {graph['graph_id']}  {graph.get('name', '')} "
-                f"[{graph.get('kind', '')}]"
-            )
+            return 0
+        print(
+            f"✓ Graph created: {graph['graph_id']}  {graph.get('name', '')} "
+            f"[{graph.get('kind', '')}]"
+        )
+        if graph.get("ontology_id"):
+            print(f"  ontology: {graph['ontology_id']}@{graph.get('ontology_version') or '?'}")
         return 0
 
     def _handle_graph_archive(self, args: argparse.Namespace) -> int:

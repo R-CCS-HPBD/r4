@@ -179,8 +179,8 @@ vs design**. Package-level import rules are in
 
 ## 5. The edge today (`gateway/`) — not a design component
 
-- **Purpose:** the NGINX + auth-sidecar edge: JWT validation on every `/gw/*` route, rate limits, X-Accel downloads, session-CURVE bootstrap, audit.
-- **Key modules:** `gateway/nginx/` (`nginx.conf` rate zones `llm_limit` 10 r/s, `upload_limit` 5 r/s, `general_limit` 50 r/s; `conf.d/server.conf` route table), `gateway/sidecar/main.py` (`/validate`, `/validate-optional`, `/validate-download/{path}`, `/audit`, `/health`, `/ready-aggregate`, `/auth/cli-callback`, `/auth/web-login`; HS256 and JWKS/RS256; `gateway_audit_log`), `sidecar/saml_sp.py`, `sidecar/otel.py`, `gateway/k8s/`, `gateway/tests/`.
+- **Purpose:** the NGINX + auth-sidecar edge: JWT validation on every `/gw/*` route, rate limits, UMRS-streamed downloads (ranged, ADR-115 D-1), session-CURVE bootstrap, audit. (2026-11-13: said "X-Accel downloads" and listed the sidecar `/validate-download/{path}`; both removed in ADR-115 S1.)
+- **Key modules:** `gateway/nginx/` (`nginx.conf` rate zones `llm_limit` 10 r/s, `upload_limit` 5 r/s, `general_limit` 50 r/s; `conf.d/server.conf` route table), `gateway/sidecar/main.py` (`/validate`, `/validate-optional`, `/audit`, `/health`, `/ready-aggregate`, `/auth/cli-callback`, `/auth/web-login`; HS256 and JWKS/RS256; `gateway_audit_log`), `sidecar/saml_sp.py`, `sidecar/otel.py`, `gateway/k8s/`, `gateway/tests/`.
 - **Boundary:** stateless proxy/policy layer only; imports neither `umrs` nor `r4` (CONSTITUTION §1.5).
 - **Status:** UMRS's edge process by ADR-059 (2026-10-18: said "contradicts the design's single gateway (D-02); its future is decision D-01/D-02" — D-02 Implemented by design amendment 2026-09-22). `gateway/gateway/` holds only `__pycache__` — the Python gateway is gone (ADR-014).
 

@@ -12,6 +12,18 @@ def test_repo_is_clean_against_itself():
     assert findings == [], "\n".join(f.format() for f in findings)
 
 
+def test_a_checkout_under_a_dot_dir_is_still_scanned(tmp_path):
+    """2026-11-14: agent worktrees live under ``.claude/worktrees/``; only
+    hidden parts inside the repo are skipped, never the checkout's own path."""
+    repo = tmp_path / ".claude" / "worktrees" / "w"
+    spec_load = "import importlib.util\nimportlib.util.spec_from_file_location('m', 'm.py')\n"
+    (repo / "tests").mkdir(parents=True)
+    (repo / "tests" / "test_x.py").write_text(spec_load)
+    (repo / "tests" / ".hidden").mkdir()
+    (repo / "tests" / ".hidden" / "test_y.py").write_text(spec_load)
+    assert [f.path for f in hygiene.scan_repo(repo)] == ["tests/test_x.py"]
+
+
 def test_flags_sys_path_insert(tmp_path):
     src = tmp_path / "t_bad.py"
     src.write_text("import sys\nsys.path.insert(0, '/x')\n")
@@ -127,6 +139,20 @@ def test_hidden_dirs_and_pycache_skipped(tmp_path):
     assert hygiene.scan_repo(root) == []
 
 
+def test_a_checkout_under_a_dotted_directory_is_still_scanned(tmp_path):
+    """Review U2.0a (2026-11-14): the hidden-part filter read the absolute
+    path, so every agent worktree (.claude/worktrees/...) scanned nothing."""
+    root = tmp_path / ".claude" / "wt" / "repo"
+    (root / "r4-contracts" / "tests").mkdir(parents=True)
+    (root / "r4-contracts" / "tests" / "test_x.py").write_text(
+        "import sys\nsys.path.insert(0, '/x')\n"
+    )
+    (root / "tools").mkdir()
+    (root / "tools" / "test_import_hygiene_allowlist.txt").write_text("")
+    findings = hygiene.scan_repo(root)
+    assert [f.path for f in findings] == ["r4-contracts/tests/test_x.py"]
+
+
 def test_main_exit_codes_and_output(tmp_path, capsys, monkeypatch):
     monkeypatch.setattr(hygiene, "scan_repo", lambda _root: [])
     rc = hygiene.main([])
@@ -143,3 +169,18 @@ def test_main_json_mode(tmp_path, capsys, monkeypatch):
     payload = json.loads(capsys.readouterr().out)
     assert rc == 1
     assert payload == [{"path": "tests/x.py", "line": 3, "call": "sys.path.insert"}]
+
+
+def test_contracts_and_protocol_suites_are_scanned(tmp_path):
+    """U2.0a (ADR-117 D-2): the suites the alias flip runs through are in scope."""
+    root = tmp_path
+    for rel in ("r4-contracts/tests", "umrs/protocol/tests"):
+        (root / rel).mkdir(parents=True)
+        (root / rel / "test_c.py").write_text("import sys\nsys.path.insert(0, '/x')\n")
+    (root / "tools").mkdir()
+    (root / "tools" / "test_import_hygiene_allowlist.txt").write_text("")
+    findings = hygiene.scan_repo(root)
+    assert sorted(f.path for f in findings) == [
+        "r4-contracts/tests/test_c.py",
+        "umrs/protocol/tests/test_c.py",
+    ]

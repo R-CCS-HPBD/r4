@@ -8,6 +8,12 @@ explored, searched, verified, and moved between deployments.
 > **Refreshed 2026-09-24** (sections 27.3–27.5: the export/import transport,
 > canonical document identity, admin-only restore). 27.1–27.2 still describe
 > the implementation as of their own date.
+>
+> **2026-11-12:** 27.1 gains "Ontologies (LinkML)" (ADR-116: registering
+> ontologies, binding graphs, whole-document extraction, `same_as` review).
+>
+> **2026-11-13:** 27.1 gains "How documents are read (Docling and GLiNER)":
+> both models on by default, how to check them and how to turn them off.
 
 The four surfaces:
 
@@ -55,7 +61,7 @@ r4 knowledge graphs                          # List registered graphs
 r4 knowledge graphs --query proteins         # Discovery search by name/description
 r4 knowledge graph <id-or-name>              # Show one graph
 r4 knowledge graph-create "proteins-lit" --project-id mylab [--kind KIND]
-r4 knowledge graph-ingest proteins-lit ./papers/ --url https://example.org/p1
+r4 knowledge graph-ingest proteins-lit --file ./papers/ --url https://example.org/p1   # files only with --file (2026-11-14: was shown as a bare path)
 r4 knowledge graph-archive proteins-lit      # Soft delete (archive is the only delete)
 
 # Share reads beyond the tier ladder (2026-10-03):
@@ -276,6 +282,212 @@ origin and run; `r4 knowledge ls` shows who added each item (K1.3).
 
 From the SDK: `Client().knowledge.graph_proposed(graph_id, run_id=...)` and
 `Client().knowledge.establish(graph_id, row_id, kind="node"|"edge")`.
+
+### Ontologies (LinkML)
+
+> Added 2026-11-12 (ADR-116). Needs a UMRS server with the ontology routes;
+> an older server answers "This server has no ontology routes".
+
+An ontology lists the classes (kinds of things) and relations that a model
+should use when it extracts entities from documents into a graph. You write
+it in [LinkML](https://linkml.io) YAML, register it, and bind a graph to it.
+Graphs without an ontology use the built-in `r4-science@1` vocabulary.
+
+R4 reads a subset of LinkML:
+
+- schema `name` (the ontology id), `id` and `version`, all three required;
+  `description` and `prefixes` optional;
+- `classes` with `is_a`, `aliases`, `description`, `abstract`, and
+  `annotations.r4_bucket` (one of `class`, `function`, `file`, `module`,
+  `concept`, `entity`, `relationship`; default `entity`);
+- `slots` (or class `attributes`) whose `range` is a class: these are the
+  relations, with `domain`, `range`, `transitive`, `aliases` and
+  `description`.
+
+`imports` may name only `linkml:types`; the server never fetches a remote
+schema. YAML anchors and aliases (`&name`, `*name`) are refused. Class and
+relation names are stored in lowercase snake_case (`Sample` becomes
+`sample`). Limits: a source of at most 256 KiB, at most 2000 classes and
+relations, at most 50 aliases per term.
+
+A small example with three classes, `lab.yaml`:
+
+```yaml
+id: https://example.org/lab
+name: lab
+version: "1"
+description: Samples, instruments and measurements in our lab.
+prefixes:
+  linkml: https://w3id.org/linkml/
+imports:
+  - linkml:types
+classes:
+  Sample:
+    description: A physical specimen prepared for study.
+    aliases: [specimen]
+  Instrument:
+    description: A device that takes measurements.
+    aliases: [apparatus]
+  Measurement:
+    description: One recorded observation of a sample.
+    annotations:
+      r4_bucket: concept
+slots:
+  measured_by:
+    description: The instrument that took the measurement.
+    domain: Measurement
+    range: Instrument
+  of_sample:
+    domain: Measurement
+    range: Sample
+```
+
+Register, list, show and retire:
+
+```bash
+r4 knowledge ontology register lab.yaml        # for the current project
+r4 knowledge ontology register lab.yaml --global   # every project (admins only)
+r4 knowledge ontology list                     # live versions, built-ins included
+r4 knowledge ontology list --all               # retired versions too
+r4 knowledge ontology show lab                 # newest live version
+r4 knowledge ontology show lab@1 --json
+r4 knowledge ontology retire lab@1             # asks to confirm; --yes skips it
+```
+
+The format comes from the file extension: `.yaml` and `.yml` are LinkML,
+`.json` is the plain ontology JSON. `--format linkml|json` overrides it.
+A project ontology needs write access to the project. Only people register
+or retire ontologies: the server refuses an agent. To change an ontology,
+raise `version` in the file and register it again; a registered version is
+never edited.
+
+Each project has its own ontology ids, and so does the global scope: two
+projects can both register `lab@1` without seeing each other. When you show
+or bind `lab@1`, your project's own record comes before a global one;
+another project's ontology is never shown, bound or used. Registering a
+version that your project (or, with `--global`, the global scope) already
+has live is refused: raise `version` in the file.
+
+Retiring a version keeps its record. No graph can bind it afterwards, but
+graphs already bound to it keep extracting with it; to move them, bind them
+to another version (`r4 knowledge graph-bind GRAPH ID@VERSION`). `show ID`
+and `graph-bind GRAPH ID` without a version both take the highest live
+version.
+
+Bind a graph:
+
+```bash
+r4 knowledge graph-create lab-notes --ontology lab@1   # new graph
+r4 knowledge graph-bind lab-notes lab                  # existing graph (id or name), newest live version
+```
+
+Without `@VERSION` the server pins the newest live version at the time you
+bind. A later version is not picked up until you bind again.
+
+**Warn mode.** Extraction never rejects a document because of the
+ontology. The prompt lists the classes (with descriptions) and the
+relations (with domain and range). A type the model names is matched to a
+class by name or alias, ignoring case, spaces, hyphens and plurals. A type
+that matches no class is stored as `unclassified`, and the model's own word
+is kept in the node's `content.type_raw`. A relation that matches none is
+stored as `related_to`, with the model's word in `content.rel_raw`. Look
+for these to see where the ontology needs a new class or relation.
+
+**What extraction writes.** Extraction reads the whole document in windows
+(up to 24 windows of about 8 000 characters by default). Files you upload
+are read in full; outputs a workflow stores automatically are read in one
+window. Each entity becomes one node per document. The node carries
+`aliases` (the other spellings found) and up to five `evidence` quotes
+(each at most 200 characters, with the window it came from), so you can
+see where the entity was found. Extracted nodes and edges land
+**proposed**, as before.
+
+**Same entity in two documents.** After an upload is read, its entities are
+compared with the other entities of the same graph. A match by name or
+alias (ignoring case, punctuation and plural endings) becomes a proposed
+`same_as` edge. Matching by name embeddings is off by default because it
+mostly paired related but different things (GPT-3 and GPT-3.5); the
+operator can turn it on with `UMRS_KNOWLEDGE_ER_EMBEDDING=1`. Nodes are never merged or rewritten. Review them like any
+other proposed row:
+
+```bash
+r4 knowledge review --rows                     # same_as edges are listed with the other rows
+r4 knowledge review establish edge-sameas-...  # confirm one
+```
+
+Establishing a `same_as` edge adds each node's label to the other's
+reviewed aliases, which the graph search matches along with the extracted
+aliases. Leave a wrong match proposed.
+
+From the SDK: `Client().knowledge.ontology_register(text, fmt="linkml",
+scope="project")`, `ontology_list()`, `ontology_show(id, version)`,
+`ontology_retire(id, version)` and `graph_bind(graph_id, id, version)`.
+
+### How documents are read (Docling and GLiNER)
+
+> Added 2026-11-13 (ADR-116 amendment). Needs a UMRS server image built on
+> or after that date; an older one reads PDFs with pypdf and gives no hints.
+
+When the platform extracts entities from an uploaded document, two models
+help, both on by default:
+
+- **Docling** reads a PDF's layout: headings, tables and reading order.
+  Without it the text comes from pypdf, which flattens tables and columns.
+- **GLiNER** marks likely entity names in each window before the language
+  model reads it, using the class names of the graph's ontology. The marks
+  are only hints for the model; they never become nodes on their own.
+
+Both models ship inside the platform's server image and run on the
+platform, offline. Nothing is sent anywhere else. The platform normally runs
+them in a separate `umrs-docmodels` service that keeps them loaded. When
+that service does not answer, the server runs them only in its isolated
+ingest sandbox where it has one, and otherwise reads the document with
+pypdf and no hints; it never parses again a document the service refused.
+
+What to expect:
+
+- More entities per document (GLiNER raised them by about a quarter in
+  ADR-116's measurement), but also more relations of the generic kind
+  `related_to`.
+- Tables and headings come through, but text inside figures can be lost.
+- A PDF over 80 pages, a document over 64 MiB, or one that takes over 2
+  minutes to parse, is read with pypdf instead.
+- Nothing ever fails because of these models. When one cannot run, the
+  document is read without it, and the job's notes say why:
+  `doc_parser_fallback:<reason>` for Docling, `pretag_unavailable:<reason>`
+  for GLiNER. Read them with `r4 job describe <understand-job-id>` (`r4 job
+  list` names the job): each attempt prints its `Note:` lines, for example
+  `extract_window_unparsed:<n>` when the model's answers had no usable graph
+  (2026-11-14).
+
+**Check what the platform uses.** `r4 doctor` (or `r4 health full`) prints a
+`knowledge_models` line:
+
+```text
+  ✓ knowledge_models  (Docling 2.150.0 on, GLiNER on, umrs-docmodels ready)
+```
+
+`r4 doctor --json` carries the same block under `knowledge_models`. A `–`
+on the line means a model that is switched on cannot run, so documents are
+read with a fallback: "not staged" (the weights are missing) or "service not
+answering" (the service is down and the server may not run the model
+itself, shown as "no local fallback"). Tell the operator. A `✓` with
+"umrs-docmodels not answering (sandbox fallback)" or "(server fallback)"
+means the service is down but the server runs the models itself, slower.
+"not advertised by this platform" means the server predates 2026-11-13.
+
+**Turn them off.** The settings belong to the operator and apply to a whole
+platform, not to one project:
+
+| To | Set on the UMRS server |
+|---|---|
+| read PDFs with pypdf | `UMRS_KNOWLEDGE_DOC_PARSER=pypdf` |
+| stop the GLiNER hints | `UMRS_KNOWLEDGE_GLINER_MODEL=off` |
+
+On umrs-front these go in `umrs_front_knowledge_ingest_env` (for example
+`rccs: {DOC_PARSER: pypdf, GLINER_MODEL: "off"}`) and take effect with the
+next converge. On a stand-alone stack, see
+[Chapter 29](29-standalone-deployment.md#document-models-docling-and-gliner).
 
 ### Sources in answers
 

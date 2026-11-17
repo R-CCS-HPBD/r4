@@ -23,8 +23,10 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
-# Pure stdlib — no runtime dependencies.
-dependencies = []
+# stdlib + umrs-protocol (itself stdlib-only), ADR-005 as amended by ADR-117.
+# The 16 moved modules are aliases of umrs_protocol (U2.0b). The floor moves in
+# lockstep with the release (scripts/release/cut.sh).
+dependencies = ["umrs-protocol>=0.2.0rc4"]
 
 [project.optional-dependencies]
 dev = [

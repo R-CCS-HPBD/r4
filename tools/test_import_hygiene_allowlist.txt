@@ -41,3 +41,13 @@ mcp-servers/tests/test_knowledge_tools_search_query.py  # same class as the sour
 # with no dotted-import route; same standing as r4/tests/test_team_bench.py.
 tests/test_bench_retrieval.py
 tests/test_adr093_profiles_seams.py  # drives the same harness (arms.PRESETS["large"], backends.Stack) against the real routes (wave C integrator, 2026-10-10)
+
+# --- r4-contracts/tests joined the scan roots (U2.0a, ADR-117 D-2, 2026-11-13).
+r4-contracts/tests/test_hpc_gate_grants.py  # loads the gate as a script; alias keeps __file__ real
+
+# --- Non-packaged script targets the U1 port added (review U2.0a, 2026-11-14).
+# The scan skipped every file in a .claude/worktrees checkout, so these were
+# never reported locally. umrs/src/scripts/benchmarks/ has no __init__.py, and
+# a `scripts` namespace would collide with the repo-root scripts/ package.
+umrs/tests/test_benchmark_scripts.py          # umrs/src/scripts/benchmarks/{populate,...}.py
+umrs/tests/test_process_objects_prefilter.py  # umrs/src/scripts/benchmarks/parse_server_log.py

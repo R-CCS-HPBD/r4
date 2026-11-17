@@ -12,8 +12,10 @@
 #      SHA256SUMS asset when one is published, and every wheel in it against
 #      the bundle's own SHA256SUMS (any mismatch aborts);
 #   4. runs `uv tool install` on those LOCAL wheels only (r4, r4-contracts,
-#      r4-teamengine-spi, r4-science, umrs[client]), so no package index can
-#      substitute a same-named package; third-party dependencies come from PyPI;
+#      r4-teamengine-spi, r4-science, umrs[client], and umrs-protocol when the
+#      bundle has it: releases from U2.0 on ship six wheels, older ones five),
+#      so no package index can substitute a same-named package; third-party
+#      dependencies come from PyPI;
 #   5. fetches the console binary (`r4 tui install`, same tag).
 # Upgrade: run the same command again. Uninstall: uv tool uninstall r4, and
 # rm -f ~/.local/share/r4/bin/r4-tui for the console ($R4_TUI_HOME/bin/r4-tui
@@ -263,17 +265,38 @@ wheel_url() {
     file_url "$path"
 }
 
+# maybe_wheel_url DIR GLOB: like wheel_url, but prints nothing when the bundle
+# has no wheel matching GLOB (a bundle cut before that wheel existed). A wheel
+# that is present must still be the only match and listed in SHA256SUMS.
+maybe_wheel_url() {
+    local path
+    # shellcheck disable=SC2086  # $2 is the glob
+    for path in "$1"/$2; do
+        [ -f "$path" ] || continue
+        wheel_url "$1" "$2" || exit 1
+        return 0
+    done
+}
+
 # uv_install UV WHEEL_DIR: install r4 (and the umrs CLI) from the local wheels.
+# umrs-protocol (U2.0, ADR-117 D-2) goes into every tool env whenever the bundle
+# ships it, so r4-contracts never resolves it from an index.
 uv_install() {
-    local uv="$1" dir="$2" r4 contracts spi science umrs
+    local uv="$1" dir="$2" r4 contracts spi science umrs proto
+    local proto_with=()
     r4=$(wheel_url "$dir" 'r4-[0-9]*.whl')
     contracts=$(wheel_url "$dir" 'r4_contracts-*.whl')
     spi=$(wheel_url "$dir" 'r4_teamengine_spi-*.whl')
     science=$(wheel_url "$dir" 'r4_science-*.whl')
     umrs=$(wheel_url "$dir" 'umrs-*.whl')
+    proto=$(maybe_wheel_url "$dir" 'umrs_protocol-*.whl')
+    if [ -n "$proto" ]; then
+        proto_with=(--with "umrs-protocol @ $proto")
+    fi
     info "Installing r4 with uv (Python $R4_PYTHON)..."
     if supports_executables_from "$uv"; then
         "$uv" tool install --python "$R4_PYTHON" --force "r4 @ $r4" \
+            ${proto_with[@]+"${proto_with[@]}"} \
             --with "r4-contracts @ $contracts" --with "r4-teamengine-spi @ $spi" \
             --with "r4-science @ $science" --with-executables-from "umrs[client] @ $umrs" \
             </dev/null || die "uv tool install failed"
@@ -281,10 +304,12 @@ uv_install() {
     fi
     # uv without --with-executables-from: the umrs CLI gets its own tool env.
     "$uv" tool install --python "$R4_PYTHON" --force "r4 @ $r4" \
+        ${proto_with[@]+"${proto_with[@]}"} \
         --with "r4-contracts @ $contracts" --with "r4-teamengine-spi @ $spi" \
         --with "r4-science @ $science" --with "umrs[client] @ $umrs" \
         </dev/null || die "uv tool install failed"
     "$uv" tool install --python "$R4_PYTHON" --force "umrs[client] @ $umrs" \
+        ${proto_with[@]+"${proto_with[@]}"} \
         --with "r4-contracts @ $contracts" </dev/null || die "uv tool install (umrs) failed"
     UMRS_OWN_TOOL=1
 }
@@ -410,6 +435,11 @@ install_from_source() {
     "$venv_dir/bin/pip" install --upgrade pip --quiet
     # Dependency order (mirrors `make install-client`: r4 depends on
     # r4-teamengine-spi and science, workspace packages that are not on PyPI).
+    # umrs-protocol first, from the umrs submodule (U2.0, ADR-117 D-2): never
+    # from an index. A branch cut before U2.0 has no umrs/protocol.
+    if [ -f "$src_dir/umrs/protocol/pyproject.toml" ]; then
+        "$venv_dir/bin/pip" install -e "$src_dir/umrs/protocol" --quiet
+    fi
     "$venv_dir/bin/pip" install -e "$src_dir/r4-contracts" --quiet
     "$venv_dir/bin/pip" install -e "$src_dir/packages/r4-teamengine-spi" --quiet
     "$venv_dir/bin/pip" install -e "$src_dir/science" --quiet

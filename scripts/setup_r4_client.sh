@@ -63,16 +63,40 @@ if [[ ! -f "${R4_CONTRACTS_DIR}/pyproject.toml" ]]; then
     exit 1
 fi
 
+# r4-teamengine-spi and r4-science are first-party and unpublished: name them
+# so pip never resolves them from an index (2026-11-14).
+SPI_DIR="${REPO_ROOT}/packages/r4-teamengine-spi"
+if [[ ! -f "${SPI_DIR}/pyproject.toml" ]]; then
+    echo "error: could not find ${SPI_DIR}/pyproject.toml" >&2
+    exit 1
+fi
+
 SCIENCE_DIR="${REPO_ROOT}/science"
 if [[ ! -f "${SCIENCE_DIR}/pyproject.toml" ]]; then
     echo "error: could not find ${SCIENCE_DIR}/pyproject.toml" >&2
     exit 1
 fi
 
+# umrs-protocol lives in the umrs submodule (U2.0, ADR-117 D-2) and is on no
+# package index: install it from the checkout, never by name. The public
+# UMRS-org/umrs clones over anonymous HTTPS.
+UMRS_PROTOCOL_DIR="${REPO_ROOT}/umrs/protocol"
+if [[ ! -f "${UMRS_PROTOCOL_DIR}/pyproject.toml" ]]; then
+    echo "Fetching the umrs submodule (umrs-protocol)"
+    git -C "${REPO_ROOT}" -c 'url.https://github.com/.insteadOf=git@github.com:' \
+        submodule update --init --depth 1 umrs
+fi
+if [[ ! -f "${UMRS_PROTOCOL_DIR}/pyproject.toml" ]]; then
+    echo "error: could not find ${UMRS_PROTOCOL_DIR}/pyproject.toml (git submodule update --init umrs)" >&2
+    exit 1
+fi
+
 echo "Installing r4 from ${R4_DIR} (with companion extras)"
 "${VENV_DIR}/bin/python" -m pip install --upgrade pip
 "${VENV_DIR}/bin/python" -m pip install \
+    -e "${UMRS_PROTOCOL_DIR}" \
     -e "${R4_CONTRACTS_DIR}" \
+    -e "${SPI_DIR}" \
     -e "${SCIENCE_DIR}" \
     -e "${R4_DIR}[companion]"
 

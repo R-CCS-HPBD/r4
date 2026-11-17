@@ -5,8 +5,9 @@
 # assets the one-command installer and `r4 tui install` download:
 #
 #   r4-client-<tag>.tar.gz   the first-party wheels (r4, r4-contracts,
-#                            r4-teamengine-spi, r4-science, umrs) + SHA256SUMS
-#                            of those wheels, flat (no top-level directory)
+#                            r4-teamengine-spi, r4-science, umrs,
+#                            umrs-protocol) + SHA256SUMS of those wheels,
+#                            flat (no top-level directory)
 #   r4-tui-<target>          console binaries for linux-x64,
 #                            linux-x64-baseline, linux-arm64, darwin-arm64,
 #                            darwin-x64, each with <name>.sha256 (and
@@ -41,8 +42,9 @@ env:
   UV_VERSION: "0.9.5"
   # The first-party Python projects in the client bundle (umrs/src is the
   # umrs submodule's package; its [client] extra is what r4 needs).
-  WHEEL_PROJECTS: "r4 r4-contracts packages/r4-teamengine-spi science umrs/src"
-  WHEEL_DISTS: "r4 r4_contracts r4_teamengine_spi r4_science umrs"
+  # umrs/protocol (U2.0, ADR-117 D-2) is on no package index: it ships here.
+  WHEEL_PROJECTS: "r4 r4-contracts packages/r4-teamengine-spi science umrs/src umrs/protocol"
+  WHEEL_DISTS: "r4 r4_contracts r4_teamengine_spi r4_science umrs umrs_protocol"
   TUI_TARGETS: "linux-x64 linux-x64-baseline linux-arm64 darwin-arm64 darwin-x64"
   # Targets a release may ship without (a ::warning:: says so); see `release`.
   TUI_OPTIONAL: "darwin-x64"
@@ -74,15 +76,60 @@ jobs:
           done
       # scripts/release/cut.sh bumps the versions before it tags, so a
       # mismatch means the tag names a commit the release script did not cut.
-      # Same mapping as cut.sh: v0.2.0-rc2 (or -rc.2) -> 0.2.0rc2.
-      - name: Check the r4 wheel version against the tag
+      # Same mapping as cut.sh: v0.2.0-rc2 (or -rc.2) -> 0.2.0rc2. cut.sh
+      # bumps umrs/protocol in lockstep with r4 (U2.0), so both are checked.
+      - name: Check the r4 and umrs-protocol wheel versions against the tag
         run: |
-          version="$(find "$RUNNER_TEMP/wheels" -maxdepth 1 -name 'r4-*.whl' -printf '%f\n' | cut -d- -f2)"
           want="$(printf '%s' "${GITHUB_REF_NAME#v}" | sed -E 's/-(rc|a|b)\.?([0-9]+)$/\1\2/')"
-          if [ "$version" != "$want" ]; then
-            echo "::error title=Version mismatch::r4 wheel is ${version:-missing}, tag ${GITHUB_REF_NAME} implies ${want}"
-            exit 1
-          fi
+          for dist in r4 umrs_protocol; do
+            version="$(find "$RUNNER_TEMP/wheels" -maxdepth 1 -name "${dist}-*.whl" -printf '%f\n' | cut -d- -f2)"
+            if [ "$version" != "$want" ]; then
+              echo "::error title=Version mismatch::${dist} wheel is ${version:-missing}, tag ${GITHUB_REF_NAME} implies ${want}"
+              exit 1
+            fi
+          done
+      # U2.0b (ADR-117 D-2): r4-contracts' moved modules are sys.modules
+      # aliases of umrs-protocol's, so the two wheels of one bundle must
+      # agree. Installed side by side without resolving: r4_contracts.hpc_gate
+      # IS umrs_protocol.hpc_gate (one gate ships), and r4-contracts requires
+      # umrs-protocol with a >= floor no newer than the tag.
+      - name: Check that the r4-contracts and umrs-protocol wheels cohere
+        run: |
+          want="$(printf '%s' "${GITHUB_REF_NAME#v}" | sed -E 's/-(rc|a|b)\.?([0-9]+)$/\1\2/')"
+          site="$RUNNER_TEMP/coherence"
+          uv pip install --quiet --no-deps --target "$site" \
+            "$RUNNER_TEMP"/wheels/umrs_protocol-*.whl "$RUNNER_TEMP"/wheels/r4_contracts-*.whl
+          WANT="$want" SITE="$site" PYTHONPATH="$site" python - <<'PY'
+          import importlib.metadata as md
+          import os
+          import re
+          import sys
+          from pathlib import Path
+
+          try:
+              from packaging.version import Version
+          except ImportError:
+              from pip._vendor.packaging.version import Version
+
+          import r4_contracts.hpc_gate as alias
+          import umrs_protocol.hpc_gate as gate
+
+          site, want = Path(os.environ["SITE"]).resolve(), os.environ["WANT"]
+          problems = []
+          if alias is not gate:
+              problems.append("r4_contracts.hpc_gate is not umrs_protocol.hpc_gate")
+          if site not in Path(gate.__file__).resolve().parents:
+              problems.append(f"umrs_protocol came from {gate.__file__}, not the bundle")
+          floor = r"umrs-protocol\s*>=\s*([^\s,;]+)"
+          floors = [m.group(1) for r in md.requires("r4-contracts") or [] if (m := re.fullmatch(floor, r))]
+          if len(floors) != 1:
+              problems.append(f"r4-contracts requires {md.requires('r4-contracts')}, not one umrs-protocol>= floor")
+          elif Version(floors[0]) > Version(want):
+              problems.append(f"r4-contracts requires umrs-protocol>={floors[0]}, newer than the tag's {want}")
+          for problem in problems:
+              print(f"::error title=Wheel coherence::{problem}")
+          sys.exit(1 if problems else 0)
+          PY
       - name: Pack r4-client-<tag>.tar.gz
         run: |
           tag="${GITHUB_REF_NAME}"

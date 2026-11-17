@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Build the umrs-server image (CPU torch, no bundled embedder) and run its
+# Build the umrs-server image (CPU torch, no bundled embedder and no bundled
+# Docling/GLiNER weights: ~1.8 GB the smoke never loads) and run its
 # smoke test (ADR-100). Dockerfile.server already runs the smoke test as its
 # last build step; the explicit `run` below proves the TAGGED image too.
 #
@@ -30,6 +31,7 @@ start=$(date +%s)
 "$cli" build "${load[@]}" \
   --build-arg TORCH_INDEX_URL="$cpu_index" \
   --build-arg UMRS_BUNDLE_TEXT_EMBEDDER=0 \
+  --build-arg UMRS_BUNDLE_INGEST_MODELS=0 \
   -f "$root/umrs/docker/Dockerfile.server" -t "$tag" "$root"
 "$cli" run --rm --network=none "$tag" python /opt/umrs/server-image-smoke.py
 echo "image smoke: PASS ($tag, $(( $(date +%s) - start )) s, $("$cli" image inspect --format '{{.Size}}' "$tag") bytes)"

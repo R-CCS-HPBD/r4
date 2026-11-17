@@ -2808,6 +2808,21 @@ def test_provenance_hashes_the_r4_packages_this_process_imported(monkeypatch):
     assert imported["r4_contracts"]["files"] >= 3 and len(imported["r4"]["sha256"]) == 64
 
 
+def test_provenance_hashes_umrs_protocol_behind_the_aliases(monkeypatch):
+    """U2.0b (ADR-117 D-2): r4_contracts.models and .context_pack are aliases;
+    the profile table and pack renderer code is umrs_protocol's, so it is hashed
+    as imported and as checked out."""
+    import umrs_protocol
+
+    prov, _calls = _fake_stack_provenance(monkeypatch)
+    imported = prov["code"]["imported"]["umrs_protocol"]
+    assert imported["dir"] == str(Path(umrs_protocol.__file__).resolve().parent)
+    assert imported["files"] >= 16
+    checkout = prov["code"]["protocol_checkout"]
+    assert checkout["dir"].endswith("umrs/protocol/src/umrs_protocol")
+    assert checkout["files"] >= 16
+
+
 def test_the_server_code_hash_covers_the_k3_route(tmp_path):
     """eval-c21-4: api/knowledge_query.py serves the k3-* arms."""
     route = tmp_path / "umrs" / "api" / "knowledge_query.py"
@@ -2825,6 +2840,9 @@ def _fake_packages(base: Path) -> None:
         "umrs/knowledge/retrieval/dense.py",
         "r4_contracts/__init__.py",
         "r4_contracts/models.py",
+        "umrs_protocol/__init__.py",
+        "umrs_protocol/models.py",
+        "umrs_protocol/context_pack.py",
     ):
         path = base / rel
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -2848,6 +2866,15 @@ def test_the_probe_hashes_r4_contracts_inside_the_container(tmp_path):
     assert probe["role"] == "umrs" and probe["code"]["files"] == 1
 
 
+def test_the_probe_hashes_umrs_protocol_inside_the_container(tmp_path):
+    """U2.0b: the code behind the r4_contracts aliases is umrs_protocol's."""
+    _fake_packages(tmp_path)
+    probe = _probe_in(tmp_path)
+    protocol = server_probe.files_sha256(str(tmp_path / "umrs_protocol"), server_probe.PACKAGE_CODE)
+    assert probe["protocol"] == protocol and protocol["files"] == 3
+    assert probe["protocol_dir"] == str(tmp_path / "umrs_protocol")
+
+
 def test_the_rag_container_is_probed_for_its_own_code(tmp_path):
     """The query encoder, UMRS_RAG_QUERY_PREFIX and the reranker run there."""
     _fake_packages(tmp_path)
@@ -2862,19 +2889,23 @@ def test_the_server_check_covers_r4_contracts_and_the_rag_container():
         "umrs_retrieval": {"sha256": "u"},
         "umrs_rag": {"sha256": "r"},
         "contracts_checkout": {"sha256": "c"},
+        "protocol_checkout": {"sha256": "p"},
     }
     umrs = {
         "code": {"sha256": "u", "mtime_max": 50.0},
         "contracts": {"sha256": "c", "mtime_max": 150.0},  # edited after the start
+        "protocol": {"sha256": "p", "mtime_max": 50.0},
         "started_at": 100.0,
     }
     rag = {
         "code": {"sha256": "r", "mtime_max": 50.0},
         "contracts": {"sha256": "old", "mtime_max": 60.0},
+        "protocol": {"sha256": "p", "mtime_max": 50.0},
         "started_at": 100.0,
     }
     out = backends.server_summary(umrs, code, rag)
-    assert (out["matches"], out["edited_after_start"]) == ({"code": True, "contracts": True}, True)
+    matches = {"code": True, "contracts": True, "protocol": True}
+    assert (out["matches"], out["edited_after_start"]) == (matches, True)
     assert (out["rag"]["matches_checkout"], out["matches_checkout"]) == (False, False)
 
 

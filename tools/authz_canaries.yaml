@@ -90,6 +90,9 @@ probes:
 - id: files
   path: /gw/files/download-status
   expect_denied: true
+- id: files-download-media  # ADR-115 S1 (2026-11-13): the ranged media read route
+  path: /gw/files/download/canary-nonexistent.mp4?bucket=canary-nonexistent&disposition=inline
+  expect_denied: true
 - id: knowledge-read
   path: /gw/knowledge/readiness  # dashboard route retired 2026-10-18 (H-10.1)
   expect_denied: true

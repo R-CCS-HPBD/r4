@@ -110,7 +110,7 @@ stores. The design collapses the first two zones into UMRS (D-02).
 
 | Today | Where | Gap |
 |---|---|---|
-| Presigned S3 URLs are minted by UMRS for compute and served to clients only through the edge's internal X-Accel locations; audit never logs the query string | `umrs/src/umrs/api/files.py`, `gateway/nginx/conf.d/server.conf` (`/internal/files/`, `/internal/s3/`, `/gw/files/download/`), `gateway/tests/test_nginx_audit_runtime.py` | — |
+| Presigned S3 URLs are minted by UMRS for compute only; clients get bytes streamed by UMRS (`/gw/files/download/`, ranged since ADR-115 D-1); audit never logs the query string. (2026-11-13: the `/internal/s3/` X-Accel location and the sidecar `/validate-download` presign chain were removed.) | `umrs/src/umrs/api/files.py`, `umrs/src/umrs/api/_ranged_download.py`, `gateway/nginx/conf.d/server.conf` (`/gw/files/download/`), `gateway/tests/test_nginx_audit_runtime.py` | — |
 | Attempt-scoped credential records (`jobs/<job_id>/attempt_<n>/` prefix, short TTL) and per-attempt STS `AssumeRole` with a prefix-true inline policy, fail-closed | `umrs/src/umrs/jobs/attempt_credentials.py`, `jobs/sts_federation.py`, `api/jobs.py` (`…/attempts/{attempt_id}/credentials[/sts]`) (ADR-043, ADR-055) | — |
 | Per-user `s3cfg` is still delivered to the client at login | `r4/src/r4/_cli/login.py` (`_write_s3cfg_from_connect_info`), `umrs/src/umrs/shared/storage/user_s3cfg.py` | D-16 (being removed, never extended) |
 | Postgres is reached only by UMRS; `EXPORT_EMBEDDINGS` returns rows through the server, the client never connects | `umrs/doc/zmq_api_contract.md`, `umrs/src/umrs/shared/pg.py` | — |

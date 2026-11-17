@@ -961,10 +961,13 @@ def _untracked_sha256(*prefix: str) -> dict[str, Any]:
     return {"untracked_files": len(paths), "untracked_sha256": digest.hexdigest()}
 
 
-def imported_packages(names: tuple[str, ...] = ("r4", "r4_contracts")) -> dict[str, Any]:
+def imported_packages(
+    names: tuple[str, ...] = ("r4", "r4_contracts", "umrs_protocol"),
+) -> dict[str, Any]:
     """The r4 packages this process imported, by path and content hash: a
     frozen copy run through ``PYTHONPATH`` is not the checkout ``parent``
-    describes, and the pack renderer and profile table live here."""
+    describes, and the pack renderer and profile table live here (in
+    ``umrs_protocol`` since U2.0b; ``r4_contracts`` holds their aliases)."""
     import importlib
 
     out: dict[str, Any] = {}
@@ -982,11 +985,12 @@ def imported_packages(names: tuple[str, ...] = ("r4", "r4_contracts")) -> dict[s
 def code_provenance() -> dict[str, Any]:
     """The code a result depends on, untracked files included: the running
     harness copy, the r4 packages it imported, and the checkout's code the
-    containers mount (the umrs retrieval and rag code, ``r4_contracts``), by
-    content hash (``server_probe.files_sha256``: the containers hash the same
-    way)."""
+    containers mount (the umrs retrieval and rag code, ``r4_contracts`` and
+    ``umrs_protocol``), by content hash (``server_probe.files_sha256``: the
+    containers hash the same way)."""
     umrs_dir = ROOT / "umrs" / "src" / "umrs"
     contracts_dir = ROOT / "r4-contracts" / "src" / "r4_contracts"
+    protocol_dir = ROOT / "umrs" / "protocol" / "src" / "umrs_protocol"
     harness = server_probe.files_sha256(str(HARNESS_DIR), ("*.py",))
     return {
         "parent": _git_state(),
@@ -1001,6 +1005,10 @@ def code_provenance() -> dict[str, Any]:
         "contracts_checkout": {
             "dir": str(contracts_dir),
             **server_probe.files_sha256(str(contracts_dir), server_probe.PACKAGE_CODE),
+        },
+        "protocol_checkout": {
+            "dir": str(protocol_dir),
+            **server_probe.files_sha256(str(protocol_dir), server_probe.PACKAGE_CODE),
         },
     }
 
@@ -1051,12 +1059,18 @@ def code_check(probe: dict[str, Any], expected: dict[str, dict[str, Any]]) -> di
 
 
 def _container(probe: dict[str, Any], code: dict[str, Any], key: str) -> dict[str, Any]:
-    expected = {"code": code[key], "contracts": code["contracts_checkout"]}
+    expected = {
+        "code": code[key],
+        "contracts": code["contracts_checkout"],
+        "protocol": code["protocol_checkout"],
+    }
     return {
         "code_dir": probe.get("code_dir"),
         "code": probe.get("code"),
         "contracts_dir": probe.get("contracts_dir"),
         "contracts": probe.get("contracts"),
+        "protocol_dir": probe.get("protocol_dir"),
+        "protocol": probe.get("protocol"),
         **code_check(probe, expected),
     }
 
@@ -1065,7 +1079,8 @@ def server_summary(
     probe: dict[str, Any] | str, code: dict[str, Any], rag: dict[str, Any] | str | None = None
 ) -> dict[str, Any] | str:
     """Whether the umrs container (and the rag container, when probed) sees
-    the checkout's code (umrs retrieval, K3 and rag code, ``r4_contracts``),
+    the checkout's code (umrs retrieval, K3 and rag code, ``r4_contracts``,
+    ``umrs_protocol``),
     and whether it changed after the process started. The top-level
     ``matches_checkout``/``edited_after_start`` cover both containers."""
     if not isinstance(probe, dict):

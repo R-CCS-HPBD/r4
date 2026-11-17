@@ -555,6 +555,17 @@ class TestAgentSurface:
         for relpath in support.PACKAGE_DIRS:
             assert (support.REPO_ROOT / relpath / "pyproject.toml").is_file(), relpath
 
+    def test_wheelhouse_builds_umrs_protocol_first(self) -> None:
+        """umrs-protocol is on no index (U2.0, ADR-117 D-2): the wheelhouse the
+        container installs from must carry it, and the lanes' clean export too."""
+        assert support.PACKAGE_DIRS[0] == "umrs/protocol"
+        lanes = (LANE_DIR / "run_tb4_lanes.sh").read_text()
+        assert (
+            'SRC=$(bash benchmarks/harness/terminal/export_src.sh "$HOME/.cache/r4bench/src")'
+            in lanes
+        )
+        assert "archive HEAD protocol" not in lanes
+
     def test_driver_file_next_to_agent(self) -> None:
         assert support.DRIVER_PATH.is_file()
 
@@ -658,6 +669,95 @@ class TestAgentSurface:
         with pytest.raises(asyncio.CancelledError):
             asyncio.run(agent.run("do the task", env, context))
         assert ("/home/u/.r4bench/transcript.jsonl", tmp_path / "transcript.jsonl") in env.downloads
+
+
+def _git(cwd: Path, *args: str) -> str:
+    done = subprocess.run(
+        ["git", "-c", "protocol.file.allow=always", *args],
+        cwd=cwd, capture_output=True, text=True, check=True, timeout=60,
+    )  # fmt: skip
+    return done.stdout.strip()
+
+
+def _commit_all(repo: Path, message: str) -> str:
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", message)
+    return _git(repo, "rev-parse", "HEAD")
+
+
+@pytest.fixture
+def lanes_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict:
+    """A parent repository whose umrs gitlink pins commit `pin` (protocol v1)
+    while the submodule has `head` (protocol v2) checked out."""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    for var in ("GIT_AUTHOR", "GIT_COMMITTER"):
+        monkeypatch.setenv(f"{var}_NAME", "bench test")
+        monkeypatch.setenv(f"{var}_EMAIL", "bench@example.invalid")
+    origin, parent = tmp_path / "umrs-origin", tmp_path / "parent"
+    (origin / "protocol").mkdir(parents=True)
+    _git(origin, "init", "-q")
+    (origin / "protocol" / "pyproject.toml").write_text("v1\n")
+    pin = _commit_all(origin, "protocol v1")
+    (origin / "protocol" / "pyproject.toml").write_text("v2\n")
+    head = _commit_all(origin, "protocol v2")
+    for rel in ("r4-contracts", "science", "packages/r4-teamengine-spi", "r4"):
+        (parent / rel).mkdir(parents=True)
+        (parent / rel / "pyproject.toml").write_text(f"{rel}\n")
+    _git(parent, "init", "-q")
+    _git(parent, "submodule", "add", "-q", str(origin), "umrs")
+    _git(parent / "umrs", "checkout", "-q", pin)
+    _commit_all(parent, "pin umrs at v1")
+    _git(parent / "umrs", "checkout", "-q", head)  # the "lagging pointer" state
+    short = _git(parent, "rev-parse", "--short", "HEAD")
+    return {"parent": parent, "pin": pin, "src": tmp_path / "cache" / short}
+
+
+def _export(repo: dict) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["bash", str(LANE_DIR / "export_src.sh"), str(repo["src"].parent)],
+        cwd=repo["parent"], capture_output=True, text=True, check=False, timeout=60,
+    )  # fmt: skip
+
+
+class TestExportSrc:
+    """Review U2.0a: the lanes archived umrs/protocol from the submodule's
+    checked-out HEAD, and an interrupted export left a cache later runs reused."""
+
+    def test_exports_the_pin_not_the_checked_out_head(self, lanes_repo: dict) -> None:
+        done = _export(lanes_repo)
+        assert done.returncode == 0, done.stderr
+        src = lanes_repo["src"]
+        assert done.stdout.strip() == str(src)
+        assert (src / "umrs" / "protocol" / "pyproject.toml").read_text() == "v1\n"
+        assert (src / ".umrs-pin").read_text().strip() == lanes_repo["pin"]
+        assert (src / "r4" / "pyproject.toml").is_file()
+        assert not src.with_name(src.name + ".partial").exists()
+
+    def test_rebuilds_a_partial_or_unmarked_cache(self, lanes_repo: dict) -> None:
+        src = lanes_repo["src"]
+        (src / "r4").mkdir(parents=True)  # interrupted run: r4 only
+        assert _export(lanes_repo).returncode == 0
+        assert (src / "umrs" / "protocol" / "pyproject.toml").read_text() == "v1\n"
+        (src / ".umrs-pin").unlink()  # pre-fix export, maybe from another commit
+        (src / "umrs" / "protocol" / "pyproject.toml").write_text("v2\n")
+        assert _export(lanes_repo).returncode == 0
+        assert (src / "umrs" / "protocol" / "pyproject.toml").read_text() == "v1\n"
+
+    def test_refuses_an_uninitialised_submodule(self, lanes_repo: dict) -> None:
+        _git(lanes_repo["parent"], "submodule", "deinit", "-q", "-f", "umrs")
+        done = _export(lanes_repo)
+        assert done.returncode == 2
+        assert "umrs submodule not initialised" in done.stderr
+        assert not lanes_repo["src"].parent.exists()
+
+    def test_refuses_a_pin_that_is_not_fetched(self, lanes_repo: dict) -> None:
+        parent, missing = lanes_repo["parent"], "1" * 40
+        _git(parent, "update-index", "--cacheinfo", f"160000,{missing},umrs")
+        _git(parent, "commit", "-q", "-m", "pin an unfetched commit")
+        done = _export(lanes_repo)
+        assert done.returncode == 2
+        assert f"umrs pin {missing} is not fetched" in done.stderr
 
 
 class _FakeEnvironment:

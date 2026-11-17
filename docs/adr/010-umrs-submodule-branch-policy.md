@@ -158,3 +158,7 @@ print('✓ Config resolution OK')
 - [ADR-007: Gen1↔Gen2 Bridge Pattern](007-gen1-gen2-bridge-pattern.md)
 - [Branch Separation Instructions](../../.github/instructions/umrs-branch-separation.instructions.md)
 - [Mutation Safety Rules](../../.github/instructions/mutation-safety.instructions.md)
+
+## Rollout-status (2026-11-13, ADR-117)
+
+Amended by [ADR-117](117-umrs-one-branch-protocol-extension-own-cicd.md). UMRS moves to one branch: `UMRS-org/umrs@main` is the trunk. `ai4s-platform` is merged into it once by PR (wave U5, `main` tagged first, no force-push) and then frozen when r4 pins `main` (U6). Until U6 this ADR's `ai4s-platform` policy and the lineage hook stay in force.

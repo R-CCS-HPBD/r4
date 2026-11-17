@@ -198,6 +198,17 @@ def test_bwrap_keeps_r4_install_inside_a_root_read_only(home, tmp_path, monkeypa
     assert str(Path(policy_mod.__file__).resolve().parents[3]) in install_paths()
 
 
+def test_install_paths_cover_the_umrs_protocol_import_root():
+    """U2.0b: the r4_contracts aliases run umrs_protocol's code, so its import
+    root is part of r4's installation (kept read-only like r4_contracts')."""
+    import r4_contracts
+    import umrs_protocol
+
+    paths = install_paths()
+    for package in (r4_contracts, umrs_protocol):
+        assert os.path.realpath(Path(package.__file__).resolve().parents[1]) in paths
+
+
 def test_bwrap_chdir_refuses_an_invisible_cwd(home, tmp_path, monkeypatch):
     """COR-3: a hidden or masked cwd is refused, never silently swapped for the root."""
     backend = _bwrap(monkeypatch)

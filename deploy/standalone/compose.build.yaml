@@ -22,3 +22,7 @@ services:
     image: ai4s-standalone-umrs:latest
     # Built by the umrs service above; never pulled.
     pull_policy: never
+  umrs-docmodels:
+    image: ai4s-standalone-umrs:latest
+    # Built by the umrs service above; never pulled.
+    pull_policy: never

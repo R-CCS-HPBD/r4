@@ -37,6 +37,9 @@ class ImportBoundaryRule:
     # When True, function-scoped lazy imports are excluded from enforcement.
     # This allows composition-site lazy imports while enforcing module-level.
     allow_lazy: bool = False
+    # When True, a missing root is a finding instead of a silent skip: the
+    # rule fences a tree that must exist (umrs-protocol, ADR-117 D-3).
+    required: bool = False
 
 
 @dataclass(frozen=True)
@@ -81,11 +84,27 @@ IMPORT_BOUNDARY_RULES: tuple[ImportBoundaryRule, ...] = (
         description="UMRS must remain independently workable without the r4 client package",
         forbidden_top_levels=("r4",),
     ),
+    # U2.0b (2026-11-15): the 16 moved modules are sys.modules aliases of
+    # umrs_protocol, r4-contracts' one dependency (itself stdlib-only, rule
+    # below). Third-party imports stay forbidden.
     ImportBoundaryRule(
         root="r4-contracts/src/r4_contracts",
-        description="r4-contracts must stay stdlib-only and free of platform/runtime dependencies",
+        description=(
+            "r4-contracts must stay stdlib-only apart from umrs-protocol, its one "
+            "dependency (ADR-005 as amended by ADR-117)"
+        ),
         stdlib_only=True,
-        allowed_top_levels=("r4_contracts",),
+        allowed_top_levels=("r4_contracts", "umrs_protocol"),
+    ),
+    # The parent-side stdlib-only fence for umrs-protocol (U2.0a, 2026-11-13).
+    # boundary-check always fetches the umrs pin, and local checkouts have the
+    # submodule, so a missing tree fails instead of skipping.
+    ImportBoundaryRule(
+        root="umrs/protocol/src/umrs_protocol",
+        description="umrs-protocol is stdlib-only (ADR-117 D-3)",
+        stdlib_only=True,
+        allowed_top_levels=("umrs_protocol",),
+        required=True,
     ),
     ImportBoundaryRule(
         root="packages/r4-teamengine-spi/src/r4_teamengine_spi",
@@ -204,10 +223,21 @@ def validate_import_boundaries(
     for rule in rules:
         source_root = repo_root / rule.root
         if not source_root.exists():
+            if rule.required:
+                findings.append(_missing_root_finding(rule))
             continue
         for path in _iter_python_files(source_root):
             findings.extend(_validate_file(repo_root, path, rule))
     return findings
+
+
+def _missing_root_finding(rule: ImportBoundaryRule) -> ImportBoundaryFinding:
+    return ImportBoundaryFinding(
+        path=rule.root,
+        line=0,
+        imported="<missing-root>",
+        message=f"required source root is missing (check out the umrs submodule); {rule.description}",
+    )
 
 
 def assert_no_import_boundary_violations(repo_root: Path) -> None:

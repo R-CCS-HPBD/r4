@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from r4_contracts import context_pack
 from r4_contracts.context_pack import (
     NOT_COVERED,
     build_pack,
@@ -207,9 +208,8 @@ def test_unknown_options_are_refused_by_name(kwargs):
 
 
 def test_the_renderer_is_stdlib_only():
-    tree = ast.parse(
-        Path(__file__).parents[1].joinpath("src", "r4_contracts", "context_pack.py").read_text()
-    )
+    # Through the alias (U2.0b): __file__ is the real umrs_protocol source, not the shim.
+    tree = ast.parse(Path(context_pack.__file__).read_text())
     imported = {
         (node.module or "").split(".")[0]
         for node in ast.walk(tree)

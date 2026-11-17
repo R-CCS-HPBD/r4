@@ -396,7 +396,10 @@ def _ensure_key_at_path(kind: str, path: Path, confirm: Optional[Callable[[str],
         _require_protected(path)
     except HpcSigningError:
         _discard(path)
-        raise
+        raise HpcSigningError(
+            f"the new signing key at {path} had no passphrase, so r4 removed it: "
+            "run `r4 hpc add` again and give the key a passphrase."
+        ) from None
     os.chmod(path, 0o600)
     return path
 
@@ -662,10 +665,13 @@ def parse_offer(answer: Any) -> TransportOffer:
 
 
 def gate_source() -> bytes:
-    """The gate shipped with this r4 (``r4_contracts/hpc_gate.py``)."""
+    """The gate shipped with this r4 (``umrs_protocol/hpc_gate.py``, ADR-117 D-2).
+
+    ``r4_contracts/hpc_gate.py`` is only the alias shim since U2.0b; the bytes
+    (and so the sha) are the ones that module was before the move."""
     from importlib import resources
 
-    return resources.files("r4_contracts").joinpath("hpc_gate.py").read_bytes()
+    return resources.files("umrs_protocol").joinpath("hpc_gate.py").read_bytes()
 
 
 def gate_sha256() -> str:

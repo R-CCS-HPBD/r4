@@ -107,6 +107,9 @@ tests/test_public_gateway_url_wiring.py
 tests/test_step_lane_converge_wiring.py
 tests/test_umrs_front_backend_probe.py
 tests/test_umrs_front_edge_probe_fail_safe.py
+# Pins private model-storage paths and requires excluded inventory; this
+# private-config regression is not a public unit test.
+tests/test_umrs_front_model_allowed_paths.py
 tests/test_umrs_front_podman_boot.py
 tests/test_umrs_front_reserved_ports.py
 tests/test_umrs_front_volume_cleanup.py

@@ -27,6 +27,13 @@ problems the gap sweep keeps finding).
    Code extension is no longer demoted; it becomes a second host of the
    console's bridge contract, with parity measured by a matrix. The REPL,
    the web console and Jupyter stay as written here.)*
+   *(Amended 2026-11-13 by [ADR-115](115-project-media-browser.md) D-10,
+   accepted with O-1: the web console admits exactly one new generic route,
+   `/app/media` (Inputs, Run and Outputs panes) with the review player at
+   `/app/media/review`, because video review cannot happen in a terminal.
+   Every action there has a CLI verb that lands no later than its web
+   counterpart; the view keeps no job store, review database or credential.
+   Everything else about the web console stays demoted.)*
    **Demoted (companion surfaces, no new features):** the Python companion
    REPL (kept as the REPL fallback), the VS Code extension, the web console,
    Jupyter magics. They keep working; improvements flow through the console

@@ -228,11 +228,12 @@ services:
       # Strict identity isolation for workflow verify-rollout E2E
       UMRS_AUTH_MODE: strict
       UMRS_HTTP_HOST: "0.0.0.0"
-      PYTHONPATH: /opt/r4-contracts/src:/app/src
+      PYTHONPATH: /opt/umrs-protocol/src:/opt/r4-contracts/src:/app/src
     volumes:
       - job_info:/var/run/rivault
       - ./models:/models:ro
       - ./tests/fixtures/umrs-user-files:/root/user_files:ro
+      - ./umrs/protocol/src:/opt/umrs-protocol/src:ro
       - ./r4-contracts/src:/opt/r4-contracts/src:ro
       - ./umrs/src:/app/src:ro
     deploy:

@@ -9,13 +9,16 @@ live: `catalog.unprocessable` (umrs/api/catalog.py) and, by this sweep,
 
 from __future__ import annotations
 
+import inspect
 import re
 from pathlib import Path
 
 import r4_contracts.errors as platform_errors
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-ERRORS_SRC = REPO_ROOT / "r4-contracts/src/r4_contracts/errors.py"
+# The real errors module, not the U2.0b alias shim in r4-contracts: through the
+# alias, inspect reads umrs_protocol/errors.py (ADR-117 D-2).
+ERRORS_SRC = inspect.getsource(platform_errors)
 SCANNED = ("umrs/src", "gateway", "r4/src", "mcp-servers/src")
 
 _CLASSMETHOD = re.compile(r"def (\w+)\(cls, name: str.*?code=f\"([\w]+)\.\{name\}\"", re.S)
@@ -32,7 +35,7 @@ def _registered_codes() -> set[str]:
 
 def _family_prefixes() -> dict[str, str]:
     """classmethod name -> code prefix, read from the factory definitions."""
-    return dict(_CLASSMETHOD.findall(ERRORS_SRC.read_text()))
+    return dict(_CLASSMETHOD.findall(ERRORS_SRC))
 
 
 def test_every_raised_platform_error_code_is_registered() -> None:

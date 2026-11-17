@@ -78,7 +78,7 @@ Client
 | **User identity headers** | Auth Sidecar → NGINX → Gateway | NGINX sets `X-User-ID`, `X-Project-ID` via `auth_request_set`. Gateway reads these for downstream authorization. |
 | **OIDC CLI callback trampoline** | Apache → NGINX (`/auth/cli-callback`) → Auth Sidecar (`/auth/cli-callback`) | OIDC browser login cannot complete; the IdP callback has no HTTPS+FQDN landing route. |
 | **Audit logging** | Auth Sidecar (Postgres `gateway_audit_log`) | If database is unreachable, sidecar continues without audit (logged as warning). |
-| **Download authorization** | Auth Sidecar (`/validate-download`) → UMRS (`/umrs/files/presign`) | Project-scoped path validation, then UMRS ACL check. Path traversal (`..`) and cross-project access are rejected. |
+| **Download authorization** | Auth Sidecar (`/validate`) → UMRS (`/umrs/files/download/`) | UMRS checks project namespacing and bucket ownership/ADR-080 access before any S3 call, then streams the bytes (ranged, ADR-115 D-1). Path traversal (`..`) and cross-project access are rejected. (2026-11-13: the sidecar `/validate-download` presign route was removed.) |
 | **Presigned URL generation** | Auth Sidecar (local S3 signing) or UMRS (delegated) | Presigned URLs are never exposed to external clients. |
 | **Route-level scope checks** | Python Gateway (`_umrs_proxy.py`) | `resolve_user_id()`, `verified_project_headers()`, `is_admin_claim()` enforce per-route ownership and scope. |
 | **LLM endpoint discovery** | Python Gateway (`routes/llm.py`) | Queries UMRS for active endpoints; returns 503 if none are ready. |
@@ -164,14 +164,19 @@ Security properties:
 ### File Download
 
 ```
-1. Client sends: GET /gw/files/download/<key>
-2. NGINX → Sidecar /validate-download/<key>
-3. Sidecar validates JWT + checks key is within caller's project scope
-4. Sidecar asks UMRS /umrs/files/presign for ACL + presigned URL
-5. Sidecar returns X-Accel-Redirect header
-6. NGINX fetches file from S3 via internal redirect
-7. Client receives file (never sees presigned URL)
+1. Client sends: GET|HEAD /gw/files/download/<key>[?bucket=B][&disposition=inline]
+   (optionally Range: bytes=a-b | a- | -n, If-Range)
+2. NGINX → Sidecar /validate (JWT, project, signed identity tuple)
+3. NGINX → UMRS /umrs/files/download/<key> with Range/If-Range forwarded
+4. UMRS authorizes (project namespace, bucket ownership / ADR-080 access)
+   before any S3 call, resolves the bucket's store (ADR-115 D-3)
+5. UMRS reads the object (get_object with Range for a 206) and streams it
+6. Client receives bytes; it never sees a presigned URL
 ```
+
+(2026-11-13, ADR-115 S1: this flow used to describe the sidecar
+`/validate-download` presign + X-Accel chain, which no nginx location had
+called since 2026-08-26; the route and `/internal/s3/` are removed.)
 
 ---
 

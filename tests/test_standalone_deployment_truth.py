@@ -1606,12 +1606,14 @@ def test_the_engine_rule(tmp_path, explicit, recorded, docker_ok, podman_ok, eng
 
 def test_the_docker_overlay_maps_the_host_for_every_service_that_dials_it():
     """podman maps host.containers.internal itself; Docker needs host-gateway.
-    umrs and rag reach registry rows (a native ollama) and MCP runtimes."""
+    umrs and rag reach registry rows (a native ollama) and MCP runtimes.
+    umrs-docmodels (same image) dials nothing: its only network is internal."""
     overlay = _compose("compose.docker.yaml")["services"]
     services = _compose()["services"]
     umrs_image = {n for n, s in services.items() if "UMRS_IMAGE" in str(s.get("image", ""))}
-    assert umrs_image == {"umrs", "rag"}
-    assert set(overlay) == umrs_image
+    assert umrs_image == {"umrs", "rag", "umrs-docmodels"}
+    assert services["umrs-docmodels"]["networks"] == ["standalone-docmodels"]
+    assert set(overlay) == umrs_image - {"umrs-docmodels"}
     for name, service in overlay.items():
         assert service == {"extra_hosts": ["host.containers.internal:host-gateway"]}, name
 
@@ -2759,7 +2761,7 @@ def test_the_stack_pulls_one_digest_pinned_image_by_default():
     default = _script_image_default()
     assert _DIGEST_REF.match(default), default
     services = _compose()["services"]
-    for name in ("umrs", "rag"):
+    for name in ("umrs", "rag", "umrs-docmodels"):
         assert services[name]["image"] == "${UMRS_IMAGE:-" + default + "}", name
         assert "build" not in services[name], name
 
@@ -2767,6 +2769,11 @@ def test_the_stack_pulls_one_digest_pinned_image_by_default():
 def test_building_is_an_opt_in_overlay_with_the_old_local_name():
     overlay = _compose("compose.build.yaml")["services"]
     assert overlay["umrs"]["image"] == overlay["rag"]["image"] == "ai4s-standalone-umrs:latest"
+    # umrs-docmodels runs the same locally built image, never a pulled one.
+    assert overlay["umrs-docmodels"] == {
+        "image": "ai4s-standalone-umrs:latest",
+        "pull_policy": "never",
+    }
     assert overlay["umrs"]["build"]["dockerfile"] == "umrs/docker/Dockerfile.server"
     assert "download.pytorch.org/whl/cpu" in overlay["umrs"]["build"]["args"]["TORCH_INDEX_URL"]
     assert overlay["rag"]["pull_policy"] == "never"

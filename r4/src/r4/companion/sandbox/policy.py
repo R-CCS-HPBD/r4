@@ -75,7 +75,9 @@ PROTECTED_WRITE_NAMES: tuple[str, ...] = (
 )
 _GIT_DIR_ITEMS = ("config", "config.worktree", "hooks")
 _LINKED_WORKTREE_ITEMS = ("commondir", "gitdir", "config.worktree")
-_EXTRA_PACKAGES = ("r4_contracts",)
+#: Import roots of r4's own packages outside ``r4``; umrs_protocol holds the code
+#: behind the r4_contracts aliases (ADR-117 D-2, U2.0b).
+_EXTRA_PACKAGES = ("r4_contracts", "umrs_protocol")
 _MAX_DEPTH = 4
 _GITMODULES_MAX = 256 * 1024
 #: Always passed through: hatch runtimes need the gateway binding.

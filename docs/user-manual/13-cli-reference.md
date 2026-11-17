@@ -536,12 +536,21 @@ r4 knowledge explore [PROJECT]
 r4 knowledge graphs [--project-id ID] [--all] [--query Q] [--json]
 r4 knowledge graph ID_OR_NAME [--json]
 r4 knowledge graph-create NAME [--description TEXT] [--project-id ID] [--kind KIND]
+                           [--ontology ID[@VERSION]]
 r4 knowledge graph-archive ID_OR_NAME      # soft delete (archive is the only delete)
 r4 knowledge graph-access ID_OR_NAME [--set SCOPE ...] [--private]
                                         # who may read the graph
 r4 knowledge graph-ingest ID_OR_NAME PATH... [--url URL ...]
+r4 knowledge graph-bind ID_OR_NAME ONTOLOGY_ID[@VERSION] [--json]
+                                    # Bind a graph to an ontology (2026-11-12)
 r4 knowledge allowlist [--check URL] [--project ID] [--json]
                                     # Web sites URL/repo ingest may fetch here
+
+# Ontologies (2026-11-12)
+r4 knowledge ontology register FILE [--format linkml|json] [--global] [--project ID] [--json]
+r4 knowledge ontology list [--all] [--project ID] [--json]
+r4 knowledge ontology show ID[@VERSION] [--project ID] [--json]
+r4 knowledge ontology retire ID@VERSION [--yes] [--project ID] [--json]
 
 # Review proposed knowledge (K1.5, 2026-10-24)
 r4 knowledge review [--project ID] [--graph G] [--rows] [--json]
@@ -607,6 +616,25 @@ r4 knowledge health                        # Plane reconciliation health per ass
   current project (`-p ID` for another): off, allowlist
   (with the sites both lists admit) or public, and the rule that set it;
   `--check` applies both.
+- `r4 knowledge ontology` (2026-11-12) — register an ontology from
+  a LinkML YAML file (`.yaml`/`.yml`) or the plain ontology JSON (`.json`);
+  `--format` overrides the guess from the extension. An ontology belongs to
+  the current project (write access needed) unless `--global` (admins
+  only). Agents cannot register or retire one. `list` shows id, version,
+  scope (`builtin`, a project id or `global`), status and the class and
+  relation counts; `--all` adds retired versions. `show ID` without a
+  version shows the highest live version (the one `graph-bind` pins).
+  `retire ID@VERSION` needs the version and asks to confirm unless `--yes`;
+  no graph can bind it afterwards; graphs already bound to it keep using it.
+  `graph-create --ontology` and `graph-bind` take `ID` or `ID@VERSION`;
+  without a version the server pins the highest live version. `graph-bind`
+  takes the graph's id or name. Each project (and the global scope) has its
+  own ontology ids; a project's own record comes before a global one with
+  the same id and version. Server refusals print one line naming the cause:
+  invalid file, id and version already registered in this scope, not
+  allowed, or no such live ontology. Usage errors exit 2; under `--json` errors print as
+  `{"error", "exit_code"}`. Guide: [27 Knowledge Management, Ontologies
+  (LinkML)](27-knowledge-management.md#ontologies-linkml).
 - `r4 knowledge explore` — interactive three-pane TUI: section tree
   (artifacts/findings/memory/plans with readiness badges), documents,
   detail/evidence pane (A2L lineage for artifacts); `e` exports the

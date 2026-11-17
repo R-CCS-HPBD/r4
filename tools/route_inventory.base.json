@@ -1627,6 +1627,38 @@
       "auth": "verified"
     },
     {
+      "path": "/umrs/knowledge/ontologies",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/knowledge/ontologies",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/knowledge/ontologies/{ontology_id}/{version}",
+      "methods": [
+        "GET"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
+      "path": "/umrs/knowledge/ontologies/{ontology_id}/{version}/retire",
+      "methods": [
+        "POST"
+      ],
+      "router": "fastapi.routing",
+      "auth": "verified"
+    },
+    {
       "path": "/umrs/knowledge/projects/{project_id}/events",
       "methods": [
         "GET"
@@ -3653,7 +3685,7 @@
   ],
   "summary": {
     "open(white)": 6,
-    "verified": 269,
+    "verified": 273,
     "edge-auth(nginx)": 140,
     "open(probe)": 1,
     "admin(jwt|verified-admin)": 8,

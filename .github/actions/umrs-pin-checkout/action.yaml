@@ -1,0 +1,24 @@
+name: umrs pin checkout (protocol)
+description: >-
+  Check out umrs/protocol at the parent's recorded umrs pin over anonymous
+  HTTPS (UMRS-org/umrs is public), for jobs that install umrs-protocol from
+  the checkout but do not fetch the umrs submodule (U2.0, ADR-117 D-2). No
+  secret, no token, no SSH key. Sparse (protocol/ only) on GitHub-hosted
+  runners; a full tree on self-hosted runners, whose reused workspace later
+  jobs read. Run it after actions/checkout, from the repository root.
+  A job that also installs ./umrs/src passes tree: full.
+inputs:
+  tree:
+    description: >-
+      auto (sparse on GitHub-hosted runners, full on self-hosted), full (the
+      whole umrs tree, for a job that also installs ./umrs/src) or sparse.
+    required: false
+    default: auto
+runs:
+  using: composite
+  steps:
+    - name: Check out umrs/protocol at the pin (anonymous HTTPS)
+      shell: bash
+      env:
+        UMRS_SPARSE: ${{ (inputs.tree == 'sparse' || (inputs.tree == 'auto' && runner.environment == 'github-hosted')) && '1' || '0' }}
+      run: bash "$GITHUB_ACTION_PATH/checkout.sh"

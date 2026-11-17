@@ -453,13 +453,21 @@ def _report_started(payload: Any, session_id: str, *, as_json: bool) -> None:
         print(f"provisioning on the server — poll with `r4 session venue {session_id}`")
 
 
+def _refuse_subagent_cli_session(store: Any, session_id: str) -> None:
+    """Legacy venue rails have no S5 child transport; test doubles may omit the store."""
+    refusal = getattr(store, "refuse_subagent_session", None)
+    if callable(refusal):
+        refusal(session_id)
+
+
 def _handle_venue_status(args: Namespace) -> int:
     session_id = getattr(args, "session_id", None)
     if not session_id:
         print("session venue requires a session ID", file=sys.stderr)
         return 2
     try:
-        client, _ = _venue_client_and_store()
+        client, store = _venue_client_and_store()
+        _refuse_subagent_cli_session(store, session_id)
         payload = client.get(_venue_url(client, session_id), timeout=15)
     except Exception as exc:  # noqa: BLE001
         print(f"venue status failed: {_venue_error(exc)}", file=sys.stderr)
@@ -474,7 +482,8 @@ def _handle_venue_stop(args: Namespace) -> int:
         print("session stop requires a session ID", file=sys.stderr)
         return 2
     try:
-        client, _ = _venue_client_and_store()
+        client, store = _venue_client_and_store()
+        _refuse_subagent_cli_session(store, session_id)
         payload = client.post(_venue_url(client, session_id, "/stop"), json={}, timeout=120)
     except Exception as exc:  # noqa: BLE001
         print(f"stop failed: {_venue_error(exc)}", file=sys.stderr)
@@ -509,7 +518,8 @@ def _handle_venue_questions(args: Namespace) -> int:
         print("session questions requires a session ID", file=sys.stderr)
         return 2
     try:
-        client, _ = _venue_client_and_store()
+        client, store = _venue_client_and_store()
+        _refuse_subagent_cli_session(store, session_id)
         payload = client.get(
             _questions_url(client, session_id), params={"status": "pending"}, timeout=15
         )
@@ -533,7 +543,8 @@ def _handle_venue_answer(args: Namespace) -> int:
         print("usage: r4 session answer <session_id> <question_id> <text>", file=sys.stderr)
         return 2
     try:
-        client, _ = _venue_client_and_store()
+        client, store = _venue_client_and_store()
+        _refuse_subagent_cli_session(store, session_id)
         payload = client.post(
             _questions_url(client, session_id, f"/{rest[0]}/answer"),
             json={"answer": text},
@@ -580,6 +591,9 @@ def _handle_pull(args: Namespace) -> int:
             f"Not found remotely: {session_id} (absent in the journal, or owned by another user).",
             file=sys.stderr,
         )
+        return 1
+    if outcome == "subagent":
+        print(f"subagent session {session_id} is read-only; use inspect_subagent", file=sys.stderr)
         return 1
     print(f"pull failed: snapshot journal unreachable for {session_id}", file=sys.stderr)
     return 1

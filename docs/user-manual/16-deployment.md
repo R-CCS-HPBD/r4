@@ -84,8 +84,11 @@ This chapter covers the prerequisites, deployment modes, and site profiles for r
 ### Server-Side Installation
 
 ```bash
-python -m pip install -e ./r4-contracts -e ./r4 -e ./umrs/src
+python -m pip install -e ./umrs/protocol -e ./r4-contracts -e ./packages/r4-teamengine-spi \
+  -e ./science -e ./r4 -e ./umrs/src
 ```
+
+(2026-11-14: `umrs/protocol` goes first and the first-party siblings are named: umrs-protocol, r4-teamengine-spi and r4-science are on no package index, so pip must never resolve them by name. U2.0, ADR-117 D-2.)
 
 ### Client-Side Installation
 

@@ -19,7 +19,8 @@ from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-PACKAGE_DIRS = ("r4-contracts", "science", "packages/r4-teamengine-spi", "r4")
+#: umrs/protocol first (U2.0, ADR-117 D-2): umrs-protocol is on no package index.
+PACKAGE_DIRS = ("umrs/protocol", "r4-contracts", "science", "packages/r4-teamengine-spi", "r4")
 DRIVER_PATH = Path(__file__).with_name("driver.py")
 #: Name of the driver inside the container. Not "driver.py": a task's own driver.py made
 #: the model run `pkill -f driver.py`, which killed R4 (M0 2026-10-25, wdm-design, exit 143).
@@ -212,7 +213,7 @@ _CACHE_DIRS = frozenset({"__pycache__", ".pytest_cache", ".ruff_cache", ".mypy_c
 
 
 def _package_signature(root: Path) -> str:
-    """Content signature over the four package trees (all text data files).
+    """Content signature over the package trees (PACKAGE_DIRS) (all text data files).
 
     SKILL.md/reference files ship inside the wheels and change runtime
     behavior (skill keywords, guides) — a *.py-only hash let stale wheels
@@ -239,12 +240,12 @@ def _package_signature(root: Path) -> str:
 
 
 def ensure_wheelhouse(root: Path = REPO_ROOT) -> Path:
-    """Build (or reuse) the wheelhouse for the four r4 packages.
+    """Build (or reuse) the wheelhouse for the r4 packages (PACKAGE_DIRS).
 
     Cached under $XDG_CACHE_HOME/r4bench/terminal-wheels/<signature>; rebuilt
     automatically when any package source file changes.
     """
-    # R4BENCH_PACKAGE_ROOT: build from a patched copy of the four package trees (variant runs).
+    # R4BENCH_PACKAGE_ROOT: build from a patched copy of the package trees (variant runs).
     root = Path(os.environ.get("R4BENCH_PACKAGE_ROOT") or root)
     signature = _package_signature(root)
     cache_root = (

@@ -26,6 +26,12 @@
 #   ./standalone.sh model list       list staged models
 #   ./standalone.sh embedder pull R D stage another text embedder (needs network)
 #   ./standalone.sh reranker pull [R] [D]  stage the cross-encoder (needs network)
+#   ./standalone.sh docling pull [D] optional: stage Docling's layout + table
+#                                    weights into /models (needs network); the
+#                                    image already bundles them
+#   ./standalone.sh gliner pull [R] [D]  optional: stage another GLiNER tagger
+#                                    into /models (needs network); the image
+#                                    bundles gliner_medium-v2.1
 #   ./standalone.sh migrate [--status] apply (or list) schema migrations
 #   ./standalone.sh orphan-repair [--apply] [--project P]...  knowledge orphan
 #                                    repair (ADR-093 MD-17); dry run by default
@@ -381,6 +387,38 @@ profile_args() {
     [[ "$p" == "models-local" && "$(model_host)" == "native" ]] && continue
     PROFILE_ARGS+=(--profile "$p")
   done
+  docmodels_profile
+}
+
+# umrs-docmodels (ADR-116 amendment, 2026-11-13) keeps Docling + GLiNER loaded
+# outside the umrs container. On unless STANDALONE_DOCMODELS=0 (exported or in
+# env/local.env), for example on a small machine: then umrs runs the models
+# itself, so its URL is set to off unless env/local.env names one.
+docmodels_profile() {
+  if [[ "$(cfg_get STANDALONE_DOCMODELS)" != 0 ]]; then
+    PROFILE_ARGS+=(--profile docmodels)
+  elif [[ -z "$(cfg_get UMRS_KNOWLEDGE_DOCMODELS_URL)" ]]; then
+    export UMRS_KNOWLEDGE_DOCMODELS_URL=off
+  fi
+}
+
+# A published image older than the docmodels service (2026-11-13) has no
+# umrs.knowledge.docmodels_server: its umrs-docmodels container would exit at
+# once and `up --wait` would fail. Leave the service out instead and say so;
+# umrs then reads PDFs as before. A checkout build always has the module.
+docmodels_image_check() {
+  [[ " ${PROFILE_ARGS[*]:-} " == *" docmodels "* ]] || return 0
+  build_wanted && return 0
+  "$ENGINE_BIN" run --rm --entrypoint python "$(umrs_image_ref)" \
+    -c "import umrs.knowledge.docmodels_server" >/dev/null 2>&1 && return 0
+  warn "the umrs image $(umrs_image_ref) predates umrs-docmodels; starting without it (Docling and GLiNER off). Use a newer UMRS_IMAGE, or STANDALONE_BUILD=1."
+  # PROFILE_ARGS holds `--profile NAME` pairs; keep every pair but this one.
+  local kept=() i
+  for ((i = 0; i < ${#PROFILE_ARGS[@]}; i += 2)); do
+    [[ "${PROFILE_ARGS[i+1]}" == docmodels ]] || kept+=("${PROFILE_ARGS[i]}" "${PROFILE_ARGS[i+1]}")
+  done
+  PROFILE_ARGS=(${kept[@]+"${kept[@]}"})
+  [[ -n "$(cfg_get UMRS_KNOWLEDGE_DOCMODELS_URL)" ]] || export UMRS_KNOWLEDGE_DOCMODELS_URL=off
 }
 
 # NOTE: "${arr[@]:-}" yields ONE EMPTY ARGUMENT when arr is empty, which
@@ -548,6 +586,7 @@ cmd_up() {
   detect_engine; load_env; profile_args; require_for_profile
   info "profile=${ACTIVE_PROFILE} ($(profile_origin)) profiles=$(active_profiles) engine=${ENGINE} files=$(overlay_names)"
   ensure_umrs_image
+  docmodels_image_check
   compose up -d --wait --remove-orphans || die "stack did not become healthy. See: ./standalone.sh logs umrs"
   # Later verbs (down, status, logs, doctor, register) read these.
   state_set profile "$ACTIVE_PROFILE"
@@ -798,6 +837,55 @@ cmd_reranker() {
   esac
 }
 
+# Knowledge ingest v2 models (ADR-116 D-9) into the shared models volume:
+# Docling's layout + TableFormer weights (OCR off) and a GLiNER entity tagger
+# with its backbone tokenizer/config, staged by umrs.knowledge.ingest_models
+# so they load offline. Needs network — the runtime does not have it.
+# Optional since the 2026-11-13 amendment: the umrs image bundles both and
+# the stack uses them by default (umrs-docmodels). A copy staged here is used
+# only once env/local.env names it, by umrs and umrs-docmodels alike.
+DOCLING_DIR="docling"
+GLINER_REPO="urchade/gliner_medium-v2.1"
+GLINER_DIR="gliner_medium-v2.1"
+_stage_ingest_model() {
+  local what="$1" name="$2"
+  shift 2
+  [[ "$name" != */* && "$name" != .* ]] || die "${what} dir-name '${name}' must be a plain directory name under /models"
+  # An image built before ADR-116 has no ingest_models module: say so by
+  # name instead of a bare "pull failed" after a ModuleNotFoundError.
+  "${ENGINE_BIN}" run --rm --entrypoint python "$(_umrs_image)" \
+    -c "import umrs.knowledge.ingest_models" >/dev/null 2>&1 \
+    || die "the umrs image $(_umrs_image) predates ADR-116 (no umrs.knowledge.ingest_models); rebuild it with STANDALONE_BUILD=1, or set UMRS_IMAGE to a newer image"
+  info "staging ${what} -> /models/${name} (this step needs network)"
+  "${ENGINE_BIN}" run --rm -v "$(_ollama_vol):/models" -e HF_HOME=/tmp/hf \
+    --entrypoint python "$(_umrs_image)" -m umrs.knowledge.ingest_models stage "$what" \
+    --dest "/models/${name}" "$@" || die "${what} pull failed"
+}
+cmd_docling() {
+  detect_engine
+  case "${1:-}" in
+    pull)
+      local name="${2:-$DOCLING_DIR}"
+      _stage_ingest_model docling "$name"
+      ok "docling staged: /models/${name}"
+      info "Optional override of the bundled weights: UMRS_KNOWLEDGE_DOCLING_ARTIFACTS=/models/${name} in env/local.env, then ./standalone.sh up"
+      ;;
+    *) die "usage: standalone.sh docling pull [dir-name]   (default /models/${DOCLING_DIR}; optional, the image bundles Docling)" ;;
+  esac
+}
+cmd_gliner() {
+  detect_engine
+  case "${1:-}" in
+    pull)
+      local repo="${2:-$GLINER_REPO}" name="${3:-$GLINER_DIR}"
+      _stage_ingest_model gliner "$name" --repo "$repo" --mount-path "/models/${name}"
+      ok "gliner staged: /models/${name}"
+      info "Optional override of the bundled tagger: UMRS_KNOWLEDGE_GLINER_MODEL=/models/${name} in env/local.env, then ./standalone.sh up"
+      ;;
+    *) die "usage: standalone.sh gliner pull [hf-repo] [dir-name]   (default ${GLINER_REPO} -> /models/${GLINER_DIR}; optional, the image bundles it)" ;;
+  esac
+}
+
 # Schema migrations against the RUNNING postgres, with the command bootstrap
 # uses (python -m umrs.migrations --db-url). A one-off umrs container, so it
 # works while umrs itself cannot start on an old schema. The URL is built
@@ -1012,6 +1100,8 @@ main() {
     model)     shift; cmd_model "$@" ;;
     embedder)  shift; cmd_embedder "$@" ;;
     reranker)  shift; cmd_reranker "$@" ;;
+    docling)   shift; cmd_docling "$@" ;;
+    gliner)    shift; cmd_gliner "$@" ;;
     migrate)   shift; cmd_migrate "$@" ;;
     orphan-repair) shift; cmd_orphan_repair "$@" ;;
     doctor)    shift; cmd_doctor "$@" ;;

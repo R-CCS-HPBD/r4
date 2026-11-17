@@ -172,6 +172,7 @@ class WebAccessBridgeMixin:
         server has no preview, with ``error`` when the call failed."""
         host = self._host()
         sid = str(params.get("session_id") or host._session_id_str())
+        host._refuse_read_only_child(sid)
         config = host.session.metadata.get("config")
         config = config if isinstance(config, dict) else {}
         project = str(params.get("project") or config.get("project_id") or "")

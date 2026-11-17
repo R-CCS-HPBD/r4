@@ -372,3 +372,71 @@ def test_umrs_jobs_may_not_import_umrs_api(tmp_path: Path) -> None:
     findings = validate_import_boundaries(tmp_path, rules=UMRS_INTERNAL_BOUNDARY_RULES)
     assert findings, "umrs.jobs importing umrs.api must be reported"
     assert any("umrs.api" in f.imported for f in findings)
+
+
+# --- ADR-117 D-3 (U2.0a): umrs-protocol is stdlib-only, and its root is required ---
+
+_PROTOCOL = Path("umrs") / "protocol" / "src" / "umrs_protocol"
+_CONTRACTS = Path("r4-contracts") / "src" / "r4_contracts"
+
+
+def test_umrs_protocol_stdlib_and_self_imports_pass(tmp_path: Path) -> None:
+    _write(
+        tmp_path / _PROTOCOL / "research.py",
+        "import hashlib\nfrom .provenance import ArtifactRef\nfrom umrs_protocol import errors\n",
+    )
+    findings = validate_import_boundaries(tmp_path)
+    assert [f for f in findings if f.path.startswith("umrs/protocol/")] == []
+
+
+def test_umrs_protocol_importing_r4_contracts_fails(tmp_path: Path) -> None:
+    _write(tmp_path / _PROTOCOL / "bad.py", "def f():\n    from r4_contracts import errors\n")
+    findings = validate_import_boundaries(tmp_path)
+    found = _finding_for(findings, "umrs/protocol/src/umrs_protocol/bad.py", "r4_contracts")
+    assert found is not None and found.is_lazy
+
+
+def test_umrs_protocol_importing_third_party_fails(tmp_path: Path) -> None:
+    _write(tmp_path / _PROTOCOL / "bad.py", "import httpx\n")
+    findings = validate_import_boundaries(tmp_path)
+    assert _finding_for(findings, "umrs/protocol/src/umrs_protocol/bad.py", "httpx") is not None
+
+
+def test_missing_umrs_protocol_root_fails(tmp_path: Path) -> None:
+    findings = validate_import_boundaries(tmp_path)
+    missing = _finding_for(findings, "umrs/protocol/src/umrs_protocol", "<missing-root>")
+    assert missing is not None
+    assert "ADR-117" in missing.format()
+
+
+def test_missing_optional_root_still_skips(tmp_path: Path) -> None:
+    rules = (ImportBoundaryRule(root="nowhere/src/pkg", description="optional"),)
+    assert validate_import_boundaries(tmp_path, rules=rules) == []
+    required = (ImportBoundaryRule(root="nowhere/src/pkg", description="needed", required=True),)
+    assert [f.imported for f in validate_import_boundaries(tmp_path, rules=required)] == [
+        "<missing-root>"
+    ]
+
+
+def test_r4_contracts_shim_may_import_umrs_protocol(tmp_path: Path) -> None:
+    """U2.0b: a moved module is a sys.modules alias of its umrs_protocol twin."""
+    _write(
+        tmp_path / _CONTRACTS / "errors.py",
+        "import sys\n\nfrom umrs_protocol import errors as _impl\n\nsys.modules[__name__] = _impl\n",
+    )
+    findings = validate_import_boundaries(tmp_path)
+    assert [f for f in findings if f.path.startswith("r4-contracts/")] == []
+
+
+def test_r4_contracts_shim_importing_third_party_fails(tmp_path: Path) -> None:
+    """The allowance names umrs_protocol only; anything else stays forbidden."""
+    _write(tmp_path / _CONTRACTS / "errors.py", "from httpx import errors as _impl\n")
+    findings = validate_import_boundaries(tmp_path)
+    assert _finding_for(findings, "r4-contracts/src/r4_contracts/errors.py", "httpx") is not None
+
+
+def test_r4_contracts_may_not_import_umrs_core(tmp_path: Path) -> None:
+    """umrs_protocol is not a prefix pass for the umrs platform package."""
+    _write(tmp_path / _CONTRACTS / "errors.py", "from umrs.api import errors\n")
+    findings = validate_import_boundaries(tmp_path)
+    assert _finding_for(findings, "r4-contracts/src/r4_contracts/errors.py", "umrs.api") is not None

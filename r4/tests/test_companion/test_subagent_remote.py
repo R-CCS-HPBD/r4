@@ -242,6 +242,80 @@ def test_local_child_inventory_and_inspection_make_no_remote_request(tmp_path) -
     assert owner.calls == []
 
 
+def _listed_child(child: str, status: str) -> dict[str, Any]:
+    """A UMRS child summary row (the listing route has no status parameter)."""
+    return {
+        "session_id": child,
+        "name": child,
+        "updated_at": "2026-11-10T00:01:00+00:00",
+        "venue": "frontend",
+        "state": "ongoing",
+        "archived_at": "",
+        "session_kind": "subagent",
+        "parent_session_id": ROOT,
+        "parent_agent_id": PARENT_AGENT,
+        "agent_id": AGENT,
+        "subagent_status": status,
+    }
+
+
+def test_remote_inventory_applies_the_exact_status_filter_umrs_ignores(tmp_path) -> None:
+    store = CompanionSessionStore(db_path=tmp_path / "children.db")
+    owner = _OwnerClient()
+    owner.listing = [
+        _listed_child("child-run", "running"),
+        _listed_child("child-done", "completed"),
+    ]
+    server = _reader(store, owner)
+
+    listed = server.list_sessions({"session_kind": "subagent", "subagent_status": "completed"})
+
+    assert [row["id"] for row in listed["sessions"]] == ["child-done"]
+    assert {key: listed["sessions"][0][key] for key in ("execution_kind", "ended_at")} == {
+        "execution_kind": "",
+        "ended_at": "",
+    }
+    everything = server.list_sessions({"session_kind": "subagent"})
+    assert sorted(row["id"] for row in everything["sessions"]) == ["child-done", "child-run"]
+
+
+def test_remote_inspection_is_never_resumable(tmp_path) -> None:
+    store = CompanionSessionStore(db_path=tmp_path / "children.db")
+    _seed(store)
+    owner = _OwnerClient(store.get_session_record(CHILD))
+    server = _reader(CompanionSessionStore(db_path=tmp_path / "empty.db"), owner)
+
+    remote = _inspect(server, remote=True)
+
+    assert (remote["source"], remote["read_only"], remote["resumable"]) == ("remote", True, False)
+
+
+class _JournalDetailClient:
+    """Ordinary journal detail route: UMRS still serves a bound child's snapshot."""
+
+    def __init__(self, metadata: Any) -> None:
+        self.payload = {"id": CHILD, "name": "remote child", "messages": [], "metadata": metadata}
+
+    def get(self, url: str, **_kwargs: Any) -> dict[str, Any]:
+        assert url.endswith(f"/companion/sessions/{CHILD}")
+        return {"session_id": CHILD, "name": "remote child", "payload": json.dumps(self.payload)}
+
+
+@pytest.mark.parametrize("encode", [False, True], ids=["object", "json-text"])
+def test_ordinary_resume_never_pulls_a_remote_child_into_the_local_store(
+    tmp_path, encode: bool
+) -> None:
+    store = CompanionSessionStore(db_path=tmp_path / "children.db")
+    metadata = json.dumps(_metadata()) if encode else _metadata()
+    server = _reader(store, _JournalDetailClient(metadata))
+
+    with pytest.raises(ValueError, match="read-only; use inspect_subagent"):
+        server.load_session({"session_id": CHILD})
+
+    assert store.pull_session(_JournalDetailClient(metadata), CHILD) == "subagent"
+    assert store.get_session_record(CHILD) is None
+
+
 class _RecorderRemote:
     def __init__(self) -> None:
         self.records: list[dict[str, Any]] = []

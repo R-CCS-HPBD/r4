@@ -9,9 +9,12 @@
 # Steps (in this order — the order is the point):
 #   1. preconditions: clean tree, on main, level with origin/main, umrs pin on
 #      UMRS-org (scripts/check-umrs-lineage.sh), CI green for HEAD
-#   2. bump versions: umrs/src/pyproject.toml (submodule commit, pushed to
-#      upstream AND origin), then the parent's Python packages (PEP 440,
-#      e.g. 0.2.0rc2) and the JS packages (semver, e.g. 0.2.0-rc.2)
+#   2. bump versions: umrs/src/pyproject.toml and umrs/protocol/pyproject.toml
+#      (one submodule commit, pushed to upstream AND origin; umrs-protocol is
+#      lockstep with r4 from U2.0, ADR-117 D-2), then the parent's Python
+#      packages (PEP 440, e.g. 0.2.0rc2), the umrs-protocol>= floors in
+#      r4-contracts and r4 (U2.0b), `uv lock`, and the JS packages (semver,
+#      e.g. 0.2.0-rc.2)
 #   3. CHANGELOG: "## [Unreleased] — vX" becomes "## [vX] — <date>"
 #   4. commit "release: vX" (parent, with the umrs pointer)
 #   5. tag umrs "ai4s-platform/vX" on both remotes; tag parent "vX" (annotated)
@@ -63,12 +66,21 @@ grep -q '^## \[Unreleased\]' CHANGELOG.md || fail "CHANGELOG.md has no [Unreleas
 # ── 2. version bumps ─────────────────────────────────────────────────────────
 py_files=(pyproject.toml r4/pyproject.toml r4-contracts/pyproject.toml packages/r4-teamengine-spi/pyproject.toml)
 js_files=(packages/r4-tui-v3/package.json packages/r4-web/package.json)
-run "sed -i -E 's/^version = \"[^\"]+\"/version = \"${py_version}\"/' umrs/src/pyproject.toml"
+run "sed -i -E 's/^version = \"[^\"]+\"/version = \"${py_version}\"/' umrs/src/pyproject.toml umrs/protocol/pyproject.toml"
+# umrs itself requires umrs-protocol (U-A1): its floor moves with the release
+# too, in the same umrs commit (U2.0b review finding 2).
+run "sed -i -E 's/\"umrs-protocol>=[^\"]+\"/\"umrs-protocol>=${py_version}\"/' umrs/src/pyproject.toml"
 run "git -C umrs commit -qam 'release: ${tag}'"
 run "git -C umrs push -q upstream HEAD:ai4s-platform && git -C umrs push -q origin HEAD:ai4s-platform"
 for f in "${py_files[@]}"; do
   run "sed -i -E 's/^version = \"[^\"]+\"/version = \"${py_version}\"/' ${f}"
 done
+# The umrs-protocol floors move in lockstep (U2.0b, ADR-117 D-2): r4-contracts
+# is an alias layer over it and r4 reads the gate from it, so each release
+# requires the umrs-protocol it ships. Then relock (no --upgrade, ADR-100).
+floor_files=(r4-contracts/pyproject.toml r4/pyproject.toml)
+run "sed -i -E 's/\"umrs-protocol>=[^\"]+\"/\"umrs-protocol>=${py_version}\"/' ${floor_files[*]}"
+run "uv lock"
 run "sed -i -E 's/^__version__ = \"[^\"]+\"/__version__ = \"${py_version}\"/' r4/src/r4/__init__.py"
 for f in "${js_files[@]}"; do
   run "sed -i -E 's/^  \"version\": \"[^\"]+\"/  \"version\": \"${js_version}\"/' ${f}"
@@ -79,7 +91,7 @@ today="$(date +%Y-%m-%d)"
 run "sed -i -E 's/^## \\[Unreleased\\].*/## [${tag}] — ${today}/' CHANGELOG.md"
 
 # ── 4–5. commit + tags ───────────────────────────────────────────────────────
-run "git add -A umrs ${py_files[*]} r4/src/r4/__init__.py ${js_files[*]} CHANGELOG.md"
+run "git add -A umrs ${py_files[*]} uv.lock r4/src/r4/__init__.py ${js_files[*]} CHANGELOG.md"
 run "git commit -qm 'release: ${tag}'"
 run "git -C umrs tag -a 'ai4s-platform/${tag}' -m 'R4 + UMRS ${tag} (umrs side)'"
 run "git -C umrs push -q upstream 'ai4s-platform/${tag}' && git -C umrs push -q origin 'ai4s-platform/${tag}'"

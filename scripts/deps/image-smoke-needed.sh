@@ -4,6 +4,12 @@
 # .github/workflows/server-image-smoke.yaml so the image build (minutes, ~2.5 GB) runs
 # only for dependency-relevant changes, not for every umrs pointer bump.
 #
+# The two knowledge modules Dockerfile.server copies before the source (the
+# bundled e5 embedder and the Docling/GLiNER staging) count as image files, and
+# so does umrs/protocol: umrs-protocol installs into the image from the
+# checkout (U2.0, ADR-117 D-2). In the parent, r4-contracts/pyproject.toml is
+# the image's r4-contracts dependency list (it gains umrs-protocol in U2.0b).
+#
 # Usage: scripts/deps/image-smoke-needed.sh <base-commit> [<head-commit>]
 # Anything it cannot tell (base or a umrs pin not fetched) counts as "true".
 set -euo pipefail
@@ -14,7 +20,7 @@ say() { echo "$2" >&2; echo "$1"; }
 if ! changed="$(git diff --name-only "$base" "$head" 2>/dev/null)"; then
   say true "base $base not available: build"; exit 0
 fi
-if grep -qxE 'uv\.lock|pyproject\.toml|\.dockerignore|scripts/deps/.*|\.github/workflows/server-image-smoke\.yaml' <<<"$changed"; then
+if grep -qxE 'uv\.lock|pyproject\.toml|r4-contracts/pyproject\.toml|\.dockerignore|scripts/deps/.*|\.github/workflows/server-image-smoke\.yaml' <<<"$changed"; then
   say true "parent dependency files changed"; exit 0
 fi
 if ! grep -qx 'umrs' <<<"$changed"; then
@@ -26,7 +32,7 @@ umrs_git() { env -u GIT_DIR -u GIT_WORK_TREE git -C "$(git rev-parse --show-topl
 if ! umrs_git cat-file -e "${old}^{commit}" 2>/dev/null || ! umrs_git cat-file -e "${new}^{commit}" 2>/dev/null; then
   say true "umrs ${old:0:8}..${new:0:8} not both fetched: build"; exit 0
 fi
-if umrs_git diff --quiet "$old" "$new" -- docker/Dockerfile.server docker/server-image src/pyproject.toml src/umrs/knowledge/text_embedder.py; then
+if umrs_git diff --quiet "$old" "$new" -- docker/Dockerfile.server docker/server-image src/pyproject.toml protocol src/umrs/knowledge/text_embedder.py src/umrs/knowledge/ingest_models_stage.py; then
   say false "umrs ${old:0:8}..${new:0:8} leaves the image's dependency files alone"
 else
   say true "umrs ${old:0:8}..${new:0:8} changes the image's dependency files"

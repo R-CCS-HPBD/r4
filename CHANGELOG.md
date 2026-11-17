@@ -41,8 +41,13 @@ the per-wave detail is kept in the maintainers' development records.
   lifecycle, and cursor-paginated actual event history without loading or
   switching a live session. Event payloads stay redacted and explicitly bounded;
   `list_sessions` gains opt-in local child inventory and lineage filters while
-  default lists and writable loading still exclude children. Remote child
-  inventory/transport remains S5 work.
+  default lists and writable loading still exclude children. An additive
+  hardening follow-up makes `resumable=false` explicit, filters exact lifecycle
+  status, carries execution/start/end summaries, indexes cursor pages, and
+  refuses ordinary raw-ID mutators and legacy venue/policy/turn routes before
+  they can become second-writer paths. Over S5 (2026-11-11) the same exact
+  filters apply to remote child rows, remote reads are `resumable=false` too,
+  and a journal pull never turns a remote child into a local session.
 - **Console subagent inspector** (S4, D-70; 2026-11-10): Work-row agent details
   and the active parent's durable child rows in Sessions open the actual child
   read-only, including after bridge restart. The inspector shows task/prompt,

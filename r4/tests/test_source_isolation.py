@@ -422,9 +422,14 @@ def test_model_at_the_active_source_keeps_the_login(deployments, wire):
     from r4.client import Client
 
     Client().chat("hi", model="m@site-a")
-    to_a = [r for r in wire if r.url.host == "a.example"]
-    assert to_a and to_a[0].headers["authorization"] == f"Bearer {A_KEY}"
-    assert to_a[0].headers["x-project-id"] == A_PROJECT
+    # Prefix discovery's /ready probe is intentionally unauthenticated; assert
+    # the login on the model request rather than whichever request ran first.
+    completions = [
+        r for r in wire if r.url.host == "a.example" and r.url.path == "/gw/llm/v1/chat/completions"
+    ]
+    assert len(completions) == 1
+    assert completions[0].headers["authorization"] == f"Bearer {A_KEY}"
+    assert completions[0].headers["x-project-id"] == A_PROJECT
 
 
 # ------------------------------------------------- the active-source overlay ---

@@ -6,9 +6,10 @@
 # Build Args:
 #   SERVER_TYPE: filesystem | database | webfetch | code | platform | rag-proxy | custom
 #
-# Build context: the ai4s-platform repository ROOT. `r4-contracts` is an
-# unpublished sibling package (ADR-005), so the image installs it from the
-# checkout instead of PyPI (ADR-045 D3: HPC venues stage this image as an
+# Build context: the ai4s-platform repository ROOT. `r4-contracts` and
+# `umrs-protocol` (from the umrs submodule, U2.0, ADR-117 D-2) are unpublished
+# sibling packages (ADR-005), so the image installs both from the checkout,
+# never from a package index (ADR-045 D3: HPC venues stage this image as an
 # archive built from the checkout alone — see umrs/deploy/_common/stage_images.sh).
 #
 # Usage (from the repository root):
@@ -42,10 +43,14 @@ WORKDIR /app
 # Install system dependencies
 RUN apk add --no-cache curl
 
-# r4-contracts first (stdlib-only, unpublished): satisfies the
-# `r4-contracts>=0.1.0` dependency below without a registry.
+# umrs-protocol and r4-contracts first (stdlib-only, unpublished), in one
+# resolve so neither name goes to a registry: they satisfy the
+# `r4-contracts>=0.1.0` dependency below (and r4-contracts' own dependency on
+# umrs-protocol from U2.0b).
+COPY umrs/protocol/ /tmp/umrs-protocol/
 COPY r4-contracts/ /tmp/r4-contracts/
-RUN pip install --no-cache-dir /tmp/r4-contracts && rm -rf /tmp/r4-contracts
+RUN pip install --no-cache-dir /tmp/umrs-protocol /tmp/r4-contracts \
+    && rm -rf /tmp/umrs-protocol /tmp/r4-contracts
 
 # Copy source and install
 COPY mcp-servers/pyproject.toml mcp-servers/README.md ./

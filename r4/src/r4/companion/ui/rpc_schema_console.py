@@ -114,6 +114,9 @@ class SessionListRow:
     parent_agent_id: str = ""
     agent_id: str = ""
     subagent_status: str = ""
+    execution_kind: str = ""
+    started_at: str = ""
+    ended_at: str = ""
 
 
 @dataclass(frozen=True)
@@ -165,6 +168,7 @@ class InspectSubagentResult:
     total_events: int = 0
     limit: int = 100
     read_only: bool = True
+    resumable: bool = False
     event_payload_cap: int = 8000
     event_payloads_may_be_abridged: bool = True
     source: Literal["local", "remote"] = "local"

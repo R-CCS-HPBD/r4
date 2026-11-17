@@ -112,11 +112,14 @@ bash scripts/ci-lint-local.sh --umrs-changed [--base <ref>]
 ```
 
 `--umrs-changed`: the parent diff never descends into the submodule, so this
-mode diffs `<base>:umrs..HEAD:umrs` (plus the submodule's unstaged edits) and
-runs `tools/lint_baseline.py check` and `tools/complexity_baseline.py check`
-on exactly those files, then exits. CI runs the same command in `test-umrs`
+mode diffs `<base>:umrs..:umrs` (the index's stage-0 gitlink, plus the
+submodule's unstaged edits). The index equals `HEAD` after a commit and holds
+the resolved final pointer during a staged parent merge; an unmerged gitlink
+fails the gate instead of selecting either side. The gate runs
+`tools/lint_baseline.py check` and `tools/complexity_baseline.py check` on
+exactly those files, then exits. CI runs the same command in `test-umrs`
 before the umrs suite, so a function born over threshold inside an umrs
-commit fails fast there too.
+commit fails fast there too. (Staged-pointer rule added 2026-11-17, ledger 299.)
 
 ### Known Exclusions
 

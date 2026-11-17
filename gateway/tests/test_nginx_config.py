@@ -387,3 +387,27 @@ def test_gateway_liveness_stays_static():
     liveness = _named_location(_nginx_server_config_text(), "/health")
     assert "return 200 " in liveness
     assert "auth_request" not in liveness
+
+
+def test_file_download_forwards_ranges_for_seeking():
+    """ADR-115 D-1/D-12 (2026-11-13): UMRS answers Range with 206/416, so the
+    download lane forwards Range and If-Range explicitly, lets HEAD through
+    (no method filter), keeps auth_request and caps concurrent streams."""
+    block = _location_block(_nginx_server_config_text(), "location /gw/files/download/ {")
+    assert "proxy_set_header Range $http_range;" in block
+    assert "proxy_set_header If-Range $http_if_range;" in block
+    assert "limit_conn conn_limit 8;" in block
+    assert "auth_request /auth/validate;" in block
+    assert "limit_except" not in block
+    assert "proxy_buffering off;" in block
+
+
+def test_presign_shaped_stream_paths_are_gone():
+    """ADR-115 D-1: /gw/stream/ proxied to a sidecar-set X-Upstream-URL that
+    nothing set, and /internal/s3/ proxied to $arg_url for the removed
+    /validate-download chain. Media streams only through UMRS."""
+    config = _nginx_server_config_text()
+    assert "location /gw/stream/" not in config
+    assert "location /internal/s3/" not in config
+    assert "$upstream_http_x_upstream_url" not in config
+    assert "proxy_pass $arg_url" not in config

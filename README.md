@@ -166,7 +166,7 @@ to every release as `install.sh`.
 git clone --recurse-submodules https://github.com/R-CCS-HPBD/r4.git
 cd r4
 python3 -m venv .venv && source .venv/bin/activate
-pip install -e ./r4-contracts -e ./packages/r4-teamengine-spi -e ./science -e ./r4 -e "./umrs/src[client]"
+pip install -e ./umrs/protocol -e ./r4-contracts -e ./packages/r4-teamengine-spi -e ./science -e ./r4 -e "./umrs/src[client]"
 ```
 
 `make install-client` does the same, using `uv` when it is installed.

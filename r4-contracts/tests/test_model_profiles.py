@@ -20,6 +20,7 @@ from pathlib import Path
 
 import pytest
 
+import r4_contracts.models
 from r4_contracts.models import (
     DEFAULT_PROFILE,
     KNOWN_MODEL_FAMILIES,
@@ -41,7 +42,9 @@ from r4_contracts.models import (
     size_class_for,
 )
 
-MODELS_SRC = Path(__file__).parents[1] / "src" / "r4_contracts" / "models.py"
+# The real source through the alias (ADR-117 D-2, U2.0b): r4_contracts/models.py is
+# a shim; __file__ names umrs_protocol/models.py, the code that runs.
+MODELS_SRC = Path(r4_contracts.models.__file__)
 
 
 @pytest.mark.parametrize(

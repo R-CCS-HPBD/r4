@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Build the r4 wheel and packaged gate twice; compare their exact hashes.
 
+The gate ships in the umrs-protocol wheel (``umrs_protocol/hpc_gate.py``,
+ADR-117 D-2, U2.0b); the r4-contracts wheel carries only its alias shim, which
+this check also asserts, so exactly one full gate ships.
+
 This is a read-only source check with outputs in a caller-selected temporary
 workspace. It never signs, uploads, tags or publishes anything. The same
 ``SOURCE_DATE_EPOCH`` and deterministic interpreter settings cover both builds.
@@ -21,7 +25,12 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-GATE_MEMBER = "r4_contracts/hpc_gate.py"
+GATE_MEMBER = "umrs_protocol/hpc_gate.py"
+#: The r4_contracts alias of the gate: a few lines, never a second gate.
+SHIM_MEMBER = "r4_contracts/hpc_gate.py"
+SHIM_MAX_BYTES = 1024
+#: Source directories built twice; ``umrs/protocol`` builds the gate wheel.
+BUILD_DIRS = ("r4", "r4-contracts", "umrs/protocol")
 
 
 class ReproducibilityError(RuntimeError):
@@ -37,10 +46,18 @@ def gate_from_wheel(wheel: Path) -> bytes:
         return archive.read(GATE_MEMBER)
 
 
+def check_contracts_shim(wheel: Path) -> None:
+    """The r4-contracts wheel's ``hpc_gate.py`` is the alias shim, not a gate copy."""
+    with zipfile.ZipFile(wheel) as archive:
+        shim = archive.read(SHIM_MEMBER)
+    if len(shim) >= SHIM_MAX_BYTES or b"sys.modules[__name__]" not in shim or b"def main" in shim:
+        raise ReproducibilityError(f"{wheel.name}: {SHIM_MEMBER} is not the umrs_protocol alias")
+
+
 def manifest_from_wheel(wheel: Path, min_client: str, expires: int) -> bytes:
     """Write release bytes from a built gate; the maintainer signs them separately."""
     from r4 import hpc_release
-    from r4_contracts import hpc_gate
+    from umrs_protocol import hpc_gate
 
     gate = gate_from_wheel(wheel)
     return hpc_release.manifest_bytes(
@@ -64,15 +81,16 @@ def _build_once(root: Path, out: Path, epoch: int, label: str, runner: Callable[
         "TZ": "UTC",
         "BUILD_LABEL": label,
     }
-    for project in ("r4", "r4-contracts"):
+    for source in BUILD_DIRS:
         runner(
-            ["uv", "build", "--wheel", "--no-sources", "--out-dir", str(out), str(root / project)],
+            ["uv", "build", "--wheel", "--no-sources", "--out-dir", str(out), str(root / source)],
             cwd=root,
             env=env,
             check=True,
         )
+    check_contracts_shim(_one_wheel(out, "r4-contracts"))
     r4 = _one_wheel(out, "r4").read_bytes()
-    gate = gate_from_wheel(_one_wheel(out, "r4-contracts"))
+    gate = gate_from_wheel(_one_wheel(out, "umrs-protocol"))
     return {"r4_sha256": _sha256(r4), "gate_sha256": _sha256(gate)}
 
 
@@ -106,13 +124,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.work_dir:
         result = build_reproducibly(args.root, args.work_dir, args.epoch)
         if args.manifest:
-            wheel = _one_wheel(args.work_dir / "a", "r4-contracts")
+            wheel = _one_wheel(args.work_dir / "a", "umrs-protocol")
             args.manifest.write_bytes(manifest_from_wheel(wheel, args.min_client, args.expires))
     else:
         with tempfile.TemporaryDirectory(prefix="r4-gate-repro-") as tmp:
             result = build_reproducibly(args.root, Path(tmp), args.epoch)
             if args.manifest:
-                wheel = _one_wheel(Path(tmp) / "a", "r4-contracts")
+                wheel = _one_wheel(Path(tmp) / "a", "umrs-protocol")
                 args.manifest.write_bytes(manifest_from_wheel(wheel, args.min_client, args.expires))
     print(json.dumps(result, sort_keys=True))
     return 0

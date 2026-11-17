@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from argparse import ArgumentParser, Namespace, RawDescriptionHelpFormatter
+from typing import Any
 
 from .base import CommandHandler
 from .registry import command
@@ -208,6 +209,24 @@ def _cmd_job_list(args, client):
     return None
 
 
+def _attempt_notes(attempt: Any) -> list[str]:
+    """What a knowledge job noted about its run (2026-11-14): the degraded
+    reason and the extraction notes it keeps in ``metrics["result"]``, which
+    were invisible before (a thin extraction gave no reason anywhere)."""
+    import json
+
+    raw = (getattr(attempt, "metrics", None) or {}).get("result")
+    try:
+        result = json.loads(raw) if isinstance(raw, str) else (raw or {})
+    except ValueError:
+        return []
+    if not isinstance(result, dict):
+        return []
+    notes = [str(note) for note in result.get("extract_notes") or []]
+    reason = result.get("degraded_reason")
+    return [f"degraded: {reason}", *notes] if reason else notes
+
+
 def _job_attempt_item(attempt) -> dict:
     return {
         "attempt_id": attempt.attempt_id,
@@ -218,6 +237,7 @@ def _job_attempt_item(attempt) -> dict:
         "exit_reason": attempt.exit_reason,
         "started_at": attempt.started_at.isoformat() if attempt.started_at else None,
         "ended_at": attempt.ended_at.isoformat() if attempt.ended_at else None,
+        "notes": _attempt_notes(attempt),
     }
 
 
@@ -286,6 +306,8 @@ def _print_attempt(attempt, status_icons: dict[str, str]) -> None:
     for label, value in optional_fields:
         if value:
             print(f"    {label}: {value}")
+    for note in _attempt_notes(attempt):
+        print(f"    Note: {note}")
 
 
 def _print_job_attempts(attempts: list) -> None:

@@ -88,7 +88,7 @@ install:
 		uv sync --all-packages --all-extras; \
 	else \
 		$(PIP_FALLBACK) install --upgrade pip; \
-		$(PIP_FALLBACK) install -e "./r4-contracts" -e "./packages/r4-teamengine-spi" -e "./science" -e "./r4" -e "./umrs/src[client,server]"; \
+		$(PIP_FALLBACK) install -e "./umrs/protocol" -e "./r4-contracts" -e "./packages/r4-teamengine-spi" -e "./science" -e "./r4" -e "./umrs/src[client,server]"; \
 	fi
 	@$(MAKE) --no-print-directory tui-deps || echo "==> WARNING: Console v3 deps step failed (see above); r4 console keeps its previous choice. Retry: make tui-deps"
 	@echo "==> Done. Activate the venv: source .venv/bin/activate"
@@ -102,7 +102,7 @@ install-client:
 		uv sync --all-packages --extra client; \
 	else \
 		$(PIP_FALLBACK) install --upgrade pip; \
-		$(PIP_FALLBACK) install -e "./r4-contracts" -e "./packages/r4-teamengine-spi" -e "./science" -e "./r4" -e "./umrs/src[client]"; \
+		$(PIP_FALLBACK) install -e "./umrs/protocol" -e "./r4-contracts" -e "./packages/r4-teamengine-spi" -e "./science" -e "./r4" -e "./umrs/src[client]"; \
 	fi
 	@$(MAKE) --no-print-directory tui-deps || echo "==> WARNING: Console v3 deps step failed (see above); r4 console keeps its previous choice. Retry: make tui-deps"
 	@echo "==> Done. Verify with: r4 --help && umrs --help"
@@ -113,10 +113,10 @@ install-client:
 install-server:
 	@echo "==> Installing server packages (umrs[server])"
 	@if [ "$(UV)" ]; then \
-		uv pip install -e "./r4-contracts" -e "./r4" -e "./umrs/src[server]"; \
+		uv pip install -e "./umrs/protocol" -e "./r4-contracts" -e "./packages/r4-teamengine-spi" -e "./science" -e "./r4" -e "./umrs/src[server]"; \
 	else \
 		$(PIP_FALLBACK) install --upgrade pip; \
-		$(PIP_FALLBACK) install -e "./r4-contracts" -e "./r4" -e "./umrs/src[server]"; \
+		$(PIP_FALLBACK) install -e "./umrs/protocol" -e "./r4-contracts" -e "./packages/r4-teamengine-spi" -e "./science" -e "./r4" -e "./umrs/src[server]"; \
 	fi
 	@echo "==> Done. Verify with: umrs-server --help"
 	@echo "==> Optional: install shell completion with 'umrs-server completion install'"

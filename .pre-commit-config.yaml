@@ -18,11 +18,12 @@ repos:
         stages: [pre-push]
 
       - id: contracts-fence
-        name: Contracts zero-dependency fence
+        name: Contracts fence (ADR-005 as amended by ADR-117)
         entry: python tools/contracts_fence.py
         language: python
         pass_filenames: false
-        files: r4-contracts/pyproject\.toml
+        # umrs: the parent sees umrs/protocol/pyproject.toml only as the gitlink.
+        files: ^(r4-contracts/pyproject\.toml|umrs)$
         stages: [pre-push]
 
       - id: stale-name-validator

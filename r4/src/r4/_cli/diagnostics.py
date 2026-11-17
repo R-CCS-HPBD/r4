@@ -472,6 +472,8 @@ def run_full_diagnostics(config) -> dict[str, dict[str, Any]]:
     """
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
+    from .knowledge_models_check import check_knowledge_models
+
     # Fast local checks first (no network)
     results: dict[str, dict[str, Any]] = {
         "config": check_config(config),
@@ -490,6 +492,7 @@ def run_full_diagnostics(config) -> dict[str, dict[str, Any]]:
         "audit": lambda: check_audit(config),
         "providers": lambda: check_providers(config),
         "s3": check_s3,
+        "knowledge_models": lambda: check_knowledge_models(config),
     }
 
     with ThreadPoolExecutor(max_workers=6) as pool:
@@ -515,6 +518,7 @@ def run_full_diagnostics(config) -> dict[str, dict[str, Any]]:
         "audit",
         "providers",
         "s3",
+        "knowledge_models",
     ]
     return {k: results[k] for k in ordered if k in results}
 
@@ -578,6 +582,8 @@ def _diagnostic_detail(result: dict[str, Any]) -> str:
         return f"  ({result['error']})"
     if ok and result.get("latency_ms"):
         return f"  ({result['latency_ms']}ms)"
+    if result.get("summary"):
+        return f"  ({result['summary']})"
     if ok is None and result.get("message"):
         return f"  ({result['message']})"
     return ""
@@ -590,7 +596,7 @@ def _print_diagnostic_result(name: str, result: dict[str, Any], *, verbose: bool
 
 
 def _print_diagnostic_verbose_fields(result: dict[str, Any]) -> None:
-    hidden_fields = {"ok", "error", "latency_ms", "message"}
+    hidden_fields = {"ok", "error", "latency_ms", "message", "summary"}
     for key, value in result.items():
         if key not in hidden_fields:
             print(f"      {key}: {value}")

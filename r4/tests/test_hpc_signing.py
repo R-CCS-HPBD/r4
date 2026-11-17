@@ -226,8 +226,11 @@ def test_an_ed25519_key_left_without_a_passphrase_is_discarded(person, monkeypat
         return subprocess.run([*argv[:3], "-N", "", "-q", *argv[3:]], check=False)
 
     monkeypatch.setattr(hs, "_run", keygen_without_passphrase)
-    with pytest.raises(hs.HpcSigningError, match="no passphrase"):
+    with pytest.raises(hs.HpcSigningError, match="no passphrase") as refused:
         hs.ensure_signing_key("ed25519")
+    # 2026-11-14: r4 already removed the key, so the message says so and
+    # does not ask the person to remove a file that no longer exists.
+    assert "r4 removed it" in str(refused.value) and "Remove it" not in str(refused.value)
     assert seen[0][1:3] == ["-t", "ed25519"] and "-N" not in seen[0]
     assert not (hs.signing_dir() / "id_umrs_ed25519").exists()
 
@@ -403,6 +406,25 @@ def test_a_bad_home_is_refused(home):
 def test_local_gate_sha_is_the_gate_file():
     assert hs.gate_sha256() == hpc_gate.gate_sha256()
     assert hs.gate_source() == Path(hpc_gate.__file__).read_bytes()
+
+
+# U2.0 spec §0/§6: the anchored gate release. Moving the gate into umrs_protocol
+# kept its bytes; any other sha is a gate release (ADR-112) and needs a reviewed row.
+KNOWN_GATE_RELEASES = {"3": {"771d9c919e2b2606c3405fd1daef4a49f3fde578efc3be378bbd986d77aabf3c"}}
+
+
+def test_gate_source_is_the_umrs_protocol_gate_not_the_alias_shim():
+    """U2.0b (ADR-117 D-2): r4_contracts/hpc_gate.py is a sys.modules shim; the
+    bytes r4 installs are umrs_protocol/hpc_gate.py, with the sha unchanged."""
+    import hashlib
+    from importlib import resources
+
+    import umrs_protocol.hpc_gate
+
+    source = hs.gate_source()
+    assert source == Path(umrs_protocol.hpc_gate.__file__).read_bytes()
+    assert source != resources.files("r4_contracts").joinpath("hpc_gate.py").read_bytes()
+    assert hashlib.sha256(source).hexdigest() in KNOWN_GATE_RELEASES[hpc_gate.GATE_VERSION]
 
 
 @needs_keygen

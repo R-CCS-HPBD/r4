@@ -62,6 +62,7 @@ function inspection(): InspectSubagentResult {
     total_events: 1,
     limit: 100,
     read_only: true,
+    resumable: false,
     event_payload_cap: 8000,
     event_payloads_may_be_abridged: true,
     source: "local",

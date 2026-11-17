@@ -40,13 +40,25 @@ packages/r4-web/
 
 ## Routes
 
-| Path | Component | Description |
+(2026-11-13: this table listed five routes; `src/App.tsx` defines ten, and
+four of them render only in demo mode. Corrected in ADR-115 S0.)
+
+| Path | Component | When it renders |
 |------|-----------|-------------|
-| `/` | Overview | Platform overview dashboard |
-| `/report` | Report | Report generation |
-| `/artifacts` | Artifacts | Artifact browser |
-| `/graph` | Graph | Dependency/task graph |
-| `/timeline` | Timeline | Event timeline |
+| `/` | Overview | demo only (`VITE_R4_WEB_DEMO=1`); otherwise hidden until live |
+| `/report` | Report | demo only; otherwise hidden until live |
+| `/artifacts` | Artifacts | demo only; otherwise hidden until live |
+| `/graph` | Graph | always rendered |
+| `/models` | Models | always rendered |
+| `/jobs` | Jobs | always rendered |
+| `/endpoints` | Endpoints | always rendered |
+| `/assets` | Assets | always rendered |
+| `/timeline` | Timeline | demo only; otherwise hidden until live |
+| `/companion` | Companion | always rendered |
+
+Planned: `/app/media` and `/app/media/review` (ADR-115 D-10, slice S3; the
+one new route [ADR-065](../../docs/adr/065-entry-point-console-surface-ladder.md)
+admits since its 2026-11-13 amendment).
 
 ## Auth
 

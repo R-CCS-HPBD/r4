@@ -737,6 +737,29 @@ class TestPullSession:
         store = CompanionSessionStore(db_path=tmp_path / "sessions.db")
         assert [s["id"] for s in store.list_sessions()] == ["remote-9"]
 
+    def test_cli_pull_refuses_a_remote_subagent_child(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: Any
+    ) -> None:
+        monkeypatch.setenv("R4_SESSION_SNAPSHOT", "off")
+        store_module.set_snapshot_enabled(None)
+        monkeypatch.setattr("r4.companion.session.DB_PATH", tmp_path / "sessions.db")
+        metadata = {"session_kind": "subagent", "parent_session_id": "root", "agent_id": "a"}
+        payload = json.dumps({"id": "child-9", "name": "child", "metadata": metadata})
+        detail = {"session_id": "child-9", "name": "child", "payload": payload}
+
+        class _ChildClient(_FakeClient):
+            def __init__(self):
+                super().__init__(get_map={"/umrs/companion/sessions/child-9": detail})
+
+        monkeypatch.setattr("r4.client.Client", _ChildClient)
+        from r4._cli.sessions import SessionsCommand
+
+        rc = SessionsCommand().handle(_ns(session_subcommand="pull", session_id="child-9"))
+        assert rc == 1
+        assert "child-9 is read-only" in capsys.readouterr().err
+        store = CompanionSessionStore(db_path=tmp_path / "sessions.db")
+        assert store.get_session_record("child-9") is None
+
 
 class TestBridgePullThenLoad:
     def _server(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, client: Any):

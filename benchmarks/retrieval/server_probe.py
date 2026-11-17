@@ -13,6 +13,9 @@ prints one JSON object:
   encoder, its prefix and the reranker (``RAG_CODE``);
 - ``contracts``: the same for ``r4_contracts`` (both containers mount it: the
   profile table and the pack renderer the server draws every pack with);
+- ``protocol``: the same for ``umrs_protocol``. Since U2.0b (ADR-117 D-2) the
+  moved ``r4_contracts`` modules are aliases of it, so the profile table and
+  the pack renderer's code are here and ``contracts`` hashes the shims;
 - ``started_at``: when the container's PID 1 started (epoch seconds);
 - umrs role only: ``rag_stats`` (``GET /rag/stats``: embedder and reranker)
   and ``ollama_tags`` (``GET /api/tags``: chat model digests).
@@ -47,7 +50,7 @@ RAG_CODE = (
     "shared/utils.py",
     "knowledge/text_embedder.py",
 )
-#: Every module of a package (``r4_contracts``, the imported ``r4``).
+#: Every module of a package (``r4_contracts``, ``umrs_protocol``, the imported ``r4``).
 PACKAGE_CODE = ("**/*.py",)
 DEFAULT_OLLAMA_URL = "http://models:11434"
 DEFAULT_RAG_URL = "http://rag:8081"
@@ -110,12 +113,15 @@ def code_report(role: str = "umrs") -> dict:
     """The code a container of ``role`` runs, and when it started."""
     code_dir, code = _hashed("umrs", ROLES.get(role, SERVER_CODE))
     contracts_dir, contracts = _hashed("r4_contracts", PACKAGE_CODE)
+    protocol_dir, protocol = _hashed("umrs_protocol", PACKAGE_CODE)
     return {
         "role": role,
         "code_dir": code_dir,
         "code": code,
         "contracts_dir": contracts_dir,
         "contracts": contracts,
+        "protocol_dir": protocol_dir,
+        "protocol": protocol,
         "started_at": started_at(),
     }
 

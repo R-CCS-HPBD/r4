@@ -89,6 +89,12 @@ Issues = "https://github.com/R-CCS-HPBD/r4/issues"
 [tool.uv]
 # Enable workspace mode
 managed = true
+# uv lock resolution only (pip ignores it). The lock carries no branch for
+# Python < 3.11.5: soupsieve 2.10 (HIGH CVE-2026-126190, fixed in 4.0, which
+# needs >= 3.11.5) was locked only for that range. CI and the images run the
+# latest 3.11.x. Same pattern as ADR-096 (pillow 13, umrs/src/pyproject.toml);
+# 2026-11-13.
+environments = ["python_full_version >= '3.11.5'"]
 # Release cooldown (ADR-100): uv resolves nothing uploaded after this date, so
 # a fresh, possibly broken release (preshed 3.0.14, 2026-10-25) cannot enter
 # uv.lock or the images exported from it. The monthly refresh
@@ -118,6 +124,8 @@ members = [
     "packages/r4-teamengine-spi",
     "engines/r4-engine-langgraph",
     "umrs/src",
+    # umrs-protocol (ADR-117 D-2, U2.0a): stdlib-only, inside the umrs submodule.
+    "umrs/protocol",
 ]
 # Exclude directories that are not Python packages
 exclude = [
@@ -135,6 +143,7 @@ r4-teamengine-spi = { workspace = true }
 r4-engine-langgraph = { workspace = true }
 r4-science = { workspace = true }
 umrs = { workspace = true }
+umrs-protocol = { workspace = true }
 
 # Cooldown exemptions (ADR-100), generated: a package whose LOCKED version is
 # newer than the cutoff keeps it (pinned at its upload time), so the refresh
@@ -194,6 +203,7 @@ known-first-party = [
     "r4_contracts",
     "r4_teamengine_spi",
     "r4_engine_langgraph",
+    "umrs_protocol",
 ]
 
 # =============================================================================

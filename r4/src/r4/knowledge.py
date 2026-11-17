@@ -62,6 +62,11 @@ logger = logging.getLogger(__name__)
 
 AGENT_ACTOR = "agent"
 
+#: Source formats and scopes ``POST /umrs/knowledge/ontologies`` accepts
+#: (ADR-116 D-4/D-5).
+ONTOLOGY_FORMATS = ("linkml", "json")
+ONTOLOGY_SCOPES = ("project", "global")
+
 #: Set (to ``1``) in the environment of every Companion tool subprocess. An
 #: ``r4`` CLI started there is the agent's hands, not the person's: its
 #: knowledge calls go out marked ``x-r4-actor: agent``, and the review
@@ -467,6 +472,104 @@ class KnowledgeClient:
     def graph_archive(self, graph_id: str) -> Dict[str, Any]:
         """Archive a graph (soft delete — archive is the only lifecycle out)."""
         return self.graph_update(graph_id, status="archived")
+
+    def graph_bind(
+        self, graph_id: str, ontology_id: str, version: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Bind a graph to a registered ontology (ADR-116 D-5).
+
+        ``PATCH /umrs/knowledge/graphs/{graph_id}`` with ``ontology_id`` and
+        ``ontology_version``. With no version the server pins the newest live
+        version at bind time. Returns the updated graph.
+        """
+        graph: Dict[str, Any] = self._client.patch(
+            self._knowledge_url(f"graphs/{graph_id}"),
+            json={"ontology_id": ontology_id, "ontology_version": version},
+            headers=self._actor_headers() or None,
+        )
+        return graph
+
+    # ── Ontology registry (ADR-116 D-5) ─────────────────────────────────
+
+    def _ontology_headers(self, project_id: Optional[str]) -> Optional[Dict[str, str]]:
+        """Actor headers, plus ``X-Project-ID`` when a project is named.
+
+        Without a project the client's configured project rides along, as
+        on every other call. The actor header stays: the server refuses an
+        agent's ontology writes (403), so an agent's call must say so.
+        """
+        headers = self._actor_headers()
+        if project_id:
+            headers["X-Project-ID"] = project_id
+        return headers or None
+
+    def _ontology_url(self, ontology_id: str, version: str, suffix: str = "") -> str:
+        from urllib.parse import quote
+
+        path = f"ontologies/{quote(ontology_id, safe='')}/{quote(version, safe='')}"
+        return self._knowledge_url(path + suffix)
+
+    def ontology_register(
+        self,
+        source: str,
+        *,
+        fmt: str = "linkml",
+        scope: str = "project",
+        project_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Register an ontology from its source text (LinkML YAML or JSON).
+
+        ``scope="project"`` registers it for the request's project (write
+        access needed); ``scope="global"`` needs an admin. Returns
+        ``{"ontology": {...}, "record": {...}}``.
+        """
+        if fmt not in ONTOLOGY_FORMATS:
+            raise ValueError(f"fmt must be one of {', '.join(ONTOLOGY_FORMATS)}, got {fmt!r}")
+        if scope not in ONTOLOGY_SCOPES:
+            raise ValueError(f"scope must be one of {', '.join(ONTOLOGY_SCOPES)}, got {scope!r}")
+        result: Dict[str, Any] = self._client.post(
+            self._knowledge_url("ontologies"),
+            json={"source": source, "format": fmt, "scope": scope},
+            headers=self._ontology_headers(project_id),
+        )
+        return result
+
+    def ontology_list(
+        self, *, include_retired: bool = False, project_id: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Registered ontologies the caller may see, built-ins included.
+
+        Each row is a registry record plus ``n_classes``, ``n_relations``
+        and ``builtin``.
+        """
+        payload = self._client.get(
+            self._knowledge_url("ontologies"),
+            params={"include_retired": "true" if include_retired else "false"},
+            headers=self._ontology_headers(project_id),
+        )
+        rows = payload.get("ontologies") if isinstance(payload, dict) else None
+        return list(rows or [])
+
+    def ontology_show(
+        self, ontology_id: str, version: str, *, project_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """One ontology: ``{"ontology", "record", "source_format", "source_text"}``."""
+        result: Dict[str, Any] = self._client.get(
+            self._ontology_url(ontology_id, version),
+            headers=self._ontology_headers(project_id),
+        )
+        return result
+
+    def ontology_retire(
+        self, ontology_id: str, version: str, *, project_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Retire one ontology version (a tombstone; nothing is deleted)."""
+        result: Dict[str, Any] = self._client.post(
+            self._ontology_url(ontology_id, version, "/retire"),
+            json={},
+            headers=self._ontology_headers(project_id),
+        )
+        return result
 
     # ── Multi-graph: extension proposals (0069) ─────────────────────────
 

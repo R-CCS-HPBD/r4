@@ -75,14 +75,18 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ── umrs changed-files gate (ADR-052): lint + complexity-through-baseline on
-# the submodule's own delta ($BASE:umrs .. HEAD:umrs), never the parent-only
-# pointer. Parent diffs never reach inside the submodule; this is the only
-# lane that catches an over-threshold function born inside an umrs commit.
+# the submodule's own delta ($BASE:umrs .. :umrs), never the parent-only
+# pointer. The index matches HEAD after a commit and carries the resolved final
+# pointer during an uncommitted merge; never select one side of an unmerged one.
 if [ $UMRS_CHANGED -eq 1 ]; then
+    if [ -n "$(git ls-files -u -- umrs 2>/dev/null)" ]; then
+        echo -e "${RED}umrs changed-files gate FAILED: unmerged umrs gitlink; resolve and stage the final pointer${NC}" >&2
+        exit 1
+    fi
     OLD_UMRS=$(git rev-parse "$BASE":umrs 2>/dev/null || echo "")
-    NEW_UMRS=$(git rev-parse HEAD:umrs 2>/dev/null || echo "")
+    NEW_UMRS=$(git rev-parse :umrs 2>/dev/null || git rev-parse HEAD:umrs 2>/dev/null || echo "")
     if [ -z "$OLD_UMRS" ] || [ -z "$NEW_UMRS" ]; then
-        echo -e "${YELLOW}umrs pointer unreadable at $BASE/HEAD — resolved to worktree diff only${NC}"
+        echo -e "${YELLOW}umrs pointer unreadable at $BASE/index — resolved to worktree diff only${NC}"
         OLD_UMRS="HEAD"; NEW_UMRS=""
     fi
     UFILES=$(git -C umrs diff --name-only --diff-filter=ACMR "$OLD_UMRS" "${NEW_UMRS:-HEAD}" -- '*.py' 2>/dev/null || true)
@@ -464,6 +468,38 @@ if [ $HAS_UMRS -eq 0 ] && [ ${#SPECIFIC_FILES[@]} -eq 0 ] && [ -d "umrs/tests" ]
     fi
 fi
 
+# r4-contracts and umrs-protocol suites (U2.0, ADR-117 D-2): any r4-contracts/
+# or umrs/protocol/ change, or a umrs pointer move (committed or checked out)
+# that touches protocol/. With --files, the pointer counts only when `umrs` is
+# named.
+HAS_CONTRACTS=0
+for f in ${CHANGED_ALL[@]+"${CHANGED_ALL[@]}"}; do
+    [[ "$f" =~ ^r4-contracts/ ]] && HAS_CONTRACTS=1
+    [[ "$f" =~ ^umrs/protocol/ ]] && HAS_CONTRACTS=1
+done
+umrs_named() {
+    local f
+    [ ${#SPECIFIC_FILES[@]} -eq 0 ] && return 0
+    for f in "${SPECIFIC_FILES[@]}"; do
+        [ "${f%/}" = "umrs" ] && return 0
+    done
+    return 1
+}
+# True when the pointer moved from $BASE and the move touches protocol/, or
+# when the old pin is not fetched here (cannot tell: run the suites).
+umrs_move_touches_protocol() {
+    local old new
+    [ -e umrs/.git ] || return 1  # `git -C umrs` would read the parent repository
+    old=$(git rev-parse "$BASE:umrs" 2>/dev/null) || return 1
+    new=$(git -C umrs rev-parse HEAD 2>/dev/null) || return 1
+    [ "$old" != "$new" ] || return 1
+    git -C umrs cat-file -e "${old}^{commit}" 2>/dev/null || return 0
+    git -C umrs diff --name-only "$old" "$new" -- protocol 2>/dev/null | grep -q .
+}
+if [ $HAS_CONTRACTS -eq 0 ] && umrs_named && umrs_move_touches_protocol; then
+    HAS_CONTRACTS=1
+fi
+
 if [ $HAS_R4 -eq 1 ] || [ $FULL -eq 1 ]; then
     # Skip IPython-dependent tests when IPython is not installed
     IPYTHON_SKIP=()
@@ -480,6 +516,12 @@ fi
 
 if [ $HAS_MCP -eq 1 ] || [ $FULL -eq 1 ]; then
     run_tests "MCP Servers"       "mcp-servers/tests/"          -q
+fi
+
+if [ $HAS_CONTRACTS -eq 1 ] || [ $FULL -eq 1 ]; then
+    # Two runs, as in CI test-root: both directories are named `tests`.
+    run_tests "r4-contracts"      "r4-contracts/tests/"         -p no:cacheprovider
+    run_tests "umrs-protocol"     "umrs/protocol/tests/"        -p no:cacheprovider
 fi
 
 if { [ $HAS_UMRS -eq 1 ] || [ $FULL -eq 1 ]; } && [ -d "umrs/tests" ]; then

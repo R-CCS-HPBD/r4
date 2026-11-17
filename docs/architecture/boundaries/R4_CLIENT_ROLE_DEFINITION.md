@@ -159,7 +159,7 @@ ZMQ or HTTP protocols.
 |------|-----------|------|
 | No `import umrs` in r4/ | `import_boundary_validator.py` | Hard-fail |
 | No `import r4` in umrs/ | `import_boundary_validator.py` | Hard-fail |
-| r4-contracts zero dependencies | `contracts_fence.py` | Hard-fail |
+| r4-contracts zero dependencies (except `umrs-protocol`, ADR-117 D-2, 2026-11-14) | `contracts_fence.py` | Hard-fail |
 | DTO equivalence | `dto_equivalence_check.py` | Hard-fail |
 | No `import gateway` in r4/ | `import_boundary_validator.py` | Hard-fail |
 

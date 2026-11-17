@@ -15,6 +15,8 @@ import os
 import re
 import shutil
 import subprocess
+import sys
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -312,6 +314,7 @@ def test_real_exclude_list_keeps_the_private_records_out() -> None:
         "memories/m.md",
         "ops/watchdog/watchdog.py",
         "deploy/ansible/inventory/umrs-front/hosts.yaml",
+        "tests/test_umrs_front_model_allowed_paths.py",
         ".github/workflows/ci.yaml",
         "reports/r.md",
         ".claude/settings.json",
@@ -689,16 +692,26 @@ def test_release_runs_only_on_v_tags_and_only_publishing_writes() -> None:
     assert wf["jobs"]["release"]["permissions"] == {"contents": "write"}
 
 
-def test_release_builds_the_five_wheels_into_the_client_bundle() -> None:
+def test_release_builds_the_six_wheels_into_the_client_bundle() -> None:
+    # umrs-protocol joined in U2.0 (ADR-117 D-2): it is on no package index,
+    # so the installer must find it in the bundle.
     wf = _release()
     projects = wf["env"]["WHEEL_PROJECTS"].split()
-    assert projects == ["r4", "r4-contracts", "packages/r4-teamengine-spi", "science", "umrs/src"]
+    assert projects == [
+        "r4",
+        "r4-contracts",
+        "packages/r4-teamengine-spi",
+        "science",
+        "umrs/src",
+        "umrs/protocol",
+    ]
     assert wf["env"]["WHEEL_DISTS"].split() == [
         "r4",
         "r4_contracts",
         "r4_teamengine_spi",
         "r4_science",
         "umrs",
+        "umrs_protocol",
     ]
     job = wf["jobs"]["wheels"]
     assert job["steps"][0]["with"]["submodules"] is True
@@ -706,6 +719,41 @@ def test_release_builds_the_five_wheels_into_the_client_bundle() -> None:
     assert "for project in $WHEEL_PROJECTS; do" in runs
     assert "uv build --wheel" in runs
     assert 'r4-client-${tag}.tar.gz" -- SHA256SUMS *.whl' in runs
+
+
+def test_public_ci_installs_umrs_protocol_from_the_checkout_and_proves_it() -> None:
+    """U2.0 (ADR-117 D-2): umrs-protocol is on no index; the public CI
+    installs it from the umrs submodule before r4-contracts, then proves it."""
+    ci = yaml.safe_load((CONFIG / "public-workflows" / "ci.yaml").read_text())
+    step = next(
+        s for s in ci["jobs"]["test"]["steps"] if s.get("name") == "Install the client packages"
+    )
+    run = step["run"]
+    assert run.index("-e ./umrs/protocol") < run.index("-e ./r4-contracts")
+    assert run.index("-e ./r4-contracts") < run.index("python scripts/ci/assert_umrs_protocol.py")
+    assert (ROOT / "scripts" / "ci" / "assert_umrs_protocol.py").is_file()
+
+
+def _first_editable_install(text: str) -> str:
+    """The first `pip install -e` command, continuations joined, spaces collapsed."""
+    joined = re.sub(r"\\\n\s*", " ", text)
+    line = next(ln for ln in joined.splitlines() if ln.strip().startswith("pip install -e"))
+    return " ".join(line.split())
+
+
+def test_contributing_installs_exactly_what_the_public_ci_installs() -> None:
+    """Review U2.0a (2026-11-14): CONTRIBUTING says it installs exactly what the
+    public CI installs; it had lost -e ./umrs/protocol when the CI gained it."""
+    ci = yaml.safe_load((CONFIG / "public-workflows" / "ci.yaml").read_text())
+    step = next(
+        s for s in ci["jobs"]["test"]["steps"] if s.get("name") == "Install the client packages"
+    )
+    contributing = (CONFIG / "public-overlay" / "CONTRIBUTING.md").read_text()
+    assert _first_editable_install(contributing) == _first_editable_install(step["run"])
+    readme = (CONFIG / "public-overlay" / "README.md").read_text()
+    assert _first_editable_install(readme).startswith(
+        "pip install -e ./umrs/protocol -e ./r4-contracts"
+    )
 
 
 @pytest.mark.parametrize("project", ["r4", "r4-contracts", "packages/r4-teamengine-spi", "science"])
@@ -770,28 +818,105 @@ def _release_step(job: str, prefix: str) -> dict:
 
 
 @pytest.mark.parametrize(
-    ("wheel", "tag", "ok"),
+    ("wheels", "tag", "ok"),
     [
-        ("r4-0.2.0rc2-py3-none-any.whl", "v0.2.0-rc2", True),
-        ("r4-0.2.0rc2-py3-none-any.whl", "v0.2.0-rc.2", True),
-        ("r4-1.0.0-py3-none-any.whl", "v1.0.0", True),
-        ("r4-0.2.0rc1-py3-none-any.whl", "v0.2.0-rc2", False),
-        (None, "v0.2.0-rc2", False),
+        (("r4-0.2.0rc2", "umrs_protocol-0.2.0rc2"), "v0.2.0-rc2", True),
+        (("r4-0.2.0rc2", "umrs_protocol-0.2.0rc2"), "v0.2.0-rc.2", True),
+        (("r4-1.0.0", "umrs_protocol-1.0.0"), "v1.0.0", True),
+        (("r4-0.2.0rc1", "umrs_protocol-0.2.0rc2"), "v0.2.0-rc2", False),
+        (("umrs_protocol-0.2.0rc2",), "v0.2.0-rc2", False),
+        # U2.0: cut.sh bumps umrs/protocol in lockstep, so the release checks it too.
+        (("r4-0.2.0rc2", "umrs_protocol-0.2.0rc1"), "v0.2.0-rc2", False),
+        (("r4-0.2.0rc2",), "v0.2.0-rc2", False),
     ],
 )
 def test_a_wheel_version_that_differs_from_the_tag_fails_the_release(
-    tmp_path: Path, wheel: str | None, tag: str, ok: bool
+    tmp_path: Path, wheels: tuple[str, ...], tag: str, ok: bool
 ) -> None:
     # Before 2026-11-07 a mismatch was only a ::warning:: and the release went out.
     (tmp_path / "wheels").mkdir()
-    if wheel:
-        (tmp_path / "wheels" / wheel).write_bytes(b"w")
+    for wheel in wheels:
+        (tmp_path / "wheels" / f"{wheel}-py3-none-any.whl").write_bytes(b"w")
     (tmp_path / "wheels" / "r4_contracts-9.9.9-py3-none-any.whl").write_bytes(b"w")
-    step = _release_step("wheels", "Check the r4 wheel version")
+    step = _release_step("wheels", "Check the r4 and umrs-protocol wheel versions")
     env = {**os.environ, "RUNNER_TEMP": str(tmp_path), "GITHUB_REF_NAME": tag}
     done = _bash(step["run"], tmp_path, env)
     assert (done.returncode == 0) is ok, done.stdout + done.stderr
     assert ("::error title=Version mismatch::" in done.stdout) is not ok
+
+
+# ── wheel coherence (U2.0b, ADR-117 D-2) ─────────────────────────────────────
+ALIAS_SHIM = (
+    "import sys\nfrom umrs_protocol import hpc_gate as _impl\nsys.modules[__name__] = _impl\n"
+)
+
+
+def _wheel(out: Path, dist: str, version: str, files: dict[str, str], requires: str = "") -> None:
+    """A minimal py3-none-any wheel: the files plus METADATA, WHEEL and RECORD."""
+    info = f"{dist}-{version}.dist-info"
+    meta = f"Metadata-Version: 2.1\nName: {dist.replace('_', '-')}\nVersion: {version}\n"
+    members = {
+        **files,
+        f"{info}/METADATA": meta + (f"Requires-Dist: {requires}\n" if requires else ""),
+        f"{info}/WHEEL": "Wheel-Version: 1.0\nGenerator: test\nRoot-Is-Purelib: true\nTag: py3-none-any\n",
+    }
+    record = "".join(f"{name},,\n" for name in members) + f"{info}/RECORD,,\n"
+    with zipfile.ZipFile(out / f"{dist}-{version}-py3-none-any.whl", "w") as whl:
+        for name, body in {**members, f"{info}/RECORD": record}.items():
+            whl.writestr(name, body)
+
+
+def _coherence(tmp_path: Path, requires: str, shim: str = ALIAS_SHIM, tag: str = "v0.2.0-rc4"):
+    if shutil.which("uv") is None:
+        pytest.skip("uv is not installed (the release job installs it)")
+    wheels = tmp_path / "wheels"
+    wheels.mkdir()
+    gate = {"umrs_protocol/__init__.py": "", "umrs_protocol/hpc_gate.py": "GATE = 1\n"}
+    _wheel(wheels, "umrs_protocol", "0.2.0rc4", gate)
+    shims = {"r4_contracts/__init__.py": "", "r4_contracts/hpc_gate.py": shim}
+    _wheel(wheels, "r4_contracts", "0.2.0rc4", shims, requires)
+    bindir = tmp_path / "bin"  # `python` is this interpreter, as setup-python's is the job's
+    bindir.mkdir()
+    (bindir / "python").symlink_to(sys.executable)
+    path = f"{bindir}:{Path(shutil.which('uv') or '').parent}:/usr/bin:/bin"
+    env = {"PATH": path, "HOME": str(tmp_path), "RUNNER_TEMP": str(tmp_path)}
+    env["GITHUB_REF_NAME"] = tag
+    step = _release_step("wheels", "Check that the r4-contracts and umrs-protocol wheels cohere")
+    return _bash(step["run"], tmp_path, env)
+
+
+def test_the_release_checks_wheel_coherence_before_packing() -> None:
+    names = [s.get("name", "") for s in _release()["jobs"]["wheels"]["steps"]]
+    coherence = names.index("Check that the r4-contracts and umrs-protocol wheels cohere")
+    assert names.index("Build the first-party wheels") < coherence
+    assert coherence < names.index("Pack r4-client-<tag>.tar.gz")
+
+
+def test_coherent_wheels_pass(tmp_path: Path) -> None:
+    done = _coherence(tmp_path, "umrs-protocol>=0.2.0rc4")
+    assert done.returncode == 0, done.stdout + done.stderr
+
+
+def test_an_older_floor_than_the_tag_passes(tmp_path: Path) -> None:
+    done = _coherence(tmp_path, "umrs-protocol>=0.2.0rc2", tag="v0.2.0")
+    assert done.returncode == 0, done.stdout + done.stderr
+
+
+@pytest.mark.parametrize(
+    ("requires", "shim", "why"),
+    [
+        ("umrs-protocol>=0.2.0rc4", "GATE = 1\n", "is not umrs_protocol.hpc_gate"),
+        ("umrs-protocol>=0.2.0", ALIAS_SHIM, "newer than the tag's 0.2.0rc4"),
+        ("", ALIAS_SHIM, "not one umrs-protocol>= floor"),
+        ("umrs-protocol", ALIAS_SHIM, "not one umrs-protocol>= floor"),
+    ],
+    ids=["second-gate", "floor-after-tag", "no-requirement", "no-floor"],
+)
+def test_incoherent_wheels_fail_the_release(tmp_path: Path, requires: str, shim: str, why: str):
+    done = _coherence(tmp_path, requires, shim)
+    assert done.returncode == 1, done.stdout + done.stderr
+    assert "::error title=Wheel coherence::" in done.stdout
+    assert why in done.stdout
 
 
 def test_publish_needs_every_build_but_the_intel_mac_console() -> None:

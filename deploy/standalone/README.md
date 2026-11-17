@@ -224,7 +224,7 @@ The edit-run loop:
 
 | You changed | Do |
 |---|---|
-| `umrs/src/**` or `r4-contracts/**` | `./standalone.sh restart umrs` — the dev profile mounts your checkout over the image's code, so no rebuild |
+| `umrs/src/**`, `umrs/protocol/**` or `r4-contracts/**` | `./standalone.sh restart umrs` — the dev profile mounts your checkout over the image's code, so no rebuild |
 | `r4/**` | nothing — `r4` runs natively from your checkout |
 | dependencies (`pyproject.toml`) | `STANDALONE_BUILD=1 ./standalone.sh up` builds the image from your checkout (compose.build.yaml; ≈16 GB of transient disk on macOS, never returned by the VM), or use the next published image (`UMRS_IMAGE`) |
 | anything, and you want a clean slate | `./standalone.sh reset --yes` (destroys all volumes, including the embedder choice) |

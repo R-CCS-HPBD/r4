@@ -174,6 +174,23 @@ def test_mid_turn_reads_answer_before_the_turn_ends(gated):
     assert result["response"]["result"]["response"] == "final answer"
 
 
+def test_mid_turn_child_inspection_uses_the_read_pool(gated):
+    server, session, events, emitted = gated
+    server.inspect_subagent = lambda params: {
+        "session_id": params["session_id"],
+        "read_only": True,
+    }
+    thread, _result = _start_turn(server, session)
+
+    server._stdin_mux._route(_line(13, "inspect_subagent", session_id="child-1"))
+    reply = _wait_for_reply(emitted, 13)
+
+    assert reply["result"] == {"session_id": "child-1", "read_only": True}
+    assert "turn_end" not in events
+    session.release.set()
+    thread.join(5)
+
+
 def test_cancel_turn_rpc_answers_mid_turn(gated):
     server, session, events, emitted = gated
     thread, result = _start_turn(server, session)

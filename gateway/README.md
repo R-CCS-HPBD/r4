@@ -58,7 +58,7 @@ module `umrs.a2l` (ADR-034). The Python gateway package was removed on
 ```
 gateway/
 ├── nginx/           # nginx.conf, conf.d/server.conf (route table), Dockerfile, entrypoint
-├── sidecar/         # main.py (FastAPI: /validate, /validate-download, /audit, /health), Dockerfile
+├── sidecar/         # main.py (FastAPI: /validate, /validate-optional, /audit, /health), Dockerfile
 ├── tests/           # sidecar contract + security tests (30)
 └── k8s/             # Kubernetes manifests
 ```

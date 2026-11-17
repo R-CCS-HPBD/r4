@@ -31,6 +31,10 @@ SCAN_ROOTS: tuple[str, ...] = (
     "umrs/tests",
     "r4/tests",
     "mcp-servers/tests",
+    # U2.0a (ADR-117 D-2, 2026-11-13): the contracts suites the alias flip
+    # runs through, and the new umrs-protocol suite.
+    "r4-contracts/tests",
+    "umrs/protocol/tests",
 )
 
 ALLOWLIST_PATH = "tools/test_import_hygiene_allowlist.txt"
@@ -140,8 +144,12 @@ def scan_repo(repo_root: Path) -> list[HygieneFinding]:
             rel = path.relative_to(repo_root).as_posix()
             if rel in allowlist or "__pycache__" in path.parts:
                 continue
-            if any(part.startswith(".") for part in path.parts):
-                continue  # editor locks / hidden dirs
+            # Hidden parts INSIDE the repo only (editor locks, hidden dirs):
+            # the absolute path skipped every file of a checkout under a dot
+            # dir, so agent worktrees (.claude/worktrees/...) passed while CI
+            # failed (2026-11-14, U1's spec-loads).
+            if any(part.startswith(".") for part in Path(rel).parts):
+                continue
             if not path.is_file():
                 continue  # broken symlink
             findings.extend(_scan_file(path, rel))

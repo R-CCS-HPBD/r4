@@ -28,6 +28,9 @@ classifiers = [
 dependencies = [
     "httpx>=0.25.0",
     "r4-contracts>=0.1.0",
+    # r4 reads the HPC gate bytes from this package (hpc_signing.gate_source,
+    # ADR-117 D-2, U2.0b); the floor moves in lockstep with the release.
+    "umrs-protocol>=0.2.0rc4",
     "r4-teamengine-spi>=0.1.0",
     "r4-science>=0.1.0",
     # Imported at module level (r4.recipes, r4.sweep_templates); until

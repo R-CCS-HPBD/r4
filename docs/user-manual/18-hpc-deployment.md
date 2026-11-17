@@ -66,7 +66,8 @@ podman-compose up -d
 
 ```bash
 # Install UMRS in a virtual environment
-python -m pip install -e ./r4-contracts -e ./umrs/src
+# umrs-protocol first, from the checkout: it is on no package index (2026-11-14, U2.0)
+python -m pip install -e ./umrs/protocol -e ./r4-contracts -e ./umrs/src
 
 # Configure site
 cp site.yaml.example site.yaml

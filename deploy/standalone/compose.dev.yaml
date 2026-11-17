@@ -18,13 +18,15 @@
 services:
   umrs:
     # Live source. The image COPYs umrs/src to /app/umrs-src and r4-contracts to
-    # /app/r4-contracts, then installs both EDITABLE (Dockerfile.server:77-82),
+    # /app/r4-contracts, then installs both EDITABLE (Dockerfile.server:129-134;
+    # from umrs U-A1 also umrs/protocol to /app/umrs-protocol, U2.0, ADR-117 D-2),
     # so mounting the checkout over the same paths makes a code change a
     # `./standalone.sh restart umrs` instead of an image rebuild. That matters
     # most on macOS, where every rebuild costs ~16 GB of transient layers the
     # podman VM never returns to the host. Rebuild only when dependencies change.
     volumes:
       - ../../umrs/src:/app/umrs-src:ro,z
+      - ../../umrs/protocol:/app/umrs-protocol:ro,z
       - ../../r4-contracts:/app/r4-contracts:ro,z
     environment:
       # `--env-file` only interpolates `${...}`, so profile.dev.env's step
@@ -46,6 +48,12 @@ services:
   rag:
     volumes:
       - ../../umrs/src:/app/umrs-src:ro,z
+      - ../../umrs/protocol:/app/umrs-protocol:ro,z
+      - ../../r4-contracts:/app/r4-contracts:ro,z
+  umrs-docmodels:
+    volumes:
+      - ../../umrs/src:/app/umrs-src:ro,z
+      - ../../umrs/protocol:/app/umrs-protocol:ro,z
       - ../../r4-contracts:/app/r4-contracts:ro,z
   postgres:
     ports:

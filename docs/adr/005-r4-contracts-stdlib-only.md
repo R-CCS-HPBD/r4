@@ -50,3 +50,11 @@ containers, Singularity). Every transitive dep increases build complexity.
 - **attrs**: Lighter than Pydantic but still a non-stdlib dependency.
 - **stdlib dataclasses + manual validation (chosen)**: Slightly more verbose but
   guarantees zero coupling between consumers.
+
+## Rollout-status (2026-11-13, ADR-117)
+
+Amended by [ADR-117](117-umrs-one-branch-protocol-extension-own-cicd.md) D-2. The contracts UMRS serves move to the UMRS-owned stdlib-only `umrs-protocol`, under this ADR's rules. `r4-contracts` keeps its module names as re-exports; wire bytes are unchanged (wave U2, not started).
+
+## Rollout-status (2026-11-14, ADR-117 U2.0b)
+
+The 16 modules UMRS serves now live in the UMRS-owned, stdlib-only `umrs-protocol`; `r4_contracts.<m>` is a module alias of `umrs_protocol.<m>`. r4-contracts declares exactly one dependency, `umrs-protocol>=0.2.0rc4`, enforced by `tools/contracts_fence.py` fence (a). This ADR's stdlib-only rule now applies to both packages.

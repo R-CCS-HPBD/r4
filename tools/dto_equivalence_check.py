@@ -38,37 +38,43 @@ DTO_PAIRS: list[tuple[str, str, str]] = [
 
 # Pairs converged — UMRS now imports from r4-contracts.
 # Kept as documentation; no AST check needed.
+# U2.0b (2026-11-15): the contract side is umrs_protocol; the r4_contracts
+# modules are aliases of it (ADR-117 D-2).
 _CONVERGED_PAIRS: list[tuple[str, str, str]] = [
     (
-        "r4-contracts/src/r4_contracts/skills.py",
+        "umrs/protocol/src/umrs_protocol/skills.py",
         "umrs/src/umrs/skills/__init__.py",
         "SkillManifest",
     ),
-    ("r4-contracts/src/r4_contracts/skills.py", "umrs/src/umrs/skills/__init__.py", "SkillScope"),
+    ("umrs/protocol/src/umrs_protocol/skills.py", "umrs/src/umrs/skills/__init__.py", "SkillScope"),
     (
-        "r4-contracts/src/r4_contracts/recipes.py",
+        "umrs/protocol/src/umrs_protocol/recipes.py",
         "umrs/src/umrs/recipes/__init__.py",
         "RecipeDefinition",
     ),
-    ("r4-contracts/src/r4_contracts/recipes.py", "umrs/src/umrs/recipes/__init__.py", "RecipeStep"),
-    ("r4-contracts/src/r4_contracts/recipes.py", "umrs/src/umrs/recipes/__init__.py", "StepType"),
     (
-        "r4-contracts/src/r4_contracts/recipes.py",
+        "umrs/protocol/src/umrs_protocol/recipes.py",
+        "umrs/src/umrs/recipes/__init__.py",
+        "RecipeStep",
+    ),
+    ("umrs/protocol/src/umrs_protocol/recipes.py", "umrs/src/umrs/recipes/__init__.py", "StepType"),
+    (
+        "umrs/protocol/src/umrs_protocol/recipes.py",
         "umrs/src/umrs/recipes/__init__.py",
         "RecipeScope",
     ),
     (
-        "r4-contracts/src/r4_contracts/security.py",
+        "umrs/protocol/src/umrs_protocol/security.py",
         "umrs/src/umrs/security/scanner.py",
         "SeverityLevel",
     ),
     (
-        "r4-contracts/src/r4_contracts/security.py",
+        "umrs/protocol/src/umrs_protocol/security.py",
         "umrs/src/umrs/security/scanner.py",
         "ScanFinding",
     ),
     (
-        "r4-contracts/src/r4_contracts/security.py",
+        "umrs/protocol/src/umrs_protocol/security.py",
         "umrs/src/umrs/security/scanner.py",
         "ScanResult",
     ),

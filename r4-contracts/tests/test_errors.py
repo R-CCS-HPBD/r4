@@ -93,6 +93,27 @@ class TestFamilies:
         with pytest.raises(KeyError):
             PlatformError.hpcaccess("made_up", "m")
 
+    def test_ontology_family_is_registered(self):
+        # ADR-116 D-5: the codes umrs/api/knowledge_ontologies.py raises.
+        from r4_contracts.errors import ONTOLOGY_ERRORS
+
+        expected = {
+            "ontology.invalid": 400,
+            "ontology.forbidden": 403,
+            "ontology.not_found": 404,
+            "ontology.conflict": 409,
+        }
+        assert expected == ONTOLOGY_ERRORS
+        codes = known_error_codes()
+        assert {code: codes[code] for code in expected} == expected
+
+    def test_ontology_constructor_uses_registry(self):
+        err = PlatformError.ontology("conflict", "m", coordinate="lab@1")
+        assert (err.code, err.http_status) == ("ontology.conflict", 409)
+        assert err.detail == {"coordinate": "lab@1"}
+        with pytest.raises(KeyError):
+            PlatformError.ontology("made_up", "m")
+
     def test_unknown_family_member_fails_loud(self):
         with pytest.raises(KeyError):
             PlatformError.session("made_up", "m")

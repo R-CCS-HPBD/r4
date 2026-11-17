@@ -2063,7 +2063,7 @@ class CompanionBridgeServer(
         local_ids = {row["id"] for row in response["sessions"]}
         for snap in snapshots:
             remote_row = _remote_only_row(snap, local_ids)
-            if remote_row is not None:
+            if remote_row is not None and _row_matches_filters(remote_row, child_filters):
                 response["sessions"].append(remote_row)
         # F14 audit fix (2026-09-21): unified merge-order — remote-only rows
         # no longer sort last simply by the erasure rule. Sort by updated_at
@@ -2245,6 +2245,7 @@ class CompanionBridgeServer(
         sid = str(params.get("session_id") or self._session_id_str())
         if not sid:
             raise ValueError("venue.bad_request: session id required")
+        self._refuse_read_only_child(sid)
         try:
             payload = self._client.get(self._venue_url(sid), timeout=15)
         except APIError as exc:
@@ -2258,6 +2259,7 @@ class CompanionBridgeServer(
         sid = str(params.get("session_id") or self._session_id_str())
         if not sid:
             raise ValueError("venue.bad_request: session id required")
+        self._refuse_read_only_child(sid)
         try:
             payload = self._client.post(self._venue_url(sid, "/stop"), json={}, timeout=120)
         except APIError as exc:
@@ -2342,6 +2344,7 @@ class CompanionBridgeServer(
         from ..session_store import journal_prefix
 
         sid = str(params.get("session_id") or self._session_id_str())
+        self._refuse_read_only_child(sid)
         try:
             payload = self._client.get(
                 f"{journal_prefix(self._client)}/companion/sessions/{sid}/approvals",
@@ -2357,6 +2360,7 @@ class CompanionBridgeServer(
         from ..session_store import journal_prefix
 
         sid = str(params.get("session_id") or self._session_id_str())
+        self._refuse_read_only_child(sid)
         approval_id = str(params.get("approval_id") or "").strip()
         decision = str(params.get("decision") or "").strip().lower()
         if not approval_id or decision not in ("once", "always", "reject"):
@@ -2404,6 +2408,7 @@ class CompanionBridgeServer(
         sid = str(params.get("session_id") or self._session_id_str())
         if not sid:
             raise ValueError("venue.bad_request: session id required")
+        self._refuse_read_only_child(sid)
         try:
             payload = self.client.get(
                 self._questions_url(sid), params={"status": "pending"}, timeout=15
@@ -2420,6 +2425,7 @@ class CompanionBridgeServer(
         answer = str(params.get("answer") or "")
         if not sid or not question_id or not answer.strip():
             raise ValueError("venue.bad_request: question_id and a non-empty answer required")
+        self._refuse_read_only_child(sid)
         try:
             payload = self.client.post(
                 self._questions_url(sid, f"/{question_id}/answer"),
@@ -2720,10 +2726,22 @@ class CompanionBridgeServer(
         self._store.save(self.session)
         return {"ok": True, "removed": removed, "messages": cut, "state": self.snapshot()}
 
+    def _refuse_read_only_child(self, session_id: str) -> None:
+        store = getattr(self, "_store", None)
+        refusal = getattr(store, "refuse_subagent_session", None)
+        if callable(refusal):
+            refusal(session_id)
+            return
+        record_probe = getattr(store, "get_session_record", None)
+        stored = record_probe(session_id) if callable(record_probe) else None
+        if stored and stored.get("session_kind") == "subagent":
+            raise ValueError(f"subagent session {session_id} is read-only; use inspect_subagent")
+
     def load_session(self, params: dict[str, Any]) -> dict[str, Any]:
         session_id = str(params.get("session_id") or "")
         if not session_id:
             raise ValueError("session_id is required")
+        self._refuse_read_only_child(session_id)
         session = self._store.load(session_id, self.client)
         if session is None:
             # Remote-only rows (plan P5): resume IS the pull — fetch the row
@@ -2807,6 +2825,8 @@ class CompanionBridgeServer(
         except Exception:  # noqa: BLE001 — journal optional
             logger.debug("journal pull probe failed for %s", session_id, exc_info=True)
             return None
+        if outcome == "subagent":
+            raise ValueError(f"subagent session {session_id} is read-only; use inspect_subagent")
         if outcome != "pulled":
             return None
         session = self._store.load(session_id, self.client)
@@ -3348,6 +3368,7 @@ class CompanionBridgeServer(
         session_id = str(params.get("session_id") or "")
         if not session_id:
             raise ValueError("session_turns requires session_id")
+        self._refuse_read_only_child(session_id)
         turn_id = str(params.get("turn_id") or "")
         payload = self.session.client.list_session_turns(
             session_id=session_id, turn_id=turn_id or None
@@ -5865,6 +5886,11 @@ def _session_sync_mode(store: Any) -> str:
     return str(probe().get("mode") or "") if callable(probe) else ""
 
 
+def _row_matches_filters(row: dict[str, Any], filters: dict[str, Any] | None) -> bool:
+    """Exact child filters on a remote row: UMRS ignores ones it lacks (subagent_status)."""
+    return all(str(row.get(key) or "") == str(value) for key, value in (filters or {}).items())
+
+
 def _remote_only_row(snap: dict[str, Any], local_ids: set[str]) -> dict[str, Any] | None:
     """Listing row for a journal snapshot absent locally; None when mirrored/junk."""
     sid = str(snap.get("session_id") or "")
@@ -5887,6 +5913,9 @@ def _remote_only_row(snap: dict[str, Any], local_ids: set[str]) -> dict[str, Any
         "parent_agent_id": _str_field(snap, "parent_agent_id"),
         "agent_id": _str_field(snap, "agent_id"),
         "subagent_status": _str_field(snap, "subagent_status"),
+        "execution_kind": _str_field(snap, "execution_kind"),
+        "started_at": _str_field(snap, "started_at"),
+        "ended_at": _str_field(snap, "ended_at"),
     }
 
 

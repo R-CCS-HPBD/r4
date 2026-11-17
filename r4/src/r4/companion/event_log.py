@@ -77,6 +77,9 @@ class EventLog:
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_events_agent ON event_log(agent_id, timestamp)"
             )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_events_session_id ON event_log(session_id, id)"
+            )
 
     def _conn(self) -> sqlite3.Connection:
         if self._db_path == ":memory:":

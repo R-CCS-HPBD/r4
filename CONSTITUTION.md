@@ -46,7 +46,7 @@ broken, not just buggy.
 | `r4` NEVER imports `umrs` | UMRS is a separate service, not a library |
 | `gateway` NEVER imports `umrs` or `r4` | The edge is a proxy, not a client |
 | `umrs` NEVER imports `r4` or `gateway` | UMRS is a standalone service |
-| `r4-contracts` has ZERO non-stdlib dependencies | Shared contracts must be dependency-free |
+| `r4-contracts` has ZERO non-stdlib dependencies *(2026-11-14, [ADR-117](docs/adr/117-umrs-one-branch-protocol-extension-own-cicd.md) D-2: one exception, `umrs-protocol`, which is itself stdlib-only and dependency-free; `tools/contracts_fence.py` allows exactly that one requirement with a `>=` floor.)* | Shared contracts must be dependency-free |
 | `r4` MAY import `r4-contracts` | Contracts are the safe sharing layer |
 
 **Enforcement:** `tools/import_boundary_validator.py` — runs in CI, hard-fail.
@@ -108,7 +108,7 @@ exploitable vulnerabilities.
 | Rule | Rationale |
 |------|-----------|
 | NEVER add network/egress access to inference containers | `TRANSFORMERS_OFFLINE=1`, `HF_HUB_OFFLINE=1` must always be set; `assert-offline.sh` runs at boot (ADR-006) |
-| Only `MODEL_DOWNLOAD` and `KNOWLEDGE_INGEST` jobs have egress, through EgressGuard allowlists | ADR-015 |
+| Only `MODEL_DOWNLOAD` and `KNOWLEDGE_INGEST` jobs have egress, through EgressGuard allowlists | ADR-015. *Amendment 2026-11-13 ([ADR-115](docs/adr/115-project-media-browser.md) D-9, accepted; text only, in force when ADR-115 S7 ships, until then the rule reads as written):* `SOURCE_IMPORT` jobs and source listing, run only by the `umrs-transfer` worker, join this egress class: read-only WebDAV (`PROPFIND`, `GET`), hosts in `UMRS_SOURCE_ALLOWED_HOSTS` that pass the ADR-099 web policy and `denied_networks` (an exact-host or /32 exception, never a widened range), under EgressGuard with pinned global-unicast sockets and per-redirect re-checks |
 | NEVER expose presigned S3 URLs to external clients | Presigned URLs exist so compute nodes can read S3 without credentials |
 | NEVER add a new path that hands storage credentials to a client | The design says storage is written only through UMRS; the existing per-user `s3cfg` delivery is gap D-16 and is being removed, not extended |
 | NEVER remove NGINX `auth_request` from edge routes; the edge validates the JWT on every request | All traffic must be authenticated (until D-02 moves authentication into UMRS) |
@@ -229,7 +229,7 @@ Scientific Catalog bundle when D-39/D-40 close).
 - Taking one of the structural decisions in the gap analysis (D-01/D-02 transport and edge, D-47 topology, D-39 catalog object, D-12 sandbox universality)
 - Removing permanent infrastructure (ZeroMQ, DurableJobRuntime bridge)
 - Changing the `execution_authority` model
-- Adding dependencies to `r4-contracts`
+- Adding dependencies to `r4-contracts` (other than `umrs-protocol`, ADR-117 D-2, 2026-11-14)
 - Adding network egress to inference containers
 
 ---

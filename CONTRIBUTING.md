@@ -112,7 +112,7 @@ installs, with plain `pip` inside a virtual environment:
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-pip install -e ./r4-contracts -e ./packages/r4-teamengine-spi -e ./science \
+pip install -e ./umrs/protocol -e ./r4-contracts -e ./packages/r4-teamengine-spi -e ./science \
   -e "./r4[dev,test,umrs]" -e "./umrs/src[client]" -e ./mcp-servers \
   fastapi python-multipart pytest-xdist ipython
 pip install "ruff==0.16.6"

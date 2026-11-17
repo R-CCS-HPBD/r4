@@ -35,13 +35,19 @@ SYSTEM_TOOLS = (
     "ls", "ln", "chmod", "cp", "tr", "cut", "env", "uname",
 )  # fmt: skip
 
+#: A release bundle from U2.0 on (ADR-117 D-2): six wheels, umrs-protocol
+#: second because the installer passes it right after r4.
+PROTOCOL_WHEEL = "umrs_protocol-9.9.9rc1-py3-none-any.whl"
 WHEELS = (
     "r4-9.9.9rc1-py3-none-any.whl",
+    PROTOCOL_WHEEL,
     "r4_contracts-9.9.9rc1-py3-none-any.whl",
     "r4_teamengine_spi-9.9.9rc1-py3-none-any.whl",
     "r4_science-0.1.0-py3-none-any.whl",
     "umrs-9.9.9rc1-py3-none-any.whl",
 )
+#: A bundle cut before U2.0: no umrs-protocol wheel.
+FIVE_WHEELS = tuple(w for w in WHEELS if w != PROTOCOL_WHEEL)
 
 UV_STUB = """#!/bin/sh
 if [ "$1 $2" = "tool dir" ]; then echo "$STUB_TOOL_BIN"; exit 0; fi
@@ -138,15 +144,24 @@ def _link_system_tools(dest: Path) -> None:
 
 
 def make_bundle(
-    release: Path, tag: str, *, corrupt: str = "", sums: bool = True, flat: bool = False
+    release: Path,
+    tag: str,
+    *,
+    corrupt: str = "",
+    sums: bool = True,
+    flat: bool = False,
+    wheels: tuple[str, ...] = WHEELS,
+    unlisted: tuple[str, ...] = (),
 ) -> Path:
     """Write ``<release>/<tag>/r4-client-<tag>.tar.gz`` with dummy wheels,
-    under one top directory, or ``flat`` (the release workflow's layout)."""
+    under one top directory, or ``flat`` (the release workflow's layout).
+    ``unlisted`` wheels are packed but left out of the bundle's SHA256SUMS."""
     top = "" if flat else f"r4-client-{tag}/"
     lines, members = [], {}
-    for name in WHEELS:
+    for name in wheels:
         data = f"wheel {name}".encode()
-        lines.append(f"{hashlib.sha256(data).hexdigest()}  {name}")
+        if name not in unlisted:
+            lines.append(f"{hashlib.sha256(data).hexdigest()}  {name}")
         members[name] = b"tampered" if name == corrupt else data
     if sums:
         members["SHA256SUMS"] = ("\n".join(lines) + "\n").encode()
@@ -225,7 +240,14 @@ class TestReleaseInstall:
         assert args[2:5] == ["--python", "3.12", "--force"]
         refs = [args[5], *_value_after(args, "--with")]
         refs += _value_after(args, "--with-executables-from")
-        names = ["r4", "r4-contracts", "r4-teamengine-spi", "r4-science", "umrs[client]"]
+        names = [
+            "r4",
+            "umrs-protocol",
+            "r4-contracts",
+            "r4-teamengine-spi",
+            "r4-science",
+            "umrs[client]",
+        ]
         tmp = sandbox.root / "tmp"
         assert refs == [
             f"{name} @ file://{tmp}/r4-install.{_suffix(refs[0])}/bundle/r4-client-{TAG}/{wheel}"
@@ -289,6 +311,49 @@ class TestReleaseInstall:
         proc = sandbox.run(R4_VERSION=TAG)
         assert proc.returncode == 0, proc.stderr
         assert "uv tool uninstall umrs" not in proc.stdout
+
+
+class TestProtocolWheel:
+    """umrs-protocol (U2.0, ADR-117 D-2) is the sixth wheel, optional for
+    bundles cut before it existed. Before U2.0 the installer ignored it, so
+    r4-contracts would have resolved it from a package index."""
+
+    @staticmethod
+    def _protocol_refs(install: list[str]) -> list[str]:
+        return [ref for ref in _value_after(install, "--with") if ref.startswith("umrs-protocol")]
+
+    def test_five_wheel_bundle_still_installs(self, sandbox):
+        make_bundle(sandbox.release, TAG, wheels=FIVE_WHEELS)
+        proc = sandbox.run(R4_VERSION=TAG)
+        assert proc.returncode == 0, proc.stderr
+        args = _install_args(sandbox)
+        assert self._protocol_refs(args) == []
+        assert args.count("--with") == 3
+
+    def test_old_uv_puts_the_protocol_wheel_in_both_tool_envs(self, sandbox):
+        make_bundle(sandbox.release, TAG)
+        proc = sandbox.run(R4_VERSION=TAG, STUB_UV_OLD="1")
+        assert proc.returncode == 0, proc.stderr
+        installs = [c for c in sandbox.calls("uv") if c[:2] == ["tool", "install"]]
+        assert len(installs) == 2
+        for install in installs:
+            (ref,) = self._protocol_refs(install)
+            assert ref.startswith("umrs-protocol @ file://") and ref.endswith(PROTOCOL_WHEEL)
+
+    def test_protocol_wheel_missing_from_sha256sums_is_refused(self, sandbox):
+        make_bundle(sandbox.release, TAG, unlisted=(PROTOCOL_WHEEL,))
+        proc = sandbox.run(R4_VERSION=TAG)
+        assert proc.returncode != 0
+        assert f"{PROTOCOL_WHEEL} is not listed in SHA256SUMS" in proc.stderr
+        assert sandbox.calls("uv") == []
+
+    def test_two_protocol_wheels_are_refused(self, sandbox):
+        extra = "umrs_protocol-0.0.1-py3-none-any.whl"
+        make_bundle(sandbox.release, TAG, wheels=(*WHEELS, extra))
+        proc = sandbox.run(R4_VERSION=TAG)
+        assert proc.returncode != 0
+        assert "more than one umrs_protocol-*.whl" in proc.stderr
+        assert sandbox.calls("uv") == []
 
 
 class TestVerification:
@@ -384,6 +449,23 @@ class TestSourceFallback:
     def test_r4_from_source_never_asks_the_api(self, sandbox):
         proc = sandbox.run(R4_FROM_SOURCE="1")  # the listing URL does not exist
         self._assert_source_install(sandbox, proc)
+
+    def test_source_install_puts_umrs_protocol_first_when_the_tree_has_it(self, sandbox):
+        # An existing clone takes the update path; its submodule has protocol/.
+        src = sandbox.home / ".r4" / "src"
+        (src / ".git").mkdir(parents=True)
+        (src / "umrs" / "protocol").mkdir(parents=True)
+        (src / "umrs" / "protocol" / "pyproject.toml").write_text("[project]\n")
+        proc = sandbox.run(R4_FROM_SOURCE="1")
+        assert proc.returncode == 0, proc.stderr
+        editable = [c[-2] for c in sandbox.calls("pip") if "-e" in c]
+        assert editable[:2] == [f"{src}/umrs/protocol", f"{src}/r4-contracts"]
+
+    def test_source_install_without_umrs_protocol_skips_it(self, sandbox):
+        proc = sandbox.run(R4_FROM_SOURCE="1")
+        self._assert_source_install(sandbox, proc)
+        editable = [c[-2] for c in sandbox.calls("pip") if "-e" in c]
+        assert editable[0] == f"{sandbox.home}/.r4/src/r4-contracts"
 
     def test_source_install_keeps_its_venv_and_names_no_uv_hint(self, sandbox):
         # Before 2026-11-07 the source fallback called its own fresh ~/.r4/venv

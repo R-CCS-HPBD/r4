@@ -3,6 +3,7 @@
 # =============================================================================
 # umrs/deploy/umrs-front/docker-compose.yaml uses context: ../../../ (here)
 # but Dockerfile.server only COPYs:  r4-contracts/  and  umrs/src/
+# (plus umrs/protocol/ from umrs U-A1, U2.0b)
 # Without this file, the entire 5+ GB repo is sent as build context.
 # =============================================================================
 
@@ -12,6 +13,9 @@
 # Allow only what Dockerfile.server copies
 !r4-contracts/
 !umrs/src/
+# ... and umrs-protocol (U2.0, ADR-117 D-2): r4/Dockerfile and
+# mcp-servers/Dockerfile install it from here now, Dockerfile.server from U-A1.
+!umrs/protocol/
 # ... and the image locks (ADR-100: images install only from these;
 # scripts/deps/lockctl.py writes them).
 !umrs/docker/server-image/

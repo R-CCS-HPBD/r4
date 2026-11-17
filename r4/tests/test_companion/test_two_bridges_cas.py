@@ -28,6 +28,8 @@ _PYTHONPATH = os.pathsep.join(
     for path in (
         _ROOT / "src",
         _ROOT.parent / "r4-contracts" / "src",
+        # r4-contracts' moved modules alias umrs_protocol (ADR-117 D-2, U2.0b).
+        _ROOT.parent / "umrs" / "protocol" / "src",
         _ROOT.parent / "packages" / "r4-teamengine-spi" / "src",
         _ROOT.parent / "science" / "src",
     )

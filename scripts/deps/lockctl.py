@@ -24,7 +24,7 @@ Subcommands
   derive-umrs
       Regenerate umrs/src/uv.lock from the workspace lock's versions, so the
       two locks cannot drift (the umrs project alone cannot be locked: its
-      r4-contracts dependency is on no index).
+      r4-contracts and umrs-protocol dependencies are on no index).
   check
       Offline (needs uv, no network): every workspace image lock is exactly
       what `uv export` emits now (no package missing, none extra), every
@@ -74,7 +74,15 @@ SPACY_MODEL = (
 # needs it (pip check failed the first CPU build without it, 2026-10-26).
 TORCH_PINS = ("torch", "torchvision")
 # Workspace members: in the derived umrs lock, never in an exported image lock.
-LOCAL_PACKAGES = {"umrs", "r4-contracts"}
+LOCAL_PACKAGES = {"umrs", "r4-contracts", "umrs-protocol"}
+# The local projects the derived umrs lock resolves by path: copied into the
+# scratch tree at their checkout paths, named from the scratch umrs/src. No
+# index holds them (umrs-protocol: ADR-117 D-2, U2.0a), so never an index.
+SCRATCH_TREES = ("r4-contracts", "umrs/protocol")
+SCRATCH_SOURCES = (
+    ("r4-contracts", "../../r4-contracts"),
+    ("umrs-protocol", "../protocol"),
+)
 CUDA_NAMES = re.compile(r"^(nvidia-|cuda-|triton$)")
 
 
@@ -461,17 +469,24 @@ def umrs_constraints() -> list[str]:
 
 def standalone_pyproject(text: str, constraints: list[str]) -> str:
     """umrs's pyproject plus the workspace versions as constraints and a path
-    source for r4-contracts (scratch copy only; never committed)."""
+    source for each local project (scratch copy only; never committed)."""
     listed = "".join(f'    "{line}",\n' for line in constraints)
     table = "[tool.uv]\nconstraint-dependencies = [\n" + listed + "]\n"
     if "[tool.uv]\n" in text:
         text = text.replace("[tool.uv]\n", table, 1)
     else:
         text += "\n" + table
-    return (
-        text
-        + '\n[tool.uv.sources]\nr4-contracts = { path = "../../r4-contracts", editable = true }\n'
+    sources = "".join(
+        f'{name} = {{ path = "{path}", editable = true }}\n' for name, path in SCRATCH_SOURCES
     )
+    return text + "\n[tool.uv.sources]\n" + sources
+
+
+def stage_local_sources(root: Path, scratch: Path) -> None:
+    """Copy the path-source projects from *root* into *scratch* (same layout)."""
+    ignore = shutil.ignore_patterns(".*", "__pycache__")
+    for rel in SCRATCH_TREES:
+        shutil.copytree(root / rel, scratch / rel, ignore=ignore)
 
 
 def cmd_derive_umrs(_args: argparse.Namespace) -> int:
@@ -481,10 +496,7 @@ def cmd_derive_umrs(_args: argparse.Namespace) -> int:
         project.mkdir(parents=True)
         source = (ROOT / "umrs" / "src" / "pyproject.toml").read_text()
         (project / "pyproject.toml").write_text(standalone_pyproject(source, constraints))
-        contracts = Path(tmp) / "r4-contracts"
-        shutil.copytree(
-            ROOT / "r4-contracts", contracts, ignore=shutil.ignore_patterns(".*", "__pycache__")
-        )
+        stage_local_sources(ROOT, Path(tmp))
         _run(["uv", "lock"], cwd=project)
         shutil.copyfile(project / "uv.lock", UMRS_LOCK)
     print(f"wrote umrs/src/uv.lock ({len(constraints)} workspace pins)")

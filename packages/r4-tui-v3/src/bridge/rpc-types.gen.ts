@@ -492,6 +492,7 @@ export type InspectSubagentResult = {
   total_events: number;
   limit: number;
   read_only: boolean;
+  resumable: boolean;
   event_payload_cap: number;
   event_payloads_may_be_abridged: boolean;
   source: "local" | "remote";
@@ -1199,6 +1200,9 @@ export type SessionListRow = {
   parent_agent_id: string;
   agent_id: string;
   subagent_status: string;
+  execution_kind: string;
+  started_at: string;
+  ended_at: string;
 };
 
 /** One loop row inside the aggregate session view. */
